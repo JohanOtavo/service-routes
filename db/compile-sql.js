@@ -26,7 +26,14 @@ function makeCollector() {
   const knex = knexLib({ client: 'mysql2', useNullAsDefault: true });
 
   const capture = (builder) => {
-    for (const part of builder.toSQL()) statements.push(part.sql);
+    // Un builder de datos (insert, update) no expone toSQL como el de esquema.
+    // Aqui solo interesa el DDL, asi que lo que no sea esquema se descarta en
+    // silencio en lugar de abortar la compilacion del servicio entero.
+    if (typeof builder?.toSQL !== 'function') return Promise.resolve([]);
+    const parts = builder.toSQL();
+    for (const part of Array.isArray(parts) ? parts : [parts]) {
+      if (part?.sql) statements.push(part.sql);
+    }
     return Promise.resolve([]);
   };
 
@@ -67,6 +74,25 @@ function makeCollector() {
     });
 
   const fakeKnex = new Proxy(knex, {
+    // Una migracion tambien puede insertar datos —un catalogo inicial, por
+    // ejemplo— llamando a knex('tabla').insert(...). Aqui solo interesa el DDL,
+    // asi que esas llamadas se capturan y se descartan en lugar de reventar.
+    apply(target, _thisArg, argumentsList) {
+      const builder = target(...argumentsList);
+      return new Proxy(builder, {
+        get(t, p) {
+          if (p === 'then') {
+            return (resolve, reject) => Promise.resolve([]).then(resolve, reject);
+          }
+          const v = t[p];
+          if (typeof v !== 'function') return v;
+          return (...a) => {
+            const r = v.apply(t, a);
+            return r && typeof r.toSQL === 'function' ? wrapBuilder(r) : r;
+          };
+        },
+      });
+    },
     get(target, prop) {
       if (prop === 'schema') return schemaProxy();
       if (prop === 'raw') {

@@ -172,6 +172,62 @@ debe_pasar "la contraparte si puede calificar (RF164)" \
    VALUES (1,'OFERENTE_A_SOLICITANTE',2,1,4);"
 
 echo
+echo "Politica de cancelacion (SRS 10.2)"
+mysql_root -e "USE pa_request; DELETE FROM incomparecencia; DELETE FROM cancelacion;" >/dev/null
+
+debe_pasar "registrar una cancelacion del oferente fuera de la gracia"   "INSERT INTO pa_request.cancelacion
+     (id_solicitud,parte_canceladora,id_usuario_cancela,id_usuario_afectado,estado_origen,
+      codigo_motivo,franja,horas_de_antelacion,peso,computa,id_usuario_imputado,reabrio_necesidad)
+   SELECT id_solicitud,'OFERENTE',2,1,'ACEPTADA','NO_PUEDO_ATENDERLO','AJUSTADA',12,1.00,1,2,1
+   FROM pa_request.solicitud_servicio WHERE origen='ADJUDICACION' LIMIT 1;"
+
+debe_fallar "una sola cancelacion por solicitud"   "INSERT INTO pa_request.cancelacion
+     (id_solicitud,parte_canceladora,id_usuario_cancela,id_usuario_afectado,estado_origen,
+      codigo_motivo,franja,peso,computa,id_usuario_imputado)
+   SELECT id_solicitud,'SOLICITANTE',1,2,'ACEPTADA','YA_NO_LO_NECESITO','TARDIA',1.50,1,1
+   FROM pa_request.solicitud_servicio WHERE origen='ADJUDICACION' LIMIT 1;"
+
+debe_fallar "quien cancela no puede ser quien lo sufre"   "INSERT INTO pa_request.cancelacion
+     (id_solicitud,parte_canceladora,id_usuario_cancela,id_usuario_afectado,estado_origen,
+      codigo_motivo,franja,peso,computa,id_usuario_imputado)
+   SELECT id_solicitud,'SOLICITANTE',1,1,'PENDIENTE','YA_NO_LO_NECESITO','HOLGADA',0.50,1,1
+   FROM pa_request.solicitud_servicio WHERE origen='DIRECTA' LIMIT 1;"
+
+debe_fallar "una cancelacion que computa exige un imputado"   "INSERT INTO pa_request.cancelacion
+     (id_solicitud,parte_canceladora,id_usuario_cancela,id_usuario_afectado,estado_origen,
+      codigo_motivo,franja,peso,computa,id_usuario_imputado)
+   SELECT id_solicitud,'SOLICITANTE',1,2,'PENDIENTE','YA_NO_LO_NECESITO','HOLGADA',0.50,1,NULL
+   FROM pa_request.solicitud_servicio WHERE origen='DIRECTA' LIMIT 1;"
+
+debe_fallar "motivo fuera del catalogo"   "INSERT INTO pa_request.cancelacion
+     (id_solicitud,parte_canceladora,id_usuario_cancela,id_usuario_afectado,estado_origen,
+      codigo_motivo,franja,peso,computa,id_usuario_imputado)
+   SELECT id_solicitud,'SOLICITANTE',1,2,'PENDIENTE','PORQUE_SI','HOLGADA',0.50,1,1
+   FROM pa_request.solicitud_servicio WHERE origen='DIRECTA' LIMIT 1;"
+
+debe_fallar "franja fuera del modelo"   "INSERT INTO pa_request.cancelacion
+     (id_solicitud,parte_canceladora,id_usuario_cancela,id_usuario_afectado,estado_origen,
+      codigo_motivo,franja,peso,computa,id_usuario_imputado)
+   SELECT id_solicitud,'SOLICITANTE',1,2,'PENDIENTE','YA_NO_LO_NECESITO','CUANDO_SEA',0.50,1,1
+   FROM pa_request.solicitud_servicio WHERE origen='DIRECTA' LIMIT 1;"
+
+debe_fallar "nadie declara su propia incomparecencia"   "INSERT INTO pa_request.incomparecencia
+     (id_solicitud,id_usuario_declara,id_usuario_senalado,disputable_hasta)
+   SELECT id_solicitud,1,1,DATE_ADD(NOW(),INTERVAL 3 DAY)
+   FROM pa_request.solicitud_servicio WHERE origen='DIRECTA' LIMIT 1;"
+
+debe_fallar "resultado de incomparecencia fuera del modelo"   "INSERT INTO pa_request.incomparecencia
+     (id_solicitud,id_usuario_declara,id_usuario_senalado,disputable_hasta,resultado)
+   SELECT id_solicitud,2,1,DATE_ADD(NOW(),INTERVAL 3 DAY),'QUIZAS'
+   FROM pa_request.solicitud_servicio WHERE origen='DIRECTA' LIMIT 1;"
+
+debe_fallar "la tasa de cancelacion no admite un umbral inventado"   "INSERT INTO pa_rating.tasa_cancelacion (id_usuario,faceta,umbral_alcanzado,ventana_desde)
+   VALUES (2,'COMO_OFERENTE',9,NOW());"
+
+debe_fallar "la faceta de la tasa pertenece al modelo"   "INSERT INTO pa_rating.tasa_cancelacion (id_usuario,faceta,ventana_desde)
+   VALUES (2,'COMO_ADMINISTRADOR',NOW());"
+
+echo
 echo "Aislamiento entre esquemas (RNF28)"
 for par in "pa_auth_svc:DB_AUTH_PASSWORD:pa_request" "pa_request_svc:DB_REQUEST_PASSWORD:pa_auth" "pa_catalog_svc:DB_CATALOG_PASSWORD:pa_admin"; do
   usuario="${par%%:*}"; resto="${par#*:}"; var="${resto%%:*}"; ajeno="${resto##*:}"
