@@ -99,6 +99,34 @@ node db/compile-sql.js request  # solo un esquema
 Útil para revisar un cambio de esquema en una revisión de código sin tener que
 levantar la base de datos.
 
+### Comprobar que los invariantes se cumplen
+
+```bash
+bash db/verify-invariants.sh
+```
+
+21 pruebas negativas contra la base real. Cada una **intenta violar** un
+invariante del modelo y pasa solo si MySQL la rechaza: dos propuestas
+adjudicadas sobre la misma necesidad, una contratación por adjudicación que nace
+pendiente, un `UPDATE` sobre la auditoría, una puntuación fuera de rango, o un
+servicio leyendo el esquema de otro. Un invariante que solo está en la
+documentación no cuenta como implementado.
+
+### Si una migración falla a medias
+
+MySQL confirma cada sentencia DDL por separado, así que una migración que falle
+en mitad deja creadas las tablas anteriores sin quedar registrada como aplicada.
+No hay forma de hacerla transaccional. Cuando ocurra:
+
+```bash
+node db/cli.js status          # ver qué esquema quedó a medias
+docker exec -it pa-mysql mysql -uroot -p   # soltar las tablas parciales
+node db/cli.js migrate <servicio>
+```
+
+En desarrollo suele salir más a cuenta `docker compose down -v` y volver a
+empezar.
+
 ---
 
 ## Calidad
