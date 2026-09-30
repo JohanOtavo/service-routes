@@ -51,11 +51,32 @@ services:
       # Los .sh y .sql de este directorio corren una sola vez, al crear el volumen.
       - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-p${MYSQL_ROOT_PASSWORD}']
+      # Por TCP y no por socket, deliberadamente.
+      #
+      # El entrypoint de MySQL levanta un servidor TEMPORAL para ejecutar los
+      # scripts de inicializacion, y ese servidor solo escucha por socket. Un
+      # ping contra 'localhost' lo alcanza y da la instancia por sana cuando
+      # todavia no acepta conexiones TCP: el migrador arranca entonces y muere
+      # con ECONNREFUSED. Forzar --protocol=TCP hace que la comprobacion mida lo
+      # que de verdad importa, que es si los servicios pueden conectarse.
+      test:
+        [
+          'CMD',
+          'mysqladmin',
+          'ping',
+          '-h',
+          '127.0.0.1',
+          '-P',
+          '3306',
+          '--protocol=TCP',
+          '-u',
+          'root',
+          '-p${MYSQL_ROOT_PASSWORD}',
+        ]
       interval: 5s
       timeout: 5s
-      retries: 20
-      start_period: 30s
+      retries: 30
+      start_period: 40s
     networks: [punto-amigo]
 
   redis:
@@ -112,6 +133,56 @@ services:
       mysql:
         condition: service_healthy
     restart: 'no'
+    networks: [punto-amigo]
+
+  # ─── Aplicacion (perfil "apps") ───────────────────────────────────────────
+  #
+  # Ningun servicio publica su puerto: solo el gateway es alcanzable desde
+  # fuera (SRS-GW-01, RNF25). Los demas se hablan por el nombre de la red
+  # interna de Docker.
+
+  auth-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    image: punto-amigo/auth-service:local
+    container_name: pa-auth
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      NODE_ENV: ${NODE_ENV:-development}
+    # Sin `ports`: deliberado. Alcanzarlo desde el host exigiria publicarlo, y
+    # entonces dejaria de ser interno.
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks: [punto-amigo]
+
+  api-gateway:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    image: punto-amigo/api-gateway:local
+    container_name: pa-gateway
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      REDIS_HOST: redis
+      NODE_ENV: ${NODE_ENV:-development}
+      UPSTREAM_AUTH_URL: http://auth-service:3001
+    ports:
+      - '127.0.0.1:${GATEWAY_PORT:-8080}:8080'
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
     networks: [punto-amigo]
 
 volumes:

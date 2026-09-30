@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { AppError, ErrorCode, toErrorResponse } from '@punto-amigo/shared';
 import type { ZodTypeAny } from 'zod';
@@ -59,6 +59,49 @@ export function validateBody(schema: ZodTypeAny) {
     }
 
     req.body = resultado.data;
+    next();
+  };
+}
+
+
+/**
+ * Exige que la peticion venga del gateway (SRS RNF24, RNF25).
+ *
+ * Los microservicios no son alcanzables desde la red publica, pero eso lo
+ * garantiza la topologia de red, y una topologia cambia con un despliegue mal
+ * configurado. Esta comprobacion es la segunda barrera: si alguien alcanza el
+ * servicio por otra via, sin el secreto compartido no consigue nada.
+ *
+ * La comparacion es en tiempo constante: `===` sobre cadenas sale antes cuando
+ * los primeros caracteres difieren, y esa diferencia permite deducir el secreto
+ * caracter a caracter.
+ *
+ * `/health` queda fuera: lo consulta el orquestador, que no conoce el secreto.
+ */
+export function requireInternalCaller(secreto: string) {
+  const esperado = Buffer.from(secreto);
+
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (req.path === '/health') {
+      next();
+      return;
+    }
+
+    const recibido = req.header('x-internal-secret');
+    if (recibido === undefined) {
+      next(AppError.forbidden('Esta ruta solo es accesible a traves del gateway.'));
+      return;
+    }
+
+    const candidato = Buffer.from(recibido);
+    if (
+      candidato.length !== esperado.length ||
+      !timingSafeEqual(candidato, esperado)
+    ) {
+      next(AppError.forbidden('Esta ruta solo es accesible a traves del gateway.'));
+      return;
+    }
+
     next();
   };
 }

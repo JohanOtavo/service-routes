@@ -15,6 +15,7 @@ import {
   errorHandler,
   notFoundHandler,
   requireAuth,
+  requireInternalCaller,
   validateBody,
   type Logger,
 } from './middleware';
@@ -30,6 +31,7 @@ export interface AppDeps {
     corsOrigin: string;
     bodyLimit: string;
     isProduction: boolean;
+    internalSecret: string;
     rateLimit: { windowMs: number; maxPerIp: number; authMax: number };
     refreshCookie: { name: string; secure: boolean; maxAgeMs: number };
   };
@@ -134,6 +136,7 @@ export function createApp(deps: AppDeps): Express {
     handler: (_req, _res, next) => next(AppError.rateLimited()),
   });
 
+  app.use(requireInternalCaller(deps.config.internalSecret));
   app.use(limiteGeneral);
 
   app.get('/health', async (_req: Request, res: Response) => {

@@ -114,6 +114,7 @@ export function buildContainer(env: z.infer<typeof envSchema>) {
       corsOrigin: env.CORS_ORIGIN,
       bodyLimit: env.REQUEST_BODY_LIMIT,
       isProduction: env.NODE_ENV === 'production',
+      internalSecret: env.INTERNAL_SERVICE_SECRET,
       rateLimit: {
         windowMs: env.RATE_LIMIT_WINDOW_MS,
         maxPerIp: env.RATE_LIMIT_MAX_PER_IP,

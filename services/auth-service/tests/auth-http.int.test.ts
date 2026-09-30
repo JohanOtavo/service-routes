@@ -7,9 +7,32 @@
  * Se salta sola si no hay base de datos disponible, para que `npm test` en una
  * maquina sin Docker no falle por algo que no es un defecto del codigo.
  */
-import request from 'supertest';
-import knexLib, { type Knex } from 'knex';
+import supertest from 'supertest';
 import type { Express } from 'express';
+
+const SECRETO_INTERNO = 'solo-para-pruebas-de-integracion';
+
+/**
+ * Cliente que adjunta el secreto interno en cada peticion.
+ *
+ * Estas pruebas llaman a la aplicacion directamente, sin gateway delante, y el
+ * servicio rechaza lo que no lo traiga (SRS RNF24). Envolverlo aqui evita
+ * repetir la cabecera en cada llamada y, sobre todo, evita la tentacion de
+ * desactivar la comprobacion durante las pruebas.
+ */
+const request = (app: Express) => {
+  const agente = supertest(app);
+  const conSecreto = (m: 'get' | 'post' | 'put' | 'patch' | 'delete') => (ruta: string) =>
+    agente[m](ruta).set('x-internal-secret', SECRETO_INTERNO);
+  return {
+    get: conSecreto('get'),
+    post: conSecreto('post'),
+    put: conSecreto('put'),
+    patch: conSecreto('patch'),
+    delete: conSecreto('delete'),
+  };
+};
+import knexLib, { type Knex } from 'knex';
 import { buildContainer, envSchema } from '../src/main';
 
 const CORREO = 'integracion@puntoamigo.local';
@@ -29,7 +52,7 @@ const env = {
   DB_AUTH_PASSWORD: process.env['DB_AUTH_PASSWORD'] ?? '',
   REDIS_HOST: 'localhost',
   REDIS_PORT: '6379',
-  INTERNAL_SERVICE_SECRET: 'solo-para-pruebas-de-integracion',
+  INTERNAL_SERVICE_SECRET: SECRETO_INTERNO,
   JWT_PRIVATE_KEY: process.env['JWT_PRIVATE_KEY'] ?? '',
   JWT_PUBLIC_KEY: process.env['JWT_PUBLIC_KEY'] ?? '',
   REFRESH_COOKIE_SECURE: 'false',
@@ -295,6 +318,24 @@ describe('endurecimiento', () => {
     expect(cookie).toMatch(/SameSite=Strict/iu);
     // El refresh token nunca viaja en el cuerpo.
     expect(JSON.stringify(login.body)).not.toContain('pa_refresh');
+  });
+
+  it('rechaza una peticion que no venga del gateway', async () => {
+    if (saltarSiNoHayBase()) return;
+
+    // Sin el secreto interno, aunque los datos sean validos.
+    const r = await supertest(app)
+      .post('/api/v1/auth/login')
+      .send({ correo: CORREO, contrasena: CONTRASENA });
+
+    expect(r.status).toBe(403);
+  });
+
+  it('deja pasar /health sin secreto, porque lo consulta el orquestador', async () => {
+    if (saltarSiNoHayBase()) return;
+
+    const r = await supertest(app).get('/health');
+    expect(r.status).toBe(200);
   });
 
   it('responde igual ante un correo inexistente que ante una contrasena incorrecta', async () => {
