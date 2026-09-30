@@ -11,6 +11,7 @@ import { Argon2PasswordHasher } from './infrastructure/security/Argon2PasswordHa
 import { JwtTokenService } from './infrastructure/security/JwtTokenService';
 import { SystemClock } from './infrastructure/SystemClock';
 import { createApp } from './infrastructure/http/app';
+import { Broker, OutboxRelay } from '@punto-amigo/messaging';
 
 /**
  * Configuracion propia del servicio, sobre la base comun.
@@ -41,6 +42,15 @@ const envSchema = baseEnvSchema.extend({
   LOGIN_LOCKOUT_MAX_SECONDS: z.coerce.number().int().min(1).default(3600),
   LOGIN_ATTEMPT_WINDOW_SECONDS: z.coerce.number().int().min(60).default(900),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().int().min(1).default(10),
+
+  RABBITMQ_HOST: z.string().min(1),
+  RABBITMQ_PORT: z.coerce.number().int().min(1).max(65535).default(5672),
+  RABBITMQ_USER: z.string().min(1),
+  RABBITMQ_PASSWORD: z.string().min(1),
+  RABBITMQ_EXCHANGE: z.string().min(1).default('punto-amigo.events'),
+  BROKER_MAX_RETRIES: z.coerce.number().int().min(1).default(5),
+  OUTBOX_POLL_MS: z.coerce.number().int().min(100).default(1000),
+  OUTBOX_BATCH: z.coerce.number().int().min(1).max(500).default(50),
 });
 
 /** Registro estructurado en JSON, con el identificador de correlacion (RNF77). */
@@ -137,6 +147,51 @@ async function main(): Promise<void> {
 
   const { app, knex } = buildContainer(env);
 
+  /**
+   * Relevo del outbox.
+   *
+   * Vive dentro del proceso del servicio y no aparte: comparte su conexion a la
+   * base y solo lee la tabla que ese mismo servicio escribe, asi que separarlo
+   * anadiria un despliegue mas sin desacoplar nada.
+   *
+   * Que el broker no este disponible NO impide arrancar. Los eventos se
+   * acumulan en el outbox y salen cuando vuelva; negarse a levantar por eso
+   * convertiria una caida del broker en una caida de la autenticacion.
+   */
+  const broker = new Broker(
+    {
+      host: env.RABBITMQ_HOST,
+      port: env.RABBITMQ_PORT,
+      user: env.RABBITMQ_USER,
+      password: env.RABBITMQ_PASSWORD,
+      exchange: env.RABBITMQ_EXCHANGE,
+      maxRetries: env.BROKER_MAX_RETRIES,
+    },
+    logger
+  );
+
+  const relevo = new OutboxRelay(
+    knex,
+    broker,
+    {
+      intervaloMs: env.OUTBOX_POLL_MS,
+      lote: env.OUTBOX_BATCH,
+      maxIntentos: env.BROKER_MAX_RETRIES,
+      contexto: 'iam',
+    },
+    logger
+  );
+
+  try {
+    await broker.conectar();
+    relevo.iniciar();
+  } catch (error) {
+    logger.error('broker no disponible al arrancar; los eventos esperan en el outbox', {
+      mensaje: error instanceof Error ? error.message : String(error),
+    });
+    relevo.iniciar();
+  }
+
   const servidor = app.listen(env.AUTH_PORT, () => {
     logger.info('auth-service escuchando', { puerto: env.AUTH_PORT, entorno: env.NODE_ENV });
   });
@@ -149,7 +204,13 @@ async function main(): Promise<void> {
   const cerrar = (senal: string): void => {
     logger.info('cerrando', { senal });
     servidor.close(() => {
-      void knex.destroy().then(() => process.exit(0));
+      // El relevo se detiene antes que la base: cortarlo a la mitad dejaria
+      // eventos publicados sin marcar, que luego se reenviarian.
+      void relevo
+        .detener()
+        .then(() => broker.cerrar())
+        .then(() => knex.destroy())
+        .then(() => process.exit(0));
     });
     setTimeout(() => process.exit(1), 10_000).unref();
   };

@@ -10,6 +10,7 @@ const tsJest = {
     // El paquete compartido se resuelve al fuente, no a dist: asi las pruebas
     // no dependen de haber compilado antes.
     '^@punto-amigo/shared$': '<rootDir>/packages/shared/src/index.ts',
+    '^@punto-amigo/messaging$': '<rootDir>/packages/messaging/src/index.ts',
   },
   transform: {
     '^.+\.ts$': ['ts-jest', { tsconfig: { module: 'commonjs', target: 'ES2022', strict: true, esModuleInterop: true } }],
