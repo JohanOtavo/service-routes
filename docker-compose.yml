@@ -30,6 +30,17 @@ services:
       - --default-time-zone=+00:00
       # Modo estricto: una insercion invalida falla en vez de truncar en silencio.
       - --sql-mode=STRICT_ALL_TABLES,NO_ENGINE_SUBSTITUTION,ERROR_FOR_DIVISION_BY_ZERO
+      # Permite que un usuario sin SUPER cree disparadores.
+      #
+      # Con el log binario activo MySQL exige SUPER para crear un disparador,
+      # porque uno no determinista puede desincronizar una replica.
+      # pa_admin_svc necesita crear los dos que hacen inmutable la auditoria
+      # (RF103), y concederle SUPER seria darle el control del servidor entero:
+      # justo lo contrario del minimo privilegio que exige RNF28.
+      #
+      # Los disparadores de este proyecto solo ejecutan SIGNAL para abortar una
+      # escritura, asi que son deterministas y no afectan a la replicacion.
+      - --log-bin-trust-function-creators=ON
     ports:
       # Solo loopback. Las siete cuentas de servicio se crean con comodin de
       # host ('%') porque cada servicio corre en su propio contenedor; publicar
@@ -83,34 +94,30 @@ services:
       start_period: 20s
     networks: [punto-amigo]
 
-  # Servicio de un solo uso: aplica las migraciones de los 7 esquemas y, en
+  # Servicio de un solo uso: aplica las migraciones de los siete esquemas y, en
   # desarrollo, carga los seeds. Termina con codigo 0 y no queda corriendo.
   migrator:
-    image: node:20-alpine
+    build:
+      context: .
+      dockerfile: db/Dockerfile
+    image: punto-amigo/migrator:local
     container_name: pa-migrator
-    working_dir: /app
     env_file: [.env]
     environment:
       MYSQL_HOST: mysql
       NODE_ENV: ${NODE_ENV:-development}
-    volumes:
-      - ./db:/app/db:ro
-      - ./package.json:/app/package.json:ro
-      - migrator-modules:/app/node_modules
-    command: >
-      sh -c "npm install --no-audit --no-fund --silent knex mysql2 dotenv @node-rs/argon2 &&
-             node db/cli.js migrate &&
-             if [ \"$$NODE_ENV\" = 'development' ]; then node db/cli.js seed; fi"
+    entrypoint: ['sh', 'db/entrypoint.sh']
+    command: []
     depends_on:
       mysql:
         condition: service_healthy
+    restart: 'no'
     networks: [punto-amigo]
 
 volumes:
   mysql-data:
   redis-data:
   rabbitmq-data:
-  migrator-modules:
 
 networks:
   punto-amigo:

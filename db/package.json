@@ -1,0 +1,13 @@
+{
+  "name": "@punto-amigo/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Migraciones, seeds y CLI de base de datos. Se instala aislado del monorepo para que la imagen del migrador no arrastre los workspaces.",
+  "license": "MIT",
+  "dependencies": {
+    "@node-rs/argon2": "2.0.2",
+    "dotenv": "16.4.7",
+    "knex": "3.1.0",
+    "mysql2": "3.11.5"
+  }
+}
