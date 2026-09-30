@@ -35,3 +35,4 @@ Thumbs.db
 # Volcados de base de datos
 *.sql.gz
 dumps/
+.keys/

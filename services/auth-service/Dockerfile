@@ -1,0 +1,38 @@
+# Imagen de auth-service. Dos etapas: se compila con las dependencias de
+# desarrollo y se ejecuta sin ellas, de modo que TypeScript y las pruebas no
+# viajan a produccion.
+FROM node:20-alpine AS build
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json packages/shared/
+COPY services/auth-service/package.json services/auth-service/
+RUN npm ci --ignore-scripts=false
+
+COPY tsconfig.base.json ./
+COPY packages/shared packages/shared
+COPY services/auth-service services/auth-service
+RUN npx tsc --build services/auth-service
+
+FROM node:20-alpine AS runtime
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json packages/shared/
+COPY services/auth-service/package.json services/auth-service/
+RUN npm ci --omit=dev --ignore-scripts=false && npm cache clean --force
+
+COPY --from=build /app/packages/shared/dist packages/shared/dist
+COPY --from=build /app/services/auth-service/dist services/auth-service/dist
+
+# Sin privilegios de root: la imagen de node ya trae el usuario `node`.
+USER node
+EXPOSE 3001
+
+# El orquestador comprueba el estado por HTTP; no hace falta curl en la imagen.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:3001/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+
+CMD ["node", "services/auth-service/dist/main.js"]
