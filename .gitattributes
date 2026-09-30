@@ -1,0 +1,40 @@
+# Normalizacion de fin de linea.
+#
+# Git en Windows convierte a CRLF al hacer checkout. Un script de shell con CRLF
+# no se puede ejecutar dentro de un contenedor Linux: el interprete recibe
+# "/bin/bash\r" y falla con "bad interpreter". Eso es exactamente lo que rompio
+# la inicializacion de MySQL la primera vez que se levanto el entorno.
+#
+# Todo archivo que un contenedor vaya a ejecutar o interpretar se fuerza a LF.
+
+# Por defecto: Git decide, pero normaliza a LF en el repositorio.
+* text=auto
+
+# Se ejecutan dentro de contenedores Linux: LF obligatorio.
+*.sh text eol=lf
+*.bash text eol=lf
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+.env.example text eol=lf
+
+# Los interpreta Node dentro de contenedores; LF evita diferencias de diff
+# entre quien trabaja en Windows y quien lo hace en Linux.
+*.js text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sql text eol=lf
+*.md text eol=lf
+
+# Binarios: Git no debe tocarlos.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
