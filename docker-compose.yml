@@ -1,0 +1,117 @@
+# Punto Amigo — entorno local completo.
+#
+# Estado: Fase 1 (base de datos). Levanta la infraestructura y aplica las
+# migraciones de los 7 esquemas. Los 8 servicios de aplicacion y el cliente web
+# se incorporan en las Fases 2 y 3, bajo el perfil "apps".
+#
+#   docker compose up -d          → infraestructura + migraciones + seeds
+#   docker compose --profile apps up -d   → lo anterior + servicios (Fase 2)
+
+name: punto-amigo
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: pa-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?falta MYSQL_ROOT_PASSWORD en .env}
+      # Las contrasenas por servicio se inyectan al script de init.
+      DB_AUTH_PASSWORD: ${DB_AUTH_PASSWORD:?}
+      DB_PROVIDER_PASSWORD: ${DB_PROVIDER_PASSWORD:?}
+      DB_CATALOG_PASSWORD: ${DB_CATALOG_PASSWORD:?}
+      DB_REQUEST_PASSWORD: ${DB_REQUEST_PASSWORD:?}
+      DB_RATING_PASSWORD: ${DB_RATING_PASSWORD:?}
+      DB_NOTIFICATION_PASSWORD: ${DB_NOTIFICATION_PASSWORD:?}
+      DB_ADMIN_PASSWORD: ${DB_ADMIN_PASSWORD:?}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      # Modo estricto: una insercion invalida falla en vez de truncar en silencio.
+      - --sql-mode=STRICT_ALL_TABLES,NO_ENGINE_SUBSTITUTION,ERROR_FOR_DIVISION_BY_ZERO
+    ports:
+      # Solo loopback. Las siete cuentas de servicio se crean con comodin de
+      # host ('%') porque cada servicio corre en su propio contenedor; publicar
+      # el puerto en todas las interfaces las expondria a la red local.
+      - '127.0.0.1:${MYSQL_PORT:-3306}:3306'
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Los .sh y .sql de este directorio corren una sola vez, al crear el volumen.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-p${MYSQL_ROOT_PASSWORD}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks: [punto-amigo]
+
+  redis:
+    image: redis:7-alpine
+    container_name: pa-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'allkeys-lru']
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [punto-amigo]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: pa-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-pa_dev}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?falta RABBITMQ_PASSWORD en .env}
+    ports:
+      - '127.0.0.1:${RABBITMQ_PORT:-5672}:5672'
+      - '127.0.0.1:15672:15672' # consola de administracion
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [punto-amigo]
+
+  # Servicio de un solo uso: aplica las migraciones de los 7 esquemas y, en
+  # desarrollo, carga los seeds. Termina con codigo 0 y no queda corriendo.
+  migrator:
+    image: node:20-alpine
+    container_name: pa-migrator
+    working_dir: /app
+    env_file: [.env]
+    environment:
+      MYSQL_HOST: mysql
+      NODE_ENV: ${NODE_ENV:-development}
+    volumes:
+      - ./db:/app/db:ro
+      - ./package.json:/app/package.json:ro
+      - migrator-modules:/app/node_modules
+    command: >
+      sh -c "npm install --no-audit --no-fund --silent knex mysql2 dotenv @node-rs/argon2 &&
+             node db/cli.js migrate &&
+             if [ \"$$NODE_ENV\" = 'development' ]; then node db/cli.js seed; fi"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks: [punto-amigo]
+
+volumes:
+  mysql-data:
+  redis-data:
+  rabbitmq-data:
+  migrator-modules:
+
+networks:
+  punto-amigo:
+    driver: bridge
