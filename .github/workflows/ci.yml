@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Una ejecucion por rama: un push nuevo cancela el anterior.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Formato, linter y tipos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+
+  migrations:
+    name: Migraciones contra MySQL real
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pci-root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Crear esquemas y usuarios
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root
+          DB_AUTH_PASSWORD: ci-auth
+          DB_PROVIDER_PASSWORD: ci-provider
+          DB_CATALOG_PASSWORD: ci-catalog
+          DB_REQUEST_PASSWORD: ci-request
+          DB_RATING_PASSWORD: ci-rating
+          DB_NOTIFICATION_PASSWORD: ci-notification
+          DB_ADMIN_PASSWORD: ci-admin
+        run: |
+          sudo apt-get install -y mysql-client
+          bash db/init/01-schemas-and-users.sh
+
+      - name: Aplicar migraciones
+        env:
+          MYSQL_HOST: 127.0.0.1
+          DB_AUTH_USER: pa_auth_svc
+          DB_AUTH_PASSWORD: ci-auth
+          DB_PROVIDER_USER: pa_provider_svc
+          DB_PROVIDER_PASSWORD: ci-provider
+          DB_CATALOG_USER: pa_catalog_svc
+          DB_CATALOG_PASSWORD: ci-catalog
+          DB_REQUEST_USER: pa_request_svc
+          DB_REQUEST_PASSWORD: ci-request
+          DB_RATING_USER: pa_rating_svc
+          DB_RATING_PASSWORD: ci-rating
+          DB_NOTIFICATION_USER: pa_notification_svc
+          DB_NOTIFICATION_PASSWORD: ci-notification
+          DB_ADMIN_USER: pa_admin_svc
+          DB_ADMIN_PASSWORD: ci-admin
+        run: npm run db:migrate
+
+      # Una migracion que no sabe deshacerse no es reversible. Se comprueba en CI
+      # y no cuando hay que revertir un despliegue en produccion.
+      - name: Verificar que las migraciones son reversibles
+        env:
+          MYSQL_HOST: 127.0.0.1
+          DB_AUTH_USER: pa_auth_svc
+          DB_AUTH_PASSWORD: ci-auth
+          DB_PROVIDER_USER: pa_provider_svc
+          DB_PROVIDER_PASSWORD: ci-provider
+          DB_CATALOG_USER: pa_catalog_svc
+          DB_CATALOG_PASSWORD: ci-catalog
+          DB_REQUEST_USER: pa_request_svc
+          DB_REQUEST_PASSWORD: ci-request
+          DB_RATING_USER: pa_rating_svc
+          DB_RATING_PASSWORD: ci-rating
+          DB_NOTIFICATION_USER: pa_notification_svc
+          DB_NOTIFICATION_PASSWORD: ci-notification
+          DB_ADMIN_USER: pa_admin_svc
+          DB_ADMIN_PASSWORD: ci-admin
+        run: npm run db:reset
+
+  tests:
+    name: Pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  security:
+    name: Dependencias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Una vulnerabilidad alta o critica bloquea el despliegue
+      # (00-governance/security-rules.md).
+      - run: npm audit --audit-level=high

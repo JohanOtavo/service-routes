@@ -1,0 +1,37 @@
+# Dependencias
+node_modules/
+.pnp.*
+
+# Entorno — nunca se versiona con valores reales
+.env
+.env.local
+.env.*.local
+
+# Claves generadas en local
+*.pem
+*.key
+
+# Compilacion
+dist/
+build/
+*.tsbuildinfo
+
+# Pruebas y cobertura
+coverage/
+.nyc_output/
+
+# Registros
+logs/
+*.log
+npm-debug.log*
+
+# Editores y sistema
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Volcados de base de datos
+*.sql.gz
+dumps/
