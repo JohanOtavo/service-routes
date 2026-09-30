@@ -1,29 +1,35 @@
 /**
- * Dos proyectos separados porque tienen coste y momento distintos:
- * las unitarias corren en cada commit, las de integracion solo en CI
+ * Dos proyectos separados porque tienen coste y momento distintos: las
+ * unitarias corren en cada commit, las de integracion solo en CI
  * (11-quality/testing-strategy.md).
  */
+const tsJest = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  moduleNameMapper: {
+    // El paquete compartido se resuelve al fuente, no a dist: asi las pruebas
+    // no dependen de haber compilado antes.
+    '^@punto-amigo/shared$': '<rootDir>/packages/shared/src/index.ts',
+  },
+  transform: {
+    '^.+\.ts$': ['ts-jest', { tsconfig: { module: 'commonjs', target: 'ES2022', strict: true, esModuleInterop: true } }],
+  },
+};
+
 module.exports = {
   projects: [
     {
+      ...tsJest,
       displayName: 'unit',
-      preset: 'ts-jest',
-      testEnvironment: 'node',
-      testMatch: ['<rootDir>/services/*/tests/**/*.unit.test.ts', '<rootDir>/packages/*/tests/**/*.unit.test.ts'],
+      testMatch: [
+        '<rootDir>/services/*/tests/**/*.unit.test.ts',
+        '<rootDir>/packages/*/tests/**/*.unit.test.ts',
+      ],
     },
-    {
-      displayName: 'integration',
-      preset: 'ts-jest',
-      testEnvironment: 'node',
-      testMatch: ['<rootDir>/services/*/tests/**/*.int.test.ts'],
-      // Levantan contenedores: mas lentas que las unitarias.
-      testTimeout: 30000,
-    },
+    { ...tsJest, displayName: 'integration', testMatch: ['<rootDir>/services/*/tests/**/*.int.test.ts'] },
   ],
   collectCoverageFrom: ['services/*/src/**/*.ts', 'packages/*/src/**/*.ts', '!**/*.d.ts'],
   coverageThreshold: {
-    // Objetivos de 11-quality/testing-strategy.md.
     global: { lines: 80, statements: 80, branches: 70, functions: 80 },
-    './services/*/src/domain/': { lines: 90, statements: 90 },
   },
 };

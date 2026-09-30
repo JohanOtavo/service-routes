@@ -1,0 +1,15 @@
+{
+  "name": "@punto-amigo/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contratos compartidos entre microservicios: sobre de eventos, errores y carga de configuracion.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean"
+  },
+  "dependencies": {
+    "zod": "3.24.1"
+  }
+}
