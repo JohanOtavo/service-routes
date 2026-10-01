@@ -1,0 +1,410 @@
+openapi: 3.0.3
+info:
+  title: Punto Amigo - request-service
+  version: 0.1.0
+  description: >
+    El nucleo del negocio. Los dos flujos terminan en la MISMA solicitud: el del
+    catalogo, donde el solicitante elige un servicio y pide, y el de la demanda,
+    donde publica una necesidad y adjudica una propuesta. La columna `origen`
+    distingue de donde vino y a partir de ahi el ciclo de vida es uno solo.
+    Cubre SRS RF60 a RF70 y RF120 a RF186.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Necesidades
+  - name: Propuestas
+  - name: Contrataciones
+
+paths:
+  /api/v1/needs:
+    post:
+      tags: [Necesidades]
+      summary: Publica una necesidad (SRS RF120 a RF125)
+      description: >
+        Es la mitad del negocio que faltaba: antes solo el oferente podia
+        publicar, y eso dejaba fuera a quien tiene el problema y no sabe a quien
+        buscar. Hay un limite de necesidades abiertas por cuenta (RF125, RNF86).
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [titulo, descripcion, idCategoria]
+              properties:
+                titulo: { type: string, minLength: 5, maxLength: 150 }
+                descripcion: { type: string, minLength: 20, maxLength: 5000 }
+                idCategoria: { type: integer, minimum: 1 }
+                presupuestoEstimado:
+                  type: string
+                  nullable: true
+                  description: 'Importe como cadena: un DECIMAL no cabe en un double sin perder precision.'
+                fechaDeseada: { type: string, format: date-time, nullable: true }
+                ubicacionAproximada:
+                  type: string
+                  maxLength: 150
+                  nullable: true
+                  description: >
+                    Zona, no direccion (SRS 10.5). El tope de longitud es parte
+                    de esa decision: una cadena larga invita a escribir la
+                    direccion exacta.
+      responses:
+        '201': { description: Necesidad publicada }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '409': { description: Supero el limite de necesidades abiertas, o la categoria no esta disponible }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+    get:
+      tags: [Necesidades]
+      summary: Necesidades abiertas, para oferentes (SRS RF130, RF136)
+      description: >
+        NO es publica. Una necesidad describe un problema concreto en una zona
+        concreta, y abrirla sin sesion la convertiria en material para quien
+        busque casas vacias. Tampoco revela quien publico: para contactar se
+        envia una propuesta, que es toda la gracia de la intermediacion.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+        - { name: idCategoria, in: query, schema: { type: integer } }
+        - { name: texto, in: query, schema: { type: string, minLength: 2, maxLength: 100 } }
+      responses:
+        '200': { description: Pagina de necesidades abiertas, sin autor ni contacto }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+
+  /api/v1/needs/mine:
+    get:
+      tags: [Necesidades]
+      summary: Las necesidades propias, con su estado
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+      responses:
+        '200': { description: Pagina de necesidades propias }
+
+  /api/v1/needs/{id}:
+    get:
+      tags: [Necesidades]
+      summary: Detalle de una necesidad abierta, para oferentes
+      description: 'Cerrada, vencida o adjudicada responde 404: deja de ser publica.'
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Detalle sin autor ni contacto }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+    patch:
+      tags: [Necesidades]
+      summary: Edita una necesidad propia y abierta (SRS RF126)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                titulo: { type: string }
+                descripcion: { type: string }
+                presupuestoEstimado: { type: string, nullable: true }
+      responses:
+        '200': { description: Necesidad actualizada }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+        '409': { description: Solo se modifica una necesidad abierta y vigente }
+
+  /api/v1/needs/{id}/close:
+    post:
+      tags: [Necesidades]
+      summary: Cierra o cancela una necesidad propia (SRS RF127)
+      description: >
+        CERRADA y CANCELADA son estados distintos: la primera dice "ya no lo
+        necesito" y la segunda "me arrepenti". Las propuestas enviadas quedan
+        como estaban; descartarlas ocultaria que existieron.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [estado]
+              properties:
+                estado: { type: string, enum: [CERRADA, CANCELADA] }
+                motivo: { type: string, maxLength: 255, nullable: true }
+      responses:
+        '204': { description: Necesidad cerrada }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+
+  /api/v1/needs/{id}/proposals:
+    post:
+      tags: [Propuestas]
+      summary: Envia una propuesta a una necesidad (SRS RF137, RF138)
+      description: >
+        El prestador se resuelve desde el usuario del token, nunca del cuerpo.
+        Su perfil tiene que estar validado. No se puede proponer sobre la propia
+        necesidad, ni adjuntar un servicio de otro oferente.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [precio, tiempoEstimado, mensaje]
+              properties:
+                precio: { type: string, pattern: '^\d{1,10}(\.\d{1,2})?$' }
+                tiempoEstimado: { type: integer, minimum: 1, maximum: 3650, description: Dias }
+                mensaje: { type: string, minLength: 10, maxLength: 2000 }
+                idServicio: { type: integer, nullable: true }
+      responses:
+        '201': { description: Propuesta enviada }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+        '409': { description: Ya tiene una propuesta vigente, o la necesidad no admite mas }
+    get:
+      tags: [Propuestas]
+      summary: Propuestas de una necesidad, SOLO para su autor (SRS RF146, RF148)
+      description: >
+        Ningun otro oferente ve esta lista. Si la viera, sabria contra que
+        precios compite y la puja dejaria de ser ciega: bastaria rebajar un peso
+        la mas barata para ganar siempre.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Propuestas recibidas }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+
+  /api/v1/needs/{id}/award:
+    post:
+      tags: [Propuestas]
+      summary: Adjudica una propuesta (SRS RF149 a RF153)
+      description: >
+        La operacion mas delicada del servicio: la necesidad pasa a ADJUDICADA,
+        la propuesta elegida a ACEPTADA, TODAS las demas a DESCARTADA y nace la
+        solicitud ya ACEPTADA, todo en una transaccion. La contratacion no pasa
+        por PENDIENTE porque el acuerdo ya se alcanzo al adjudicar. El precio y
+        el plazo se copian de la propuesta y quedan congelados.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [idPropuesta]
+              properties: { idPropuesta: { type: integer, minimum: 1 } }
+      responses:
+        '201': { description: Contratacion creada, en estado ACEPTADA }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+        '409': { description: La necesidad ya no esta abierta o la propuesta ya fue decidida }
+
+  /api/v1/proposals/mine:
+    get:
+      tags: [Propuestas]
+      summary: Las propuestas propias (SRS RF145)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+      responses:
+        '200': { description: Pagina de propuestas propias }
+
+  /api/v1/proposals/{id}:
+    patch:
+      tags: [Propuestas]
+      summary: Modifica una propuesta propia aun no decidida
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                precio: { type: string }
+                tiempoEstimado: { type: integer }
+                mensaje: { type: string }
+      responses:
+        '200': { description: Propuesta actualizada }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+    delete:
+      tags: [Propuestas]
+      summary: Retira una propuesta propia (SRS RF144)
+      description: 'Pasa a RETIRADA. No borra: deja constancia de que existio.'
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '204': { description: Propuesta retirada }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+
+  /api/v1/requests:
+    post:
+      tags: [Contrataciones]
+      summary: Contrata un servicio del catalogo (SRS RF60)
+      description: >
+        Nace PENDIENTE y espera que el oferente acepte. El prestador NO viene
+        del cuerpo: se deduce del servicio, para que nadie pueda dirigir una
+        solicitud a un oferente que no ofrece ese servicio. Tampoco se puede
+        contratar el servicio propio.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [idServicio, descripcionProblema]
+              properties:
+                idServicio: { type: integer, minimum: 1 }
+                descripcionProblema: { type: string, minLength: 10, maxLength: 5000 }
+      responses:
+        '201': { description: Solicitud creada, en estado PENDIENTE }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+        '409': { description: El servicio no esta disponible, o seria contratarse a si mismo }
+
+  /api/v1/requests/mine:
+    get:
+      tags: [Contrataciones]
+      summary: Las contrataciones propias, en el papel que se indique
+      description: >
+        El papel es un parametro porque la MISMA persona puede ser las dos cosas
+        (SRS RF165). Deducirlo del rol dejaria a quien tiene ambos viendo solo
+        una de sus dos bandejas. El listado nunca revela contacto, ni de las ya
+        aceptadas: para eso esta el detalle, y asi una sola peticion no vuelca
+        todos los contactos de una vez.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+        - name: como
+          in: query
+          schema: { type: string, enum: [SOLICITANTE, OFERENTE], default: SOLICITANTE }
+      responses:
+        '200': { description: Pagina de contrataciones }
+
+  /api/v1/requests/{id}:
+    get:
+      tags: [Contrataciones]
+      summary: Detalle de una contratacion propia (SRS RF156, RNF84)
+      description: >
+        Esta es la frontera que sostiene toda la intermediacion. El telefono y
+        el correo no se publican en el catalogo ni en el perfil: aparecen SOLO
+        aqui y SOLO cuando la solicitud paso de PENDIENTE. Antes del acuerdo no
+        hay nada que coordinar, y revelarlo convertiria la plataforma en un
+        directorio del que las partes se van sin dejar rastro. Se devuelve el
+        contacto de la contraparte, no los dos.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Detalle; `contacto` es null mientras no haya acuerdo }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+
+  /api/v1/requests/{id}/status:
+    patch:
+      tags: [Contrataciones]
+      summary: Avanza el estado de una contratacion (SRS RF62 a RF66)
+      description: >
+        Quien pide el cambio se traduce a SOLICITANTE u OFERENTE segun su papel
+        en ESTA solicitud, y la tabla de transiciones decide si ese actor puede
+        hacerlo. CANCELADA no entra por aqui: tiene su propia ruta porque exige
+        motivo del catalogo y produce una clasificacion. Permitirla aqui seria
+        una puerta trasera que salta toda la politica de cancelacion.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [destino]
+              properties:
+                destino: { type: string, enum: [ACEPTADA, RECHAZADA, COMPLETADA] }
+                motivo: { type: string, maxLength: 255, nullable: true }
+      responses:
+        '200': { description: Estado cambiado }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+        '409': { description: Ese actor no puede hacer esa transicion desde ese estado }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+
+  /api/v1/requests/{id}/cancel:
+    post:
+      tags: [Contrataciones]
+      summary: Cancela una contratacion (SRS 10.2, RF174 a RF186)
+      description: >
+        La politica esta tomada del transporte por aplicacion, con una
+        diferencia que lo cambia todo: aqui NO hay cobro, asi que todo el peso
+        disuasorio recae sobre la reputacion y la visibilidad.
+
+        Son dos relojes distintos. La gracia se mide desde que se ACEPTO, y
+        permite deshacer un arrepentimiento inmediato sin coste. El resto se
+        mide desde la FECHA ACORDADA, porque lo que dana a la contraparte no es
+        que cancelen, sino quedarse sin margen para reorganizarse.
+
+        Un motivo que traslada la falta o que exige validacion NO surte efecto
+        por elegirlo: abre revision. Si bastara con elegirlo, todo el mundo
+        elegiria ese.
+
+        Si el OFERENTE se retracta de una adjudicacion, la necesidad vuelve a
+        ABIERTA con la vigencia ampliada: al adjudicar se descartaron todas las
+        demas propuestas, asi que el solicitante quedo peor que antes de
+        publicar, y como no hay dinero con el que compensar, devolverle la
+        necesidad al mercado es la unica reparacion posible.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [codigoMotivo]
+              properties:
+                codigoMotivo:
+                  type: string
+                  minLength: 2
+                  maxLength: 40
+                  description: >
+                    Codigo del catalogo `motivo_cancelacion`. Es una tabla y no
+                    una enumeracion del codigo porque sus efectos son parametros
+                    que hay que recalibrar con datos reales.
+                detalle: { type: string, maxLength: 500, nullable: true }
+                fechaAcordada: { type: string, format: date-time, nullable: true }
+      responses:
+        '200':
+          description: >
+            Cancelada. Devuelve la franja, el peso y si entra en revision: se le
+            dice a quien cancela que efecto tuvo, porque lo que no se ve no
+            corrige el comportamiento.
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+        '409': { description: Ese actor no puede cancelar desde ese estado }
+        '422': { description: Motivo no valido, o falta la explicacion que ese motivo exige }

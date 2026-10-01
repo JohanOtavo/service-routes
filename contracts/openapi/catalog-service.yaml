@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: Punto Amigo - catalog-service
+  version: 0.1.0
+  description: >
+    Servicios publicados, categorias y busqueda (SRS RF40 a RF53). La busqueda
+    es la unica parte del sistema abierta sin sesion, porque sin ella quien
+    llega por primera vez no puede ver que ofrece la plataforma. Ningun
+    resultado lleva datos de contacto.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Catalogo
+  - name: Busqueda
+  - name: Categorias
+
+paths:
+  /api/v1/services:
+    get:
+      tags: [Busqueda]
+      summary: Busqueda publica del catalogo (SRS RF45 a RF49)
+      description: >
+        Solo servicios ACTIVE de prestadores ACTIVE. Ordena por puntuacion y
+        desempata por identificador, para que la paginacion no repita ni se
+        salte filas. El texto se consulta contra un indice FULLTEXT en modo
+        lenguaje natural, con el termino como parametro.
+      security: []
+      parameters:
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+        - { name: texto, in: query, schema: { type: string, minLength: 2, maxLength: 100 } }
+        - { name: idCategoria, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: idPrestador, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Pagina de resultados, con prestador y reputacion }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+    post:
+      tags: [Catalogo]
+      summary: Publica un servicio (SRS RF50)
+      description: >
+        Exige rol OFERENTE y un perfil de prestador validado. El dueno sale del
+        token, nunca del cuerpo. Al publicarlo se crea su resumen de
+        calificaciones en cero, en la misma transaccion: sin esa fila, la
+        primera calificacion no tendria donde sumarse y se perderia.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [nombre, descripcion, idCategoria]
+              properties:
+                nombre: { type: string, minLength: 3, maxLength: 150 }
+                descripcion: { type: string, minLength: 10, maxLength: 5000 }
+                idCategoria: { type: integer, minimum: 1 }
+      responses:
+        '201': { description: Servicio publicado }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '409': { description: Necesita un perfil de prestador validado }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+
+  /api/v1/services/mine:
+    get:
+      tags: [Catalogo]
+      summary: El catalogo propio del oferente (SRS RF52)
+      description: >
+        Incluye los INACTIVE: su dueno tiene que verlos para saber que siguen
+        ahi. No lleva resumen de calificaciones; es la vista de gestion, no el
+        escaparate.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+      responses:
+        '200': { description: Pagina de servicios propios }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+
+  /api/v1/services/{id}:
+    get:
+      tags: [Busqueda]
+      summary: Ficha publica de un servicio (SRS RF46)
+      description: >
+        Pasa por el mismo filtro que la busqueda. Si solo comprobara el estado
+        del servicio, el de un prestador suspendido seguiria siendo accesible
+        por su enlace directo aunque hubiera desaparecido del listado.
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Ficha con prestador y reputacion }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+    patch:
+      tags: [Catalogo]
+      summary: Edita un servicio propio (SRS RF51)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                nombre: { type: string }
+                descripcion: { type: string }
+                idCategoria: { type: integer }
+      responses:
+        '200': { description: Servicio actualizado }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+    delete:
+      tags: [Catalogo]
+      summary: Retira un servicio del escaparate (SRS RF51)
+      description: 'Pasa a INACTIVE. No borra: las contrataciones pasadas lo siguen referenciando.'
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '204': { description: Servicio desactivado }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+
+  /api/v1/categories:
+    get:
+      tags: [Categorias]
+      summary: Categorias activas (SRS RF44)
+      description: Publica, porque hace falta para filtrar la busqueda sin sesion.
+      security: []
+      responses:
+        '200': { description: Categorias disponibles }
+    post:
+      tags: [Categorias]
+      summary: Crea una categoria (SRS RF41)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [nombre]
+              properties:
+                nombre: { type: string, minLength: 3, maxLength: 100 }
+                descripcion: { type: string, maxLength: 255, nullable: true }
+      responses:
+        '201': { description: Categoria creada }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '409': { description: Ya existe una categoria con ese nombre }
+
+  /api/v1/categories/{id}:
+    patch:
+      tags: [Categorias]
+      summary: Renombra o desactiva una categoria (SRS RF42, RF43)
+      description: >
+        Desactivarla la saca del formulario y del filtro, pero los servicios que
+        ya la usan la conservan: cambiarlos seria reclasificar trabajo ajeno.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                nombre: { type: string, minLength: 3, maxLength: 100 }
+                activa: { type: boolean }
+      responses:
+        '200': { description: Categoria actualizada }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }

@@ -1,0 +1,106 @@
+# Piezas comunes a todos los contratos de Punto Amigo.
+#
+# Viven en el repositorio del codigo y no en el de documentacion a proposito:
+# una prueba las compara con las rutas que Express registra de verdad
+# (services/api-gateway/tests/openapi-coverage.unit.test.ts), y eso solo se
+# puede hacer si el contrato esta donde el codigo.
+openapi: 3.0.3
+info:
+  title: Punto Amigo - componentes compartidos
+  version: 0.1.0
+  description: >
+    No se despliega por si solo. Los demas documentos lo referencian.
+paths: {}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Access token de vida corta (15 minutos como maximo) que entrega
+        /api/v1/auth/login. El cliente lo guarda en memoria, nunca en
+        localStorage. El token de refresco viaja aparte, en una cookie httpOnly.
+
+  parameters:
+    pagina:
+      name: pagina
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 10000 }
+    tamano:
+      name: tamano
+      in: query
+      required: false
+      description: Tope de 50. Una peticion mayor se rechaza, no se recorta en silencio.
+      schema: { type: integer, minimum: 1, maximum: 50 }
+    correlationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: Identificador que atraviesa todos los servicios (RNF78).
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message, correlationId]
+      properties:
+        code:
+          type: string
+          description: Codigo estable; el mensaje puede cambiar, este no.
+          example: NOT_FOUND
+        message:
+          type: string
+          description: Texto para la persona. Nunca incluye detalles internos.
+        correlationId: { type: string, format: uuid }
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+    Pagina:
+      type: object
+      required: [elementos, total, pagina, tamano]
+      properties:
+        elementos: { type: array, items: { type: object } }
+        total: { type: integer }
+        pagina: { type: integer }
+        tamano: { type: integer }
+
+  responses:
+    SinAutenticar:
+      description: Falta el token o la sesion fue cerrada.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    SinPermiso:
+      description: Autenticado, pero el rol no alcanza.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NoEncontrado:
+      description: >
+        El recurso no existe, O existe y no es suyo. Las dos situaciones
+        responden igual a proposito: distinguirlas permitiria recorrer
+        identificadores para averiguar que recursos ajenos existen.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NoValido:
+      description: Los datos enviados no superan la validacion del esquema.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflicto:
+      description: La operacion choca con el estado actual del recurso.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    DemasiadasPeticiones:
+      description: Se supero el limite por IP o por usuario.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

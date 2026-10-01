@@ -1,0 +1,77 @@
+openapi: 3.0.3
+info:
+  title: Punto Amigo - notification-service
+  version: 0.1.0
+  description: >
+    Avisos dentro de la plataforma (SRS RF90 a RF95). La entrega por correo y
+    por push esta fuera del alcance.
+
+    NINGUNA ruta lleva el identificador del destinatario: siempre sale del
+    token. Si existiera /notifications/users/{id}, alguien acabaria llamandola
+    con el identificador de otro y el unico muro seria un `if` que hay que
+    recordar escribir en cada ruta nueva. Sin esa ruta, el error no se puede
+    cometer.
+
+    Lo que los avisos NO llevan importa tanto como lo que llevan: ni motivos
+    internos de moderacion, ni precios de propuestas ajenas, ni datos de
+    contacto de terceros.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Bandeja
+
+paths:
+  /api/v1/notifications:
+    get:
+      tags: [Bandeja]
+      summary: La bandeja propia (SRS RF93)
+      description: >
+        El destinatario es parte del WHERE de la consulta, no una comprobacion
+        posterior: asi es imposible que devuelva avisos ajenos. La respuesta no
+        repite el identificador del destinatario, porque quien lee su bandeja ya
+        sabe quien es.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+        - name: estado
+          in: query
+          schema: { type: string, enum: [NO_LEIDA, LEIDA] }
+      responses:
+        '200': { description: Pagina de avisos propios, con el contador de no leidas }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+
+  /api/v1/notifications/unread-count:
+    get:
+      tags: [Bandeja]
+      summary: Cuantos avisos propios estan sin leer (SRS RF95)
+      description: Para el distintivo de la interfaz, sin traerse la bandeja entera.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Numero de avisos no leidos }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+
+  /api/v1/notifications/read-all:
+    post:
+      tags: [Bandeja]
+      summary: Marca como leida toda la bandeja propia (SRS RF94)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Cuantos avisos cambiaron }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+
+  /api/v1/notifications/{id}/read:
+    post:
+      tags: [Bandeja]
+      summary: Marca un aviso como leido (SRS RF94)
+      description: >
+        Marcar el de otra persona responde 404, nunca 403. Marcarlo dos veces no
+        es un error: es pulsar dos veces.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '204': { description: Aviso marcado como leido }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }

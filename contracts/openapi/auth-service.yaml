@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: Punto Amigo - auth-service
+  version: 0.1.0
+  description: >
+    Identidad, sesiones y administracion de cuentas (SRS RF01 a RF21, RF96 a RF100).
+    Todas las rutas se consumen a traves del gateway.
+servers:
+  - url: http://localhost:8080
+    description: Gateway local
+
+tags:
+  - name: Sesion
+  - name: Cuentas
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [Sesion]
+      summary: Alta de una cuenta (SRS RF01)
+      description: >
+        Nace con el rol SOLICITANTE. El rol NO se puede pedir en el cuerpo:
+        cualquier campo no declarado se rechaza.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [nombre, correo, contrasena, confirmacionContrasena]
+              properties:
+                nombre: { type: string, minLength: 2, maxLength: 100 }
+                correo: { type: string, minLength: 3, maxLength: 150 }
+                contrasena: { type: string, minLength: 1, maxLength: 128 }
+                confirmacionContrasena: { type: string, minLength: 1, maxLength: 128 }
+                telefono: { type: string, maxLength: 20 }
+      responses:
+        '201': { description: Cuenta creada }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+        '409': { $ref: '_shared.yaml#/components/responses/Conflicto' }
+        '429': { $ref: '_shared.yaml#/components/responses/DemasiadasPeticiones' }
+
+  /api/v1/auth/login:
+    post:
+      tags: [Sesion]
+      summary: Inicio de sesion (SRS RF05)
+      description: >
+        Devuelve el access token en el cuerpo y el de refresco en una cookie
+        httpOnly, Secure y SameSite=Strict. El de refresco nunca va en el cuerpo:
+        asi un XSS no puede leerlo. Tras varios intentos fallidos la cuenta se
+        bloquea de forma progresiva (RF07).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [correo, contrasena]
+              properties:
+                correo: { type: string }
+                contrasena: { type: string }
+      responses:
+        '200': { description: Sesion iniciada }
+        '401':
+          description: >
+            Credenciales invalidas. La respuesta es la misma exista o no el
+            correo: distinguirlas convertiria esto en un verificador de cuentas.
+        '423': { description: Cuenta bloqueada temporalmente }
+        '429': { $ref: '_shared.yaml#/components/responses/DemasiadasPeticiones' }
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Sesion]
+      summary: Renueva el access token (SRS RF09)
+      description: >
+        Rota el token de refresco. Reutilizar uno ya rotado revoca la cadena
+        entera: es la senal de que alguien lo robo.
+      security: []
+      responses:
+        '200': { description: Token renovado }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Sesion]
+      summary: Cierra la sesion (SRS RF10)
+      description: >
+        Revoca el token de refresco y mete el access token en la lista de
+        denegacion. Sin eso seguiria sirviendo hasta expirar, porque un JWT es
+        autocontenido.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Sesion cerrada }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+
+  /api/v1/auth/me:
+    get:
+      tags: [Sesion]
+      summary: Identidad de la sesion en curso
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Identificador y roles }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+
+  /api/v1/auth/password-recovery:
+    post:
+      tags: [Sesion]
+      summary: Pide recuperar la contrasena (SRS RF12)
+      description: >
+        Responde 202 exista o no la cuenta. Distinguirlo permitiria averiguar
+        que correos estan registrados.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [correo]
+              properties: { correo: { type: string } }
+      responses:
+        '202': { description: Si el correo existe, recibira instrucciones }
+        '429': { $ref: '_shared.yaml#/components/responses/DemasiadasPeticiones' }
+
+  /api/v1/auth/password-reset:
+    post:
+      tags: [Sesion]
+      summary: Restablece la contrasena con el token recibido (SRS RF13)
+      description: Revoca todas las sesiones abiertas de esa cuenta.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token, contrasena, confirmacionContrasena]
+              properties:
+                token: { type: string, minLength: 20, maxLength: 200 }
+                contrasena: { type: string }
+                confirmacionContrasena: { type: string }
+      responses:
+        '204': { description: Contrasena cambiada }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+
+  /api/v1/users/{id}/roles:
+    patch:
+      tags: [Cuentas]
+      summary: Asigna un rol a una cuenta (SRS RF97)
+      description: >
+        Solo ADMINISTRADOR, comprobado en el servidor. Que la interfaz oculte la
+        opcion no es un control de acceso (RNF23).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [rol]
+              properties:
+                rol: { type: string, enum: [ADMINISTRADOR, OFERENTE, SOLICITANTE] }
+      responses:
+        '200': { description: Roles resultantes }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+
+  /api/v1/users/{id}/roles/{rol}:
+    delete:
+      tags: [Cuentas]
+      summary: Retira un rol de una cuenta (SRS RF97)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: rol, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Roles resultantes }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+
+  /api/v1/users/{id}/suspend:
+    post:
+      tags: [Cuentas]
+      summary: Suspende una cuenta (SRS RF98)
+      description: >
+        Revoca sus sesiones y emite UserAccountSuspended, que arrastra la
+        suspension al perfil de prestador (RF32).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [motivo]
+              properties: { motivo: { type: string, minLength: 3, maxLength: 255 } }
+      responses:
+        '204': { description: Cuenta suspendida }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+
+  /api/v1/users/{id}/reactivate:
+    post:
+      tags: [Cuentas]
+      summary: Reactiva una cuenta suspendida (SRS RF99)
+      description: >
+        NO devuelve el perfil de prestador a ACTIVE. RF32 define el arrastre en
+        un solo sentido, y un perfil puede estar suspendido por su propio
+        contenido: reactivarlo en automatico deshacia esa decision sin revision.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '204': { description: Cuenta reactivada }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+
+  /api/v1/users/{id}:
+    delete:
+      tags: [Cuentas]
+      summary: Borrado logico de una cuenta (SRS RF100)
+      description: >
+        La cuenta desaparece y su historial permanece. Un administrador no puede
+        eliminar la suya propia.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '204': { description: Cuenta eliminada }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '409': { $ref: '_shared.yaml#/components/responses/Conflicto' }

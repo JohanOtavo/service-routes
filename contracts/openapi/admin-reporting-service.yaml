@@ -1,0 +1,182 @@
+openapi: 3.0.3
+info:
+  title: Punto Amigo - admin-reporting-service
+  version: 0.1.0
+  description: >
+    Auditoria, parametros del sistema e informes (SRS RF101 a RF115).
+
+    TODAS las rutas exigen ADMINISTRADOR. El guardia se aplica con dos
+    middlewares de ambito declarados antes de ninguna ruta, no repetidos ruta a
+    ruta: asi una ruta nueva queda protegida por omision en lugar de por
+    acordarse.
+
+    La bitacora es append-only. No hay forma de modificar ni de borrar un
+    asiento, ni por el API ni por el repositorio: una bitacora corregible no
+    prueba nada.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Auditoria
+  - name: Parametros
+  - name: Informes
+
+paths:
+  /api/v1/admin/audit:
+    get:
+      tags: [Auditoria]
+      summary: Consulta la bitacora de auditoria (SRS RF101 a RF103)
+      description: >
+        `campoOrden` sale de una lista blanca porque ORDER BY no admite
+        parametros: el nombre de columna acaba concatenado al SQL, y esa lista
+        es lo unico que lo separa de una inyeccion.
+
+        Son dos fechas distintas a proposito. `ocurrido_at` responde cuando
+        paso, `registrado_at` cuando lo supimos. Investigar un retraso en la
+        cola de eventos necesita la segunda.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+        - { name: desde, in: query, schema: { type: string, format: date-time } }
+        - { name: hasta, in: query, schema: { type: string, format: date-time } }
+        - { name: idActor, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: accion, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: recursoTipo, in: query, schema: { type: string, maxLength: 40 } }
+        - { name: recursoId, in: query, schema: { type: string, maxLength: 64 } }
+        - { name: resultado, in: query, schema: { type: string, enum: [EXITO, FALLO, DENEGADO] } }
+        - { name: correlationId, in: query, schema: { type: string, format: uuid } }
+        - { name: campoOrden, in: query, schema: { type: string, enum: [ocurrido_at, registrado_at] } }
+        - { name: sentidoOrden, in: query, schema: { type: string, enum: [asc, desc] } }
+      responses:
+        '200': { description: Pagina de asientos }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '422': { description: Rango invertido, orden fuera de la lista blanca o filtro no declarado }
+
+  /api/v1/admin/parameters:
+    get:
+      tags: [Parametros]
+      summary: Parametros del sistema (SRS RF105)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+      responses:
+        '200': { description: Pagina de parametros }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+    put:
+      tags: [Parametros]
+      summary: Crea o cambia un parametro (SRS RF105)
+      description: >
+        El asiento de auditoria se escribe en la MISMA transaccion que el
+        cambio. Si fueran dos, un fallo entre ambas dejaria un parametro
+        cambiado sin rastro de quien lo cambio, que es justo el caso en el que
+        la bitacora tendria que servir.
+
+        Si el nombre del parametro suena a secreto, el asiento registra que hubo
+        un cambio y omite los valores. El depurador general censura por el
+        nombre de cada campo del detalle, y ahi los campos se llaman `clave`,
+        `anterior` y `nuevo`: ninguno suena a secreto, y sin embargo el valor
+        puede serlo.
+
+        El valor se guarda como texto pero se comprueba contra el tipo
+        declarado. Un umbral que diga `number` y valga "pronto" rompe al
+        servicio que lo convierta, en otro proceso y mucho despues.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [clave, valor, tipoDato]
+              properties:
+                clave:
+                  type: string
+                  pattern: '^[A-Z][A-Z0-9_]{1,79}$'
+                  description: >
+                    Mayusculas, digitos y guion bajo. Otros servicios lo leen
+                    por su nombre exacto; admitir espacios haria convivir dos
+                    parametros distintos para la misma idea.
+                valor: { type: string, minLength: 1, maxLength: 500 }
+                descripcion: { type: string, maxLength: 255, nullable: true }
+                tipoDato: { type: string, enum: [string, number, boolean] }
+      responses:
+        '200': { description: Parametro guardado }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+
+  /api/v1/admin/parameters/{clave}:
+    get:
+      tags: [Parametros]
+      summary: Un parametro por su clave
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clave, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Parametro }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
+
+  /api/v1/admin/reports/activity:
+    get:
+      tags: [Informes]
+      summary: Informe consolidado de actividad (SRS RF115)
+      description: >
+        Se construye sobre la bitacora de ESTE esquema. No hay un solo JOIN a
+        otro esquema: cada servicio es dueno de sus datos, y cruzar fronteras
+        aqui convertiria un informe en un acoplamiento que se rompe con cada
+        migracion ajena.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: desde, in: query, schema: { type: string, format: date-time } }
+        - { name: hasta, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200': { description: Totales, desglose por accion y serie diaria }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+
+  /api/v1/admin/reports/metrics:
+    get:
+      tags: [Informes]
+      summary: Metricas disponibles
+      description: Sin esto, habria que adivinar los nombres de metrica.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Nombres de metrica }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+
+  /api/v1/admin/reports/series:
+    get:
+      tags: [Informes]
+      summary: Serie de una metrica precalculada (SRS RF113)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: metrica, in: query, required: true, schema: { type: string, maxLength: 60 } }
+        - { name: dimension, in: query, schema: { type: string, maxLength: 60 } }
+        - { name: desde, in: query, schema: { type: string, format: date-time } }
+        - { name: hasta, in: query, schema: { type: string, format: date-time } }
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+      responses:
+        '200': { description: Pagina de puntos de la serie }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '422': { description: Falta la metrica o el rango de fechas esta invertido }
+
+  /api/v1/admin/backups:
+    get:
+      tags: [Informes]
+      summary: Estado de los respaldos y sus pruebas de restauracion (SRS RF106, RF107)
+      description: >
+        Solo lectura. Un respaldo que nunca se ha restaurado no es un respaldo,
+        asi que la fecha de la ultima prueba se devuelve junto al resto.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: esquema, in: query, schema: { type: string, maxLength: 60 } }
+        - { name: desde, in: query, schema: { type: string, format: date-time } }
+        - { name: hasta, in: query, schema: { type: string, format: date-time } }
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+      responses:
+        '200': { description: Pagina de respaldos }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }

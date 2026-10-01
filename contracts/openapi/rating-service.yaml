@@ -1,0 +1,134 @@
+openapi: 3.0.3
+info:
+  title: Punto Amigo - rating-service
+  version: 0.1.0
+  description: >
+    Calificaciones bidireccionales, reputacion por faceta y tasa de cancelacion
+    (SRS RF78 a RF85, RF164 a RF167, RF180 a RF183, RF192).
+
+    La regla que lo gobierna todo es el periodo ciego: las dos calificaciones de
+    una contratacion permanecen ocultas hasta que ambas existan o venza el
+    plazo. Sin ella nadie califica mal, porque quien va primero sabe que el otro
+    puede responder con un 1; entonces todo el mundo pone cinco estrellas y la
+    reputacion deja de medir nada.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Calificar
+  - name: Consultar
+  - name: Moderacion
+
+paths:
+  /api/v1/ratings:
+    post:
+      tags: [Calificar]
+      summary: Registra una calificacion (SRS RF78 a RF82, RF164)
+      description: >
+        No exige un rol concreto: califican las DOS partes, y quien contrata hoy
+        puede ser quien atiende manana. Quien decide si puede es el dominio, que
+        comprueba que esta persona fue parte de ESA solicitud; un guardia de rol
+        dejaria fuera al oferente calificando al solicitante.
+
+        Solo habilita una solicitud COMPLETADA, y se exige ademas su fecha de
+        cierre: un estado COMPLETADA sin fecha es una fila a medio sincronizar.
+
+        Nace OCULTA. `visibleAt` llega null y solo deja de serlo cuando la
+        contraparte califica o vence el plazo.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [idSolicitud, puntuacion]
+              properties:
+                idSolicitud: { type: integer, minimum: 1 }
+                puntuacion: { type: integer, minimum: 1, maximum: 5 }
+                comentario: { type: string, maxLength: 1000, nullable: true }
+      responses:
+        '201': { description: Calificacion registrada, aun oculta }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+        '404':
+          description: >
+            La solicitud no existe, o quien llama no fue parte de ella. Las dos
+            responden igual: confirmar que existe permitiria recorrer
+            identificadores y descubrir contrataciones ajenas.
+        '409': { description: Aun no esta completada, o esta parte ya califico }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+
+  /api/v1/ratings/users/{id}:
+    get:
+      tags: [Consultar]
+      summary: Reputacion publica de una persona (SRS RF167, RF192)
+      description: >
+        Las dos facetas van separadas (RF165): ser buen oferente y ser buen
+        solicitante son cosas distintas, y promediarlas destruye informacion.
+        Alguien impecable atendiendo y desastroso contratando quedaria "normal",
+        y quien lo contrate no sabria cual de las dos le toca.
+
+        La tasa de cancelacion aparece SOLO a partir del primer umbral (RF192).
+        Al no haber cobro, la visibilidad es el unico instrumento disuasorio;
+        pero publicar el 0 % de todo el mundo no disuade a nadie y si expone a
+        quien cancelo una vez de forma justificada.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Reputacion por faceta }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+
+  /api/v1/ratings/users/{id}/received:
+    get:
+      tags: [Consultar]
+      summary: Calificaciones publicas que recibio una persona (SRS RF83)
+      description: >
+        Solo las ya reveladas y no retiradas por moderacion. No incluye el
+        emisor ni la marca de moderacion: decir que una calificacion fue
+        retirada confirma que existio y que alguien se quejo de ella.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+        - name: faceta
+          in: query
+          schema: { type: string, enum: [COMO_OFERENTE, COMO_SOLICITANTE], default: COMO_OFERENTE }
+      responses:
+        '200': { description: Pagina de calificaciones publicas }
+        '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
+
+  /api/v1/ratings/services/{id}:
+    get:
+      tags: [Consultar]
+      summary: Calificaciones y promedio de un servicio (SRS RF83, RF84)
+      description: >
+        El promedio se calcula desde SUMA y CONTEO de las visibles, no
+        arrastrando la media anterior: sumar sobre un valor ya redondeado a dos
+        decimales acumula error, y ademas una calificacion puede volverse
+        visible mucho despues de registrarse.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { $ref: '_shared.yaml#/components/parameters/pagina' }
+        - { $ref: '_shared.yaml#/components/parameters/tamano' }
+      responses:
+        '200': { description: Promedio, total y pagina de calificaciones }
+
+  /api/v1/ratings/{id}:
+    delete:
+      tags: [Moderacion]
+      summary: Retira una calificacion por moderacion (SRS RF85)
+      description: >
+        Solo ADMINISTRADOR, nunca el autor: si el autor pudiera retirar la suya,
+        bastaria con hacerlo cada vez que la contraparte respondiera mal y la
+        reputacion solo guardaria elogios. Retirarla recalcula la reputacion en
+        la misma operacion, para que el numero deje de incluirla de verdad.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '204': { description: Calificacion retirada y reputacion recalculada }
+        '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
+        '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
