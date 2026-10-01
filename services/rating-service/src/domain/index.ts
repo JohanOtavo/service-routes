@@ -276,6 +276,15 @@ export class Calificacion {
     this.props.ocultaPorModeracion = true;
   }
 
+  /**
+   * Vista para QUIEN LA ESCRIBIO. Incluye la puntuacion siempre, tambien en
+   * periodo ciego: el autor tiene derecho a ver lo que puso, y ocultarselo no
+   * protege a nadie porque ya lo sabe.
+   *
+   * No expone `idEmisor` ni `ocultaPorModeracion`. Lo segundo importa: decir
+   * que una calificacion fue retirada confirma que existio y que alguien se
+   * quejo de ella (SRS RF85).
+   */
   toJSON(): Record<string, unknown> {
     return {
       id: this.props.id,
@@ -288,6 +297,28 @@ export class Calificacion {
       fecha: this.props.fecha.toISOString(),
       visibleAt: this.props.visibleAt?.toISOString() ?? null,
     };
+  }
+
+  /**
+   * Vista para TERCEROS. Se niega mientras la calificacion no sea publica.
+   *
+   * `toJSON()` no puede servir al listado publico: devuelve la puntuacion
+   * aunque `visibleAt` siga en NULL, y entonces el periodo ciego dependeria de
+   * que cada consulta recuerde filtrar. RF166 se sostiene sobre que nadie vea
+   * la nota antes de tiempo, asi que la unica forma segura es que el camino
+   * equivocado no exista: aqui falla, en lugar de publicar de mas.
+   *
+   * Lanza y no devuelve null a proposito. Un null se cuela en una lista como
+   * hueco silencioso; una excepcion delata al llamador que no filtro.
+   */
+  vistaPublica(): Record<string, unknown> {
+    if (!this.esPublica) {
+      throw AppError.conflict('Esta calificacion no es publica todavia.', {
+        idCalificacion: this.props.id,
+        motivo: this.props.ocultaPorModeracion ? 'MODERACION' : 'PERIODO_CIEGO',
+      });
+    }
+    return this.toJSON();
   }
 }
 
