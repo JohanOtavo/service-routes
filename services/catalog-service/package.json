@@ -1,0 +1,20 @@
+{
+  "name": "@punto-amigo/catalog-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Servicios publicados, categorias y busqueda.",
+  "main": "dist/main.js",
+  "scripts": { "build": "tsc --build" },
+  "dependencies": {
+    "@punto-amigo/shared": "0.1.0",
+    "@punto-amigo/service-kit": "0.1.0",
+    "@punto-amigo/messaging": "0.1.0",
+    "express": "4.21.2",
+    "express-rate-limit": "7.5.0",
+    "helmet": "8.0.0",
+    "knex": "3.1.0",
+    "mysql2": "3.11.5",
+    "zod": "3.24.1"
+  },
+  "devDependencies": { "@types/express": "4.17.21", "supertest": "7.0.0", "@types/supertest": "6.0.2" }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@punto-amigo/service-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Infraestructura comun a los microservicios: transaccion ambiental, middleware HTTP, reloj y publicador outbox.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "dependencies": {
+    "@punto-amigo/shared": "0.1.0",
+    "express": "4.21.2",
+    "knex": "3.1.0",
+    "zod": "3.24.1"
+  },
+  "devDependencies": {
+    "@types/express": "4.17.21"
+  }
+}

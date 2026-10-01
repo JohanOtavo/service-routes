@@ -119,6 +119,7 @@ class SesionesFalsas implements ISessionRepository {
   async revocar(): Promise<void> {}
   async revocarCadena(): Promise<void> {}
   async marcarRotada(): Promise<void> {}
+  async revocarTodasDe(): Promise<void> {}
   async denegarAccessToken(): Promise<void> {}
 }
 
