@@ -254,6 +254,19 @@ export class Calificacion {
   get enPeriodoCiego(): boolean {
     return this.props.visibleAt === null;
   }
+  /**
+   * Retirada por un administrador.
+   *
+   * Lo expone para que la persistencia escriba la columna tal cual, en vez de
+   * deducirla combinando `esPublica` con `visibleAt`. Una deduccion asi
+   * funciona hoy y se rompe el dia que alguien anada un tercer motivo de
+   * ocultacion. No sale en `toJSON()`: decir que una calificacion fue retirada
+   * confirma que existio y que alguien se quejo de ella.
+   */
+  get ocultaPorModeracion(): boolean {
+    return this.props.ocultaPorModeracion;
+  }
+
   /** Publica: revelada y no retirada por un administrador (SRS RF85). */
   get esPublica(): boolean {
     return this.props.visibleAt !== null && !this.props.ocultaPorModeracion;
@@ -702,4 +715,102 @@ export class TasaCancelacion {
 /** Inicio de la ventana movil a partir de su duracion en dias (SRS RF180). */
 export function inicioDeVentana(ahora: Date, dias: number): Date {
   return new Date(ahora.getTime() - dias * 86_400_000);
+}
+
+// ─── Puertos de salida ──────────────────────────────────────────────────────
+//
+// Las interfaces viven junto al dominio que las necesita y las implementaciones
+// en infrastructure/. El reloj y el publicador de eventos los aporta
+// @punto-amigo/service-kit (IClock, IEventPublisher).
+
+export interface Pagina<T> {
+  elementos: readonly T[];
+  total: number;
+  pagina: number;
+  tamano: number;
+}
+
+export interface ICalificacionRepository {
+  findById(id: number): Promise<Calificacion | null>;
+  /** La de ESTA solicitud en ESTA direccion. Es la clave unica de la tabla. */
+  findPorSolicitudYDireccion(
+    idSolicitud: number,
+    direccion: Direccion
+  ): Promise<Calificacion | null>;
+  save(calificacion: Calificacion, creadoPor: number): Promise<Calificacion>;
+  update(calificacion: Calificacion): Promise<void>;
+  /**
+   * Las que recibio una persona en una faceta, SOLO las publicas.
+   * El listado publico nunca debe poder devolver una en periodo ciego.
+   */
+  listarPublicasDeReceptor(
+    idReceptor: number,
+    faceta: Faceta,
+    pagina: number,
+    tamano: number
+  ): Promise<Pagina<Calificacion>>;
+  listarPublicasDeServicio(
+    idServicio: number,
+    pagina: number,
+    tamano: number
+  ): Promise<Pagina<Calificacion>>;
+  /** Suma y conteo de las VISIBLES: es lo que alimenta la media (SRS RF84). */
+  agregadoDeReceptor(idReceptor: number, faceta: Faceta): Promise<AgregadoPuntuaciones>;
+  agregadoDeServicio(idServicio: number): Promise<AgregadoPuntuaciones>;
+  /**
+   * Las que siguen ocultas y ya vencieron el plazo.
+   *
+   * Las busca el proceso que levanta periodos ciegos. Va en lotes porque una
+   * consulta sin tope podria traer meses de atraso de golpe si el proceso
+   * estuvo parado.
+   */
+  listarVencidas(limite: Date, lote: number): Promise<Calificacion[]>;
+}
+
+export interface IReputacionRepository {
+  buscar(idUsuario: number, faceta: Faceta): Promise<Reputacion | null>;
+  guardar(reputacion: Reputacion): Promise<void>;
+}
+
+export interface ITasaCancelacionRepository {
+  buscar(idUsuario: number, faceta: Faceta): Promise<TasaCancelacion | null>;
+  guardar(tasa: TasaCancelacion): Promise<void>;
+  /**
+   * Resume la ventana movil desde el detalle de `cancelacion_ref`.
+   *
+   * Se calcula leyendo las filas en lugar de arrastrar un acumulado porque la
+   * ventana es movil: lo que sale de ella hay que restarlo. Con solo el
+   * acumulado la tasa no podria bajar nunca y una mala racha marcaria a alguien
+   * de forma permanente.
+   */
+  resumirVentana(idUsuario: number, faceta: Faceta, desde: Date): Promise<VentanaCancelacion>;
+  /**
+   * Denominador de la tasa: contrataciones CERRADAS en la ventana.
+   *
+   * Cuentan las completadas y las canceladas, no solo las completadas: si solo
+   * se contaran las que salieron bien, cancelar reduciria el denominador a la
+   * vez que sube el numerador y la tasa se dispararia el doble de rapido de lo
+   * que corresponde.
+   *
+   * La faceta decide en que lado de la solicitud se mira a la persona: como
+   * oferente se la cuenta por las que atendio, como solicitante por las que
+   * contrato.
+   */
+  contarContrataciones(idUsuario: number, faceta: Faceta, desde: Date): Promise<number>;
+  /** Guarda la cancelacion imputada. Idempotente: el evento puede repetirse. */
+  registrarCancelacion(cancelacion: CancelacionImputada): Promise<void>;
+}
+
+/** Replica de la solicitud, alimentada por eventos de request-service. */
+export interface ISolicitudRefRepository {
+  buscar(idSolicitud: number): Promise<SolicitudCalificable | null>;
+  /**
+   * `idPrestador` va aparte y no dentro de `SolicitudCalificable`.
+   *
+   * La tabla lo guarda para poder rastrear la contratacion hasta el perfil, pero
+   * ninguna regla de reputacion lo usa: la reputacion se mide en PERSONAS, no en
+   * perfiles, porque la misma persona puede ser calificada en ambas facetas
+   * (SRS RF165). Meterlo en el tipo del dominio invitaria a decidir con el.
+   */
+  upsert(solicitud: SolicitudCalificable, idPrestador: number): Promise<void>;
 }

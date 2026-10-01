@@ -11,6 +11,8 @@
  */
 'use strict';
 
+const { randomUUID } = require('node:crypto');
+
 const { hash } = require('@node-rs/argon2');
 
 /**
@@ -110,6 +112,37 @@ exports.seed = async function seed(knex) {
         asignado_por: null,
       }))
     );
+
+    /**
+     * El seed tambien escribe el evento de alta en el outbox.
+     *
+     * Sin esto, el usuario existe en pa_auth y NO existe para nadie mas: los
+     * demas esquemas guardan una replica `usuario_ref` que se alimenta de
+     * `UserRegistered`, y varias tablas la tienen como clave foranea. El
+     * resultado era que una cuenta sembrada podia iniciar sesion pero no crear
+     * una solicitud, porque la FK no encontraba a su propio dueno.
+     *
+     * Se escribe en el outbox y no se publica aqui a proposito: el relevo de
+     * auth-service lo envia al arrancar, por el mismo camino que cualquier alta
+     * real. Asi el seed ejercita la ruta de verdad en lugar de rodearla.
+     */
+    await knex('outbox_event').insert({
+      event_id: randomUUID(),
+      event_name: 'UserRegistered',
+      event_version: 1,
+      aggregate_type: 'Usuario',
+      aggregate_id: String(idUsuario),
+      correlation_id: randomUUID(),
+      causation_id: null,
+      payload: JSON.stringify({
+        userId: idUsuario,
+        nombre: u.nombre,
+        correo: u.correo,
+        roles: u.roles,
+        occurredAt: new Date().toISOString(),
+      }),
+      occurred_at: new Date(),
+    });
   }
 
   // eslint-disable-next-line no-console
