@@ -257,6 +257,27 @@ services:
         condition: service_completed_successfully
     networks: [punto-amigo]
 
+  notification-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    image: punto-amigo/notification-service:local
+    container_name: pa-notification
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      NODE_ENV: ${NODE_ENV:-development}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks: [punto-amigo]
+
   api-gateway:
     profiles: [apps]
     build:
@@ -274,6 +295,7 @@ services:
       UPSTREAM_REQUEST_URL: http://request-service:3004
       UPSTREAM_CATALOG_URL: http://catalog-service:3003
       UPSTREAM_RATING_URL: http://rating-service:3005
+      UPSTREAM_NOTIFICATION_URL: http://notification-service:3006
     ports:
       - '127.0.0.1:${GATEWAY_PORT:-8080}:8080'
     depends_on:

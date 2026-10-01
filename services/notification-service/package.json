@@ -1,11 +1,12 @@
 {
-  "name": "@punto-amigo/rating-service",
+  "name": "@punto-amigo/notification-service",
   "version": "0.1.0",
   "private": true,
-  "description": "Calificaciones bidireccionales, reputacion por faceta y tasa de cancelacion.",
+  "description": "Notificaciones al usuario: se crean a partir de eventos y se leen desde su bandeja.",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc --build"
+    "build": "tsc --build",
+    "test": "jest --selectProjects unit"
   },
   "dependencies": {
     "@punto-amigo/shared": "0.1.0",
@@ -18,9 +19,5 @@
     "mysql2": "3.24.5",
     "zod": "3.24.1"
   },
-  "devDependencies": {
-    "@types/express": "4.17.21",
-    "supertest": "7.0.0",
-    "@types/supertest": "6.0.2"
-  }
+  "devDependencies": { "@types/express": "4.17.21", "supertest": "7.0.0", "@types/supertest": "6.0.2" }
 }

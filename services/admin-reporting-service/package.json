@@ -1,11 +1,12 @@
 {
-  "name": "@punto-amigo/rating-service",
+  "name": "@punto-amigo/admin-reporting-service",
   "version": "0.1.0",
   "private": true,
-  "description": "Calificaciones bidireccionales, reputacion por faceta y tasa de cancelacion.",
+  "description": "Auditoria inmutable, parametros del sistema e informes construidos solo con eventos.",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc --build"
+    "build": "tsc --build",
+    "test": "jest --selectProjects unit"
   },
   "dependencies": {
     "@punto-amigo/shared": "0.1.0",
@@ -18,9 +19,5 @@
     "mysql2": "3.24.5",
     "zod": "3.24.1"
   },
-  "devDependencies": {
-    "@types/express": "4.17.21",
-    "supertest": "7.0.0",
-    "@types/supertest": "6.0.2"
-  }
+  "devDependencies": { "@types/express": "4.17.21", "supertest": "7.0.0", "@types/supertest": "6.0.2" }
 }
