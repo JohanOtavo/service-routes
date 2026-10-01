@@ -213,6 +213,29 @@ services:
         condition: service_completed_successfully
     networks: [punto-amigo]
 
+  catalog-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: services/catalog-service/Dockerfile
+    image: punto-amigo/catalog-service:local
+    container_name: pa-catalog
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      NODE_ENV: ${NODE_ENV:-development}
+    # Sin `depends_on` de rabbitmq: la busqueda del catalogo es lo primero que
+    # ve quien llega y no necesita eventos para funcionar.
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks: [punto-amigo]
+
   api-gateway:
     profiles: [apps]
     build:
@@ -228,6 +251,7 @@ services:
       UPSTREAM_AUTH_URL: http://auth-service:3001
       UPSTREAM_PROVIDER_URL: http://provider-service:3002
       UPSTREAM_REQUEST_URL: http://request-service:3004
+      UPSTREAM_CATALOG_URL: http://catalog-service:3003
     ports:
       - '127.0.0.1:${GATEWAY_PORT:-8080}:8080'
     depends_on:

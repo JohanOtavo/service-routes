@@ -261,6 +261,23 @@ export interface Logger {
 }
 
 /**
+ * Cuerpo que el analizador de JSON no pudo leer.
+ *
+ * `express.json()` lanza un SyntaxError con `status` 400 y `body` cuando el
+ * cuerpo esta mal formado. Sin distinguirlo, acaba como error interno: el
+ * cliente recibe un 500 que le dice que el servidor se rompio cuando el que se
+ * equivoco fue el, y cada peticion malformada ensucia los registros de errores
+ * reales. En la ruta de login, ademas, cualquiera puede provocarlo sin sesion.
+ */
+function esCuerpoIlegible(error: unknown): boolean {
+  return (
+    error instanceof SyntaxError &&
+    'body' in error &&
+    (error as unknown as { status?: number }).status === 400
+  );
+}
+
+/**
  * Manejador de errores central.
  *
  * Traduce cualquier fallo a la misma forma de respuesta. Un error no previsto se
@@ -270,7 +287,11 @@ export interface Logger {
 export function errorHandler(logger: Logger, exponerDetalle: boolean) {
   return (error: unknown, req: Request, res: Response, _next: NextFunction): void => {
     const appError =
-      error instanceof AppError ? error : AppError.internal(error, { path: req.path });
+      error instanceof AppError
+        ? error
+        : esCuerpoIlegible(error)
+          ? AppError.validation('El cuerpo de la peticion no es JSON valido.')
+          : AppError.internal(error, { path: req.path });
 
     if (appError.code === ErrorCode.INTERNAL) {
       logger.error('error no controlado', {
