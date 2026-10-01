@@ -33,6 +33,22 @@ export async function runInTransaction<T>(knex: Knex, fn: () => Promise<T>): Pro
   return knex.transaction((trx) => almacen.run(trx, fn));
 }
 
+/**
+ * Adopta una transaccion que ya existe, sin abrir otra.
+ *
+ * La usa el consumidor de eventos: el broker le entrega la transaccion en la
+ * que tambien se escribe la marca de "evento ya procesado", y el efecto del
+ * manejador tiene que ir en ESA, no en una nueva.
+ *
+ * No vale `runInTransaction(trx, fn)`. Esa funcion no encuentra transaccion en
+ * el contexto —el manejador corre fuera de el— y llamaria a `trx.transaction()`,
+ * que en Knex abre un SAVEPOINT anidado. Funcionaria, pero anadiria un punto de
+ * guardado por evento sin ninguna razon. Esto solo ata la que ya hay.
+ */
+export async function useTransaction<T>(trx: Knex.Transaction, fn: () => Promise<T>): Promise<T> {
+  return almacen.run(trx, fn);
+}
+
 /** Conexion a usar: la transaccion en curso o, si no hay, la conexion normal. */
 export function currentDb(knex: Knex): Knex | Knex.Transaction {
   return almacen.getStore() ?? knex;

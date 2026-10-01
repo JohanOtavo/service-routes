@@ -65,6 +65,53 @@ export function validateBody(schema: ZodTypeAny) {
 
 
 /**
+ * Valida la cadena de consulta y la sustituye por el resultado tipado.
+ *
+ * Hace falta aparte de `validateBody` porque un GET no tiene cuerpo y sus
+ * filtros llegan igual desde el cliente. Sin esto, `?tamano=99999` o
+ * `?pagina=-1` entran como texto hasta el repositorio.
+ *
+ * Express entrega siempre cadenas, asi que el esquema debe convertir
+ * (`z.coerce.number()`); un `z.number()` a secas rechazaria `?pagina=2`.
+ */
+export function validateQuery(schema: ZodTypeAny) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const resultado = schema.safeParse(req.query);
+
+    if (!resultado.success) {
+      next(
+        AppError.validation(
+          'Los parametros de la consulta no son validos.',
+          resultado.error.issues.map((issue) => ({
+            field: issue.path.join('.') || 'consulta',
+            message: issue.message,
+          }))
+        )
+      );
+      return;
+    }
+
+    req.query = resultado.data as Request['query'];
+    next();
+  };
+}
+
+/**
+ * Identificador numerico de la ruta, o 404.
+ *
+ * Un `/api/v1/providers/abc` daria NaN, y una consulta por NaN devuelve vacio,
+ * que el caso de uso traduciria a 404 de todas formas. Comprobarlo aqui evita
+ * el viaje a la base y deja el motivo escrito en un solo sitio.
+ */
+export function idDeRuta(req: Request, nombre = 'id'): number {
+  const bruto = req.params[nombre];
+  if (bruto === undefined || !/^[1-9][0-9]{0,18}$/u.test(bruto)) {
+    throw AppError.notFound();
+  }
+  return Number(bruto);
+}
+
+/**
  * Exige que la peticion venga del gateway (SRS RNF24, RNF25).
  *
  * Los microservicios no son alcanzables desde la red publica, pero eso lo
@@ -102,6 +149,54 @@ export function requireInternalCaller(secreto: string) {
       return;
     }
 
+    next();
+  };
+}
+
+/**
+ * Identidad que el gateway inyecta tras verificar el token.
+ *
+ * Los nombres coinciden con `CABECERAS_INTERNAS` del gateway. No se importan de
+ * alli porque eso haria que cada servicio dependiera del gateway; el acoplamiento
+ * es el contrato de cabeceras, y vive escrito en los dos lados.
+ */
+const CABECERA_USUARIO = 'x-internal-user-id';
+const CABECERA_ROLES = 'x-internal-roles';
+const CABECERA_JTI = 'x-internal-jti';
+
+/**
+ * Toma la identidad de las cabeceras internas (SRS RNF24, RNF25).
+ *
+ * Los servicios de dentro NO vuelven a verificar el JWT. El gateway ya lo hizo:
+ * comprobo la firma con la clave publica, el algoritmo fijado y la lista de
+ * denegacion. Repetirlo aqui obligaria a cada servicio a tener la clave publica
+ * y una conexion a Redis, y a que una caida de Redis tumbara los ocho servicios
+ * en vez de uno.
+ *
+ * Lo que sostiene esta confianza es que el gateway BORRA estas cabeceras de toda
+ * peticion entrante antes de mirar nada, y que `requireInternalCaller` exige el
+ * secreto compartido. Sin esas dos cosas, cualquiera se haria administrador con
+ * una cabecera; con ellas, hace falta alcanzar el servicio por dentro de la red
+ * y conocer el secreto.
+ *
+ * Deniega por defecto: si la cabecera falta o no es un numero, no hay identidad
+ * y la peticion no pasa.
+ */
+export function requireGatewayIdentity() {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const bruto = req.header(CABECERA_USUARIO);
+
+    if (bruto === undefined || !/^[1-9][0-9]{0,18}$/u.test(bruto)) {
+      next(AppError.unauthenticated('Falta la identidad de la peticion.'));
+      return;
+    }
+
+    const roles = (req.header(CABECERA_ROLES) ?? '')
+      .split(',')
+      .map((rol) => rol.trim())
+      .filter((rol) => rol.length > 0);
+
+    req.auth = { userId: Number(bruto), roles, jti: req.header(CABECERA_JTI) ?? '' };
     next();
   };
 }

@@ -470,12 +470,45 @@ function recortarOpcional(valor: string | null | undefined): string | null | und
 // @punto-amigo/service-kit (IClock, IEventPublisher) y duplicar su interfaz
 // solo crearia dos contratos que divergen.
 
+/** Pagina de resultados. El tope lo impone el dominio, no el llamador. */
+export interface Pagina<T> {
+  elementos: readonly T[];
+  total: number;
+  pagina: number;
+  tamano: number;
+}
+
+/** Tope de pagina: sin el, una peticion puede pedir el directorio completo. */
+export const TAMANO_PAGINA_MAXIMO = 50;
+
+export function normalizarPaginacion(entrada: {
+  pagina?: number | undefined;
+  tamano?: number | undefined;
+}): { pagina: number; tamano: number } {
+  return {
+    pagina: Math.max(1, Math.floor(entrada.pagina ?? 1)),
+    tamano: Math.min(TAMANO_PAGINA_MAXIMO, Math.max(1, Math.floor(entrada.tamano ?? 20))),
+  };
+}
+
 export interface IPrestadorRepository {
   findById(id: number): Promise<Prestador | null>;
   findByUsuario(idUsuario: number): Promise<Prestador | null>;
   /** Persiste y devuelve el perfil con el identificador ya asignado. */
   save(prestador: Prestador, creadoPor: number): Promise<Prestador>;
   update(prestador: Prestador): Promise<void>;
+  /**
+   * Cola de revision administrativa (SRS RF26). Los mas antiguos primero: una
+   * cola que ordenara por lo mas reciente dejaria al final a quien lleva mas
+   * tiempo esperando.
+   */
+  listarPendientes(pagina: number, tamano: number): Promise<Pagina<Prestador>>;
+  /** Directorio publico: solo validados y no borrados (SRS RF25). */
+  listarVisibles(
+    filtros: { especialidad?: string | undefined },
+    pagina: number,
+    tamano: number
+  ): Promise<Pagina<Prestador>>;
 }
 
 /** Entrada de la bitacora de validaciones: append-only (SRS RF26, RF27). */

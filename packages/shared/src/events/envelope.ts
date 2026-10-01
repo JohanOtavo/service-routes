@@ -21,6 +21,16 @@ export const EventName = {
   // Prestadores
   ServiceProviderProfileCreated: 'ServiceProviderProfileCreated',
   ServiceProviderProfileValidated: 'ServiceProviderProfileValidated',
+  /**
+   * Datos del perfil cambiados por su dueno.
+   *
+   * NO esta en la lista de eventos del SRS; lo anade la implementacion porque
+   * sin el, `pa_catalog.prestador_ref` conserva el nombre y la especialidad
+   * antiguos para siempre, y el catalogo publica datos que ya no son ciertos.
+   * `ProviderStatusChanged` no sirve: lleva estado, no datos del perfil.
+   * Pendiente de reflejarlo en el SRS.
+   */
+  ServiceProviderProfileUpdated: 'ServiceProviderProfileUpdated',
   ProviderStatusChanged: 'ProviderStatusChanged',
   // Catalogo
   ServicePublished: 'ServicePublished',

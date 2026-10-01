@@ -113,11 +113,27 @@ export function resolverRuta(path: string): RutaUpstream | null {
   return mejor;
 }
 
+/** Un parametro de ruta publica solo puede ser un identificador numerico. */
+const IDENTIFICADOR = /^[1-9][0-9]{0,18}$/u;
+
 /**
  * Indica si una peticion concreta puede pasar sin token.
  *
- * Compara segmento a segmento para que `:id` case con cualquier valor, sin
- * construir una expresion regular al vuelo a partir de la ruta.
+ * Compara segmento a segmento, sin construir una expresion regular al vuelo a
+ * partir de la ruta.
+ *
+ * Un segmento `:id` case SOLO con digitos, y eso no es cosmetico: la lista
+ * blanca dice `GET /api/v1/providers/:id`, y si `:id` aceptara cualquier
+ * palabra, entonces `/api/v1/providers/me` y `/api/v1/providers/pending`
+ * tambien entrarian por ella. La primera dejaria de funcionar —llega sin token
+ * y el servicio la rechaza—, y la segunda es la cola de revision
+ * administrativa, que lista perfiles con telefono y correo. Que hoy el servicio
+ * de destino tenga su propio `requireRole` no arregla la lista blanca: la
+ * puerta no debe depender de que la segunda cerradura este echada.
+ *
+ * Tampoco admite el cero ni ceros a la izquierda: `/0` y `/007` no son
+ * identificadores que la base vaya a devolver, y aceptarlos solo amplia la
+ * superficie publica sin servir a nadie.
  */
 export function esPublica(ruta: RutaUpstream, metodo: string, path: string): boolean {
   if (ruta.publico === undefined) return false;
@@ -129,8 +145,10 @@ export function esPublica(ruta: RutaUpstream, metodo: string, path: string): boo
     const recibidos = path.split('/');
     if (esperados.length !== recibidos.length) return false;
 
-    return esperados.every(
-      (segmento, i) => segmento.startsWith(':') || segmento === recibidos[i]
-    );
+    return esperados.every((segmento, i) => {
+      const recibido = recibidos[i];
+      if (recibido === undefined) return false;
+      return segmento.startsWith(':') ? IDENTIFICADOR.test(recibido) : segmento === recibido;
+    });
   });
 }

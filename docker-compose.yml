@@ -163,6 +163,32 @@ services:
         condition: service_completed_successfully
     networks: [punto-amigo]
 
+  provider-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: services/provider-service/Dockerfile
+    image: punto-amigo/provider-service:local
+    container_name: pa-provider
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      NODE_ENV: ${NODE_ENV:-development}
+    # Sin `ports`: igual que auth-service, solo el gateway sale al host.
+    # Sin `depends_on` de rabbitmq: el servicio arranca con el broker caido y
+    # sus eventos esperan en el outbox. Esperarlo convertiria una caida del
+    # broker en una caida del catalogo de prestadores, que se consulta sin
+    # necesitar eventos.
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks: [punto-amigo]
+
   api-gateway:
     profiles: [apps]
     build:
@@ -176,6 +202,7 @@ services:
       REDIS_HOST: redis
       NODE_ENV: ${NODE_ENV:-development}
       UPSTREAM_AUTH_URL: http://auth-service:3001
+      UPSTREAM_PROVIDER_URL: http://provider-service:3002
     ports:
       - '127.0.0.1:${GATEWAY_PORT:-8080}:8080'
     depends_on:
@@ -183,6 +210,10 @@ services:
         condition: service_healthy
       auth-service:
         condition: service_healthy
+    # Solo espera a auth-service, no a los ocho servicios. Para los demas basta
+    # el cortocircuito del propio gateway: si uno no responde, devuelve 503 en
+    # SU prefijo. Esperarlos a todos haria que un servicio roto impidiera
+    # arrancar el gateway, y con el las rutas que si funcionaban.
     networks: [punto-amigo]
 
 volumes:

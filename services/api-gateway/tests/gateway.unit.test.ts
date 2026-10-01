@@ -53,6 +53,23 @@ describe('rutas publicas', () => {
     expect(esPublica(catalogo, 'GET', '/api/v1/services/42/ratings')).toBe(false);
   });
 
+  /**
+   * La lista blanca dice `:id`, y `:id` significa identificador, no cualquier
+   * palabra. Si casara con cualquier cosa, `/providers/pending` entraria por la
+   * entrada publica de `/providers/:id` y el gateway reenviaria la cola de
+   * revision administrativa —perfiles con telefono y correo— sin token.
+   */
+  it('un parametro de ruta publica solo case con un identificador numerico', () => {
+    const prestadores = resolverRuta('/api/v1/providers/1')!;
+
+    expect(esPublica(prestadores, 'GET', '/api/v1/providers/1')).toBe(true);
+    expect(esPublica(prestadores, 'GET', '/api/v1/providers/987654')).toBe(true);
+
+    for (const segmento of ['me', 'pending', 'admin', '0', '007', '-1', '1x', '']) {
+      expect(esPublica(prestadores, 'GET', `/api/v1/providers/${segmento}`)).toBe(false);
+    }
+  });
+
   it('las necesidades NO son publicas: solo las ven oferentes validados', () => {
     expect(esPublica(necesidades, 'GET', '/api/v1/needs')).toBe(false);
   });
