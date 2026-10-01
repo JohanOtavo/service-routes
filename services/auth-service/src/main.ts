@@ -3,6 +3,10 @@ import { z } from 'zod';
 import { baseEnvSchema, loadEnv, assertProductionSafety } from '@punto-amigo/shared';
 import { RegisterUserUseCase } from './application/use-cases/RegisterUser';
 import { AuthenticateUserUseCase } from './application/use-cases/AuthenticateUser';
+import { RefreshSessionUseCase } from './application/use-cases/RefreshSession';
+import { PasswordRecoveryUseCase } from './application/use-cases/PasswordRecovery';
+import { ManageAccountsUseCase } from './application/use-cases/ManageAccounts';
+import { KnexRecoveryTokenRepository } from './infrastructure/persistence/KnexRecoveryTokenRepository';
 import { KnexUsuarioRepository } from './infrastructure/persistence/KnexUsuarioRepository';
 import { KnexSessionRepository } from './infrastructure/persistence/KnexSessionRepository';
 import { KnexLockoutPolicy } from './infrastructure/persistence/KnexLockoutPolicy';
@@ -36,6 +40,7 @@ const envSchema = baseEnvSchema.extend({
   REFRESH_TOKEN_TTL_SECONDS: z.coerce.number().int().min(300).default(604800),
   REFRESH_COOKIE_NAME: z.string().min(1).default('pa_refresh'),
   REFRESH_COOKIE_SECURE: z.enum(['true', 'false']).default('true'),
+  PASSWORD_RECOVERY_TTL_SECONDS: z.coerce.number().int().min(300).max(86400).default(1800),
 
   LOGIN_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(5),
   LOGIN_LOCKOUT_BASE_SECONDS: z.coerce.number().int().min(1).default(30),
@@ -102,6 +107,7 @@ export function buildContainer(env: z.infer<typeof envSchema>) {
     maxSeconds: env.LOGIN_LOCKOUT_MAX_SECONDS,
     windowSeconds: env.LOGIN_ATTEMPT_WINDOW_SECONDS,
   });
+  const recuperacionRepo = new KnexRecoveryTokenRepository(knex);
   const eventos = new OutboxEventPublisher('auth-service');
   const clock = new SystemClock();
 
@@ -117,6 +123,17 @@ export function buildContainer(env: z.infer<typeof envSchema>) {
       eventos,
       clock
     ),
+    renovar: new RefreshSessionUseCase(usuarios, sesiones, tokens, clock),
+    recuperacion: new PasswordRecoveryUseCase(
+      usuarios,
+      recuperacionRepo,
+      sesiones,
+      hasher,
+      eventos,
+      clock,
+      env.PASSWORD_RECOVERY_TTL_SECONDS
+    ),
+    cuentas: new ManageAccountsUseCase(usuarios, sesiones, eventos, clock),
     sesiones,
     tokens,
     logger,

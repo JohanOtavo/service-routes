@@ -22,6 +22,29 @@ export class KnexSessionRepository implements ISessionRepository {
     return currentDb(this.knex);
   }
 
+  /**
+   * Conexion propia, SOLO para revocar cuando a continuacion se lanza.
+   *
+   * Hay un caso en que la revocacion no puede vivir en la transaccion de la
+   * peticion: al detectar el reuso de un refresh token se invalida la cadena y
+   * se rechaza la peticion, y ese rechazo revertiria la revocacion dejando al
+   * atacante con el token que acababa de delatarse.
+   *
+   * Pero usar esta conexion cuando la transaccion YA escribio en `usuario`
+   * produce un interbloqueo, y no es teorico: `refresh_session` tiene clave
+   * foranea hacia `usuario`, asi que actualizarla exige un bloqueo compartido
+   * sobre la fila padre. Si la transaccion tiene esa fila tomada en exclusiva,
+   * esta conexion espera por ella mientras aquella espera a que esta termine, y
+   * las dos se quedan ahi hasta que MySQL corta por tiempo.
+   *
+   * Por eso solo la usa `revocarCadena`, que se invoca en caminos que unicamente
+   * LEEN el usuario. Todo lo demas revoca dentro de la transaccion, donde la
+   * operacion acompanante confirma y la revocacion viaja con ella.
+   */
+  private get dbSinTransaccion(): Knex {
+    return this.knex;
+  }
+
   async crear(input: {
     idUsuario: number;
     tokenHash: string;
@@ -83,18 +106,18 @@ export class KnexSessionRepository implements ISessionRepository {
       if (actual === undefined || visitadas.has(actual)) continue;
       visitadas.add(actual);
 
-      const fila = await this.db<FilaSesion>('refresh_session')
+      const fila = await this.dbSinTransaccion<FilaSesion>('refresh_session')
         .where({ id_sesion: actual })
         .first();
       if (fila?.reemplazado_por != null) pendientes.push(fila.reemplazado_por);
 
-      const anteriores = await this.db<FilaSesion>('refresh_session')
+      const anteriores = await this.dbSinTransaccion<FilaSesion>('refresh_session')
         .where({ reemplazado_por: actual })
         .select('id_sesion');
       for (const a of anteriores) pendientes.push(a.id_sesion);
     }
 
-    await this.db('refresh_session')
+    await this.dbSinTransaccion('refresh_session')
       .whereIn('id_sesion', [...visitadas])
       .whereNull('revocado_at')
       .update({ revocado_at: ahora, motivo_revocacion: motivo });
@@ -106,6 +129,23 @@ export class KnexSessionRepository implements ISessionRepository {
       motivo_revocacion: 'ROTACION',
       reemplazado_por: idSesionNueva,
     });
+  }
+
+  /**
+   * Cierra todas las sesiones de un usuario.
+   *
+   * Se usa al cambiar la contrasena y al suspender una cuenta. Sin esto, la
+   * suspension seria decorativa durante los siete dias que vive el refresh
+   * token: el usuario seguiria renovando su acceso sin problema.
+   */
+  async revocarTodasDe(idUsuario: number, motivo: string): Promise<void> {
+    // Dentro de la transaccion: quien llama (cambio de contrasena, suspension)
+    // acaba de escribir en `usuario`, y salir de la transaccion aqui provocaria
+    // el interbloqueo descrito en dbSinTransaccion.
+    await this.db('refresh_session')
+      .where({ id_usuario: idUsuario })
+      .whereNull('revocado_at')
+      .update({ revocado_at: new Date(), motivo_revocacion: motivo });
   }
 
   /**

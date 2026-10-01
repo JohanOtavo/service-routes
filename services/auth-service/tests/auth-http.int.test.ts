@@ -41,6 +41,8 @@ const CONTRASENA = 'ContrasenaDePrueba2026';
 let app: Express;
 let knex: Knex;
 let disponible = false;
+/** Por que no se pudo conectar. Sin esto, un fallo de configuracion se confunde con un entorno sin Docker. */
+let motivoNoDisponible = '';
 
 const env = {
   NODE_ENV: 'test',
@@ -61,10 +63,17 @@ const env = {
   LOGIN_LOCKOUT_BASE_SECONDS: '60',
   RATE_LIMIT_AUTH_MAX: '500',
   RATE_LIMIT_MAX_PER_IP: '1000',
+  RABBITMQ_HOST: process.env['RABBITMQ_HOST'] ?? '127.0.0.1',
+  RABBITMQ_PORT: process.env['RABBITMQ_PORT'] ?? '5672',
+  RABBITMQ_USER: process.env['RABBITMQ_USER'] ?? 'pa_dev',
+  RABBITMQ_PASSWORD: process.env['RABBITMQ_PASSWORD'] ?? 'local',
 };
 
 beforeAll(async () => {
-  if (env.DB_AUTH_PASSWORD === '' || env.JWT_PRIVATE_KEY === '') return;
+  if (env.DB_AUTH_PASSWORD === '' || env.JWT_PRIVATE_KEY === '') {
+    motivoNoDisponible = 'faltan DB_AUTH_PASSWORD o JWT_PRIVATE_KEY en el entorno';
+    return;
+  }
 
   try {
     const parsed = envSchema.parse(env);
@@ -73,7 +82,11 @@ beforeAll(async () => {
     knex = contenedor.knex;
     await knex.raw('SELECT 1');
     disponible = true;
-  } catch {
+  } catch (error) {
+    // El motivo se conserva y se imprime. Tragarlo convierte un error de
+    // configuracion en una suite que "pasa" sin haber ejecutado nada, que es
+    // peor que fallar.
+    motivoNoDisponible = error instanceof Error ? error.message : String(error);
     disponible = false;
   }
 });
@@ -103,10 +116,23 @@ beforeEach(async () => {
   if (disponible) await limpiar();
 });
 
+/**
+ * Decide si omitir, y distingue dos situaciones que no son lo mismo.
+ *
+ * Sin Docker levantado, omitir es razonable: quien clona el repositorio y
+ * ejecuta las pruebas no deberia ver fallos por algo que no es suyo.
+ *
+ * Pero un error de configuracion —una variable que el esquema exige y la prueba
+ * no pasa— SI es un defecto, y omitirlo en silencio lo esconde. Con
+ * REQUIRE_INTEGRATION=1, el fallo se propaga en lugar de disfrazarse de exito.
+ */
 const saltarSiNoHayBase = (): boolean => {
   if (!disponible) {
+    if (process.env['REQUIRE_INTEGRATION'] === '1') {
+      throw new Error(`Las pruebas de integracion no pudieron arrancar: ${motivoNoDisponible}`);
+    }
     // eslint-disable-next-line no-console
-    console.warn('sin MySQL disponible: pruebas de integracion omitidas');
+    console.warn(`pruebas de integracion omitidas: ${motivoNoDisponible}`);
   }
   return !disponible;
 };
@@ -255,6 +281,130 @@ describe('bloqueo progresivo', () => {
     expect(fila.fallos_consecutivos).toBe(0);
     expect(fila.bloqueado_hasta).toBeNull();
   });
+});
+
+
+describe('recuperacion de contrasena', () => {
+  /**
+   * Regresion de un interbloqueo encontrado al ejecutar el servicio.
+   *
+   * Las revocaciones se habian sacado de la transaccion para que sobrevivieran
+   * a un rechazo. Pero `refresh_session` tiene clave foranea hacia `usuario`, y
+   * actualizarla desde otra conexion mientras la transaccion tiene esa fila
+   * tomada en exclusiva hace que cada una espere a la otra hasta que MySQL corta
+   * por tiempo. El endpoint colgaba cincuenta segundos y devolvia 503.
+   *
+   * Con un tiempo de espera corto, esta prueba falla en segundos si alguien
+   * vuelve a sacar la revocacion de la transaccion.
+   */
+  it('restablece la contrasena sin bloquearse contra si misma', async () => {
+    if (saltarSiNoHayBase()) return;
+
+    await request(app).post('/api/v1/auth/register').send({
+      nombre: 'Usuario Integracion',
+      correo: CORREO,
+      contrasena: CONTRASENA,
+      confirmacionContrasena: CONTRASENA,
+    });
+    // Una sesion viva: es la que el cambio de contrasena debe revocar.
+    await request(app).post('/api/v1/auth/login').send({ correo: CORREO, contrasena: CONTRASENA });
+
+    await request(app).post('/api/v1/auth/password-recovery').send({ correo: CORREO }).expect(202);
+
+    const evento = await knex('outbox_event')
+      .where('event_name', 'UserProfileUpdated')
+      .orderBy('id_outbox', 'desc')
+      .first();
+    const payload =
+      typeof evento.payload === 'string' ? JSON.parse(evento.payload) : evento.payload;
+    const token = payload.token as string;
+    expect(typeof token).toBe('string');
+
+    const nueva = 'ContrasenaRestablecida2026';
+    const reset = await request(app)
+      .post('/api/v1/auth/password-reset')
+      .send({ token, contrasena: nueva, confirmacionContrasena: nueva });
+
+    expect(reset.status).toBe(204);
+
+    // La contrasena cambio de verdad.
+    await request(app)
+      .post('/api/v1/auth/login')
+      .send({ correo: CORREO, contrasena: nueva })
+      .expect(200);
+    await request(app)
+      .post('/api/v1/auth/login')
+      .send({ correo: CORREO, contrasena: CONTRASENA })
+      .expect(401);
+  }, 20000);
+
+  it('el token de recuperacion sirve una sola vez', async () => {
+    if (saltarSiNoHayBase()) return;
+
+    await request(app).post('/api/v1/auth/register').send({
+      nombre: 'Usuario Integracion',
+      correo: CORREO,
+      contrasena: CONTRASENA,
+      confirmacionContrasena: CONTRASENA,
+    });
+    await request(app).post('/api/v1/auth/password-recovery').send({ correo: CORREO });
+
+    const evento = await knex('outbox_event')
+      .where('event_name', 'UserProfileUpdated')
+      .orderBy('id_outbox', 'desc')
+      .first();
+    const payload =
+      typeof evento.payload === 'string' ? JSON.parse(evento.payload) : evento.payload;
+    const token = payload.token as string;
+
+    const primera = 'PrimerCambio2026AB';
+    await request(app)
+      .post('/api/v1/auth/password-reset')
+      .send({ token, contrasena: primera, confirmacionContrasena: primera })
+      .expect(204);
+
+    const segunda = 'SegundoCambio2026AB';
+    await request(app)
+      .post('/api/v1/auth/password-reset')
+      .send({ token, contrasena: segunda, confirmacionContrasena: segunda })
+      .expect(401);
+  }, 20000);
+
+  it('cambiar la contrasena cierra las sesiones abiertas', async () => {
+    if (saltarSiNoHayBase()) return;
+
+    await request(app).post('/api/v1/auth/register').send({
+      nombre: 'Usuario Integracion',
+      correo: CORREO,
+      contrasena: CONTRASENA,
+      confirmacionContrasena: CONTRASENA,
+    });
+    await request(app).post('/api/v1/auth/login').send({ correo: CORREO, contrasena: CONTRASENA });
+
+    await request(app).post('/api/v1/auth/password-recovery').send({ correo: CORREO });
+    const evento = await knex('outbox_event')
+      .where('event_name', 'UserProfileUpdated')
+      .orderBy('id_outbox', 'desc')
+      .first();
+    const payload =
+      typeof evento.payload === 'string' ? JSON.parse(evento.payload) : evento.payload;
+
+    const nueva = 'OtraContrasenaMas2026';
+    await request(app)
+      .post('/api/v1/auth/password-reset')
+      .send({ token: payload.token, contrasena: nueva, confirmacionContrasena: nueva })
+      .expect(204);
+
+    const usuario = await knex('usuario').where('correo', CORREO).first();
+    const activas = await knex('refresh_session')
+      .where({ id_usuario: usuario.id_usuario })
+      .whereNull('revocado_at')
+      .count<{ n: number }[]>({ n: '*' });
+
+    // Quien recupera su cuenta suele hacerlo porque sospecha que alguien entro;
+    // dejar sesiones vivas conservaria el acceso a quien se intenta expulsar.
+    expect(Number(activas[0]?.n)).toBe(0);
+  }, 20000);
 });
 
 describe('endurecimiento', () => {

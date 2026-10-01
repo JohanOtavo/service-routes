@@ -7,6 +7,9 @@ import type { Knex } from 'knex';
 import { AppError } from '@punto-amigo/shared';
 import type { RegisterUserUseCase } from '../../application/use-cases/RegisterUser';
 import type { AuthenticateUserUseCase } from '../../application/use-cases/AuthenticateUser';
+import type { RefreshSessionUseCase } from '../../application/use-cases/RefreshSession';
+import type { PasswordRecoveryUseCase } from '../../application/use-cases/PasswordRecovery';
+import type { ManageAccountsUseCase } from '../../application/use-cases/ManageAccounts';
 import type { KnexSessionRepository } from '../persistence/KnexSessionRepository';
 import type { JwtTokenService } from '../security/JwtTokenService';
 import { runInTransaction } from '../persistence/transaction';
@@ -15,6 +18,7 @@ import {
   errorHandler,
   notFoundHandler,
   requireAuth,
+  requireRole,
   requireInternalCaller,
   validateBody,
   type Logger,
@@ -24,6 +28,9 @@ export interface AppDeps {
   knex: Knex;
   registrar: RegisterUserUseCase;
   autenticar: AuthenticateUserUseCase;
+  renovar: RefreshSessionUseCase;
+  recuperacion: PasswordRecoveryUseCase;
+  cuentas: ManageAccountsUseCase;
   sesiones: KnexSessionRepository;
   tokens: JwtTokenService;
   logger: Logger;
@@ -49,6 +56,20 @@ const registroSchema = z
   // que intente enviar "roles" o "estado" debe fallar de forma visible, no
   // pasar como si nada.
   .strict();
+
+const recuperacionSchema = z.object({ correo: z.string().min(3).max(150) }).strict();
+
+const restablecerSchema = z
+  .object({
+    token: z.string().min(20).max(200),
+    contrasena: z.string().min(1).max(128),
+    confirmacionContrasena: z.string().min(1).max(128),
+  })
+  .strict();
+
+const rolSchema = z.object({ rol: z.enum(['ADMINISTRADOR', 'OFERENTE', 'SOLICITANTE']) }).strict();
+
+const suspenderSchema = z.object({ motivo: z.string().min(3).max(255) }).strict();
 
 const loginSchema = z
   .object({
@@ -249,6 +270,189 @@ export function createApp(deps: AppDeps): Express {
     requireAuth(deps.tokens, deps.sesiones),
     (req: Request, res: Response) => {
       res.json({ userId: req.auth?.userId, roles: req.auth?.roles });
+    }
+  );
+
+  app.post(
+    '/api/v1/auth/refresh',
+    limiteAuth,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const salida = await runInTransaction(deps.knex, () =>
+          deps.renovar.execute({
+            refreshToken: req.cookies?.[deps.config.refreshCookie.name] as string | undefined,
+            ip: req.ip ?? null,
+            userAgent: req.header('user-agent') ?? null,
+          })
+        );
+
+        // La cookie se sustituye por la del token rotado; la anterior ya no vale.
+        res.cookie(deps.config.refreshCookie.name, salida.refreshToken, {
+          httpOnly: true,
+          secure: deps.config.refreshCookie.secure,
+          sameSite: 'strict',
+          path: '/api/v1/auth',
+          maxAge: deps.config.refreshCookie.maxAgeMs,
+        });
+
+        res.json({
+          accessToken: salida.accessToken,
+          expiresAt: salida.accessExpiresAt.toISOString(),
+        });
+      } catch (error) {
+        // Una renovacion fallida limpia la cookie: conservarla solo produce
+        // reintentos que van a fallar igual.
+        res.clearCookie(deps.config.refreshCookie.name, { path: '/api/v1/auth' });
+        next(error);
+      }
+    }
+  );
+
+  app.post(
+    '/api/v1/auth/password-recovery',
+    limiteAuth,
+    validateBody(recuperacionSchema),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        await runInTransaction(deps.knex, () =>
+          deps.recuperacion.solicitar({
+            correo: req.body.correo,
+            correlationId: req.correlationId,
+          })
+        );
+        // 202 siempre, exista o no la cuenta: distinguirlo convertiria esto en
+        // un verificador de correos registrados.
+        res.status(202).json({
+          mensaje: 'Si el correo esta registrado, recibira instrucciones para continuar.',
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  app.post(
+    '/api/v1/auth/password-reset',
+    limiteAuth,
+    validateBody(restablecerSchema),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        await runInTransaction(deps.knex, () =>
+          deps.recuperacion.restablecer({ ...req.body, correlationId: req.correlationId })
+        );
+        res.status(204).send();
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  // ─── Administracion de cuentas ──────────────────────────────────────────
+  // Todas exigen rol ADMINISTRADOR, verificado en el servidor y no en la
+  // interfaz (SRS RNF23).
+
+  app.patch(
+    '/api/v1/users/:id/roles',
+    requireAuth(deps.tokens, deps.sesiones),
+    requireRole('ADMINISTRADOR'),
+    validateBody(rolSchema),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const roles = await runInTransaction(deps.knex, () =>
+          deps.cuentas.asignarRol({
+            idUsuario: Number(req.params['id']),
+            rol: req.body.rol,
+            ejecutadaPor: req.auth!.userId,
+            correlationId: req.correlationId,
+          })
+        );
+        res.json({ roles });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  app.delete(
+    '/api/v1/users/:id/roles/:rol',
+    requireAuth(deps.tokens, deps.sesiones),
+    requireRole('ADMINISTRADOR'),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const roles = await runInTransaction(deps.knex, () =>
+          deps.cuentas.retirarRol({
+            idUsuario: Number(req.params['id']),
+            rol: String(req.params['rol']),
+            ejecutadaPor: req.auth!.userId,
+            correlationId: req.correlationId,
+          })
+        );
+        res.json({ roles });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  app.post(
+    '/api/v1/users/:id/suspend',
+    requireAuth(deps.tokens, deps.sesiones),
+    requireRole('ADMINISTRADOR'),
+    validateBody(suspenderSchema),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        await runInTransaction(deps.knex, () =>
+          deps.cuentas.suspender({
+            idUsuario: Number(req.params['id']),
+            motivo: req.body.motivo,
+            ejecutadaPor: req.auth!.userId,
+            correlationId: req.correlationId,
+          })
+        );
+        res.status(204).send();
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  app.post(
+    '/api/v1/users/:id/reactivate',
+    requireAuth(deps.tokens, deps.sesiones),
+    requireRole('ADMINISTRADOR'),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        await runInTransaction(deps.knex, () =>
+          deps.cuentas.reactivar({
+            idUsuario: Number(req.params['id']),
+            ejecutadaPor: req.auth!.userId,
+            correlationId: req.correlationId,
+          })
+        );
+        res.status(204).send();
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  app.delete(
+    '/api/v1/users/:id',
+    requireAuth(deps.tokens, deps.sesiones),
+    requireRole('ADMINISTRADOR'),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        await runInTransaction(deps.knex, () =>
+          deps.cuentas.eliminar({
+            idUsuario: Number(req.params['id']),
+            ejecutadaPor: req.auth!.userId,
+            correlationId: req.correlationId,
+          })
+        );
+        res.status(204).send();
+      } catch (error) {
+        next(error);
+      }
     }
   );
 

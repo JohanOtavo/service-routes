@@ -112,7 +112,14 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm run test:unit
+      # REQUIRE_INTEGRATION hace que un fallo de arranque sea un fallo y no una
+      # omision silenciosa. Sin esto, una variable que el esquema exige y la
+      # prueba no pasa produce una suite verde que no ejecuto nada.
+      - name: Pruebas de integracion
+        env:
+          REQUIRE_INTEGRATION: '1'
+        run: npm run test:integration
 
   security:
     name: Dependencias

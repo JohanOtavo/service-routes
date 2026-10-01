@@ -77,6 +77,19 @@ export interface SesionRefresco {
   reemplazadoPor: number | null;
 }
 
+export interface TokenRecuperacion {
+  id: number;
+  idUsuario: number;
+}
+
+export interface IRecoveryTokenRepository {
+  /** Crea el token y devuelve su valor en claro; solo se guarda su hash. */
+  crear(input: { idUsuario: number; expiraAt: Date }): Promise<string>;
+  buscarVigente(token: string, ahora: Date): Promise<TokenRecuperacion | null>;
+  marcarUsado(id: number, ahora: Date): Promise<void>;
+  invalidarPendientes(idUsuario: number): Promise<void>;
+}
+
 export interface ISessionRepository {
   crear(input: {
     idUsuario: number;
@@ -90,6 +103,8 @@ export interface ISessionRepository {
   /** Revoca toda la cadena de rotacion: se usa al detectar reuso de un token. */
   revocarCadena(idSesion: number, motivo: string): Promise<void>;
   marcarRotada(idSesionAnterior: number, idSesionNueva: number): Promise<void>;
+  /** Cierra todas las sesiones de un usuario: cambio de contrasena, suspension. */
+  revocarTodasDe(idUsuario: number, motivo: string): Promise<void>;
   denegarAccessToken(jti: string, idUsuario: number, expiraAt: Date): Promise<void>;
 }
 
