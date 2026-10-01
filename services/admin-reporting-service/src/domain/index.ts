@@ -105,6 +105,21 @@ export interface AsientoAuditoria {
 const CLAVES_SENSIBLES =
   /(pass|contrasen|secret|token|jwt|refresh|credential|hash|salt|correo|e?mail|telefono|phone|celular|documento|cedula|direccion)/iu;
 
+/**
+ * Si un NOMBRE suena a secreto o a dato personal.
+ *
+ * `depurarDetalle` lo aplica a las claves del detalle, pero se exporta porque
+ * hay un caso que esa funcion no puede ver: cuando el nombre sensible viaja
+ * como VALOR. Al auditar un parametro del sistema, el detalle lleva
+ * `{clave, anterior, nuevo}`; ninguna de esas tres claves suena a secreto, y
+ * sin embargo el valor de `nuevo` puede ser la contrasena del SMTP si la
+ * `clave` se llama SMTP_PASSWORD. Quien construye ese detalle tiene que
+ * preguntarlo por el nombre del parametro, no por el de sus campos.
+ */
+export function nombreSensible(nombre: string): boolean {
+  return CLAVES_SENSIBLES.test(nombre);
+}
+
 /** Marca visible de lo que se descarto. Omitir en silencio esconde el fallo. */
 const OMITIDO = '[omitido]';
 
