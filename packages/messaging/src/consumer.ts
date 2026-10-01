@@ -32,6 +32,17 @@ export interface ConsumerConfig {
  * la tabla `processed_event`, la segunda entrega enviaria la notificacion
  * duplicada e incrementaria el contador dos veces (SRS RF95, RNF89).
  */
+/** Codigo de MySQL para violacion de clave unica. */
+const ER_DUP_ENTRY = 1062;
+
+function esClaveDuplicada(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { errno?: number }).errno === ER_DUP_ENTRY
+  );
+}
+
 export class EventConsumer {
   private readonly manejadores = new Map<string, ManejadorEvento>();
 
@@ -102,20 +113,27 @@ export class EventConsumer {
          * Si un segundo mensaje del mismo evento llega mientras el primero se
          * procesa, choca con la clave primaria y se descarta. Hacerlo despues
          * dejaria una ventana en la que ambos pasarian la comprobacion.
+         *
+         * El choque se detecta por la EXCEPCION y no por el numero de filas.
+         * `onConflict().ignore()` seria mas limpio de leer, pero en MySQL se
+         * compila a `INSERT IGNORE` y Knex devuelve `[insertId]`, no las filas
+         * afectadas. Como esta tabla tiene clave primaria compuesta y ningun
+         * autoincremento, ese valor es 0 SIEMPRE: tanto en el alta buena como
+         * en la repetida. Leerlo como "0 filas, ya estaba" hacia que ningun
+         * manejador llegara a ejecutarse nunca, mientras la marca quedaba
+         * escrita y el mensaje se confirmaba. Un sistema de eventos que no
+         * aplica ninguno y no se queja.
          */
-        const insertado = await trx('processed_event')
-          .insert({
+        try {
+          await trx('processed_event').insert({
             consumer: this.config.consumidor,
             event_id: sobre.eventId,
             event_name: sobre.eventName,
-          })
-          .onConflict(['consumer', 'event_id'])
-          .ignore();
-
-        // Con onConflict().ignore(), MySQL informa 0 filas afectadas cuando ya
-        // existia: el evento ya se aplico.
-        const filas = Array.isArray(insertado) ? Number(insertado[0] ?? 0) : Number(insertado);
-        if (filas === 0) return false;
+          });
+        } catch (error) {
+          if (esClaveDuplicada(error)) return false;
+          throw error;
+        }
 
         await manejador(sobre, trx);
         return true;

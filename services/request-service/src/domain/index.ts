@@ -244,7 +244,22 @@ export class Necesidad {
       throw AppError.invalidTransition('Solo se reabre una necesidad adjudicada.', ['ADJUDICADA']);
     }
     this.props.estado = 'ABIERTA';
-    this.props.fechaVigencia = new Date(ahora.getTime() + diasExtra * 86_400_000);
+
+    /**
+     * Los dias se anaden SOBRE lo que quedaba, no desde hoy.
+     *
+     * `ahora + diasExtra` parece lo mismo y no lo es: si la necesidad se
+     * publico con 30 dias de vigencia y la retractacion llega el primer dia,
+     * fijar la vigencia en hoy mas 15 la ACORTARIA de 29 dias restantes a 15.
+     * La reparacion habria dejado al solicitante peor que antes de adjudicar,
+     * que es exactamente lo contrario de lo que RF185 persigue.
+     *
+     * Se parte del momento mas tardio entre la vigencia que quedaba y hoy, para
+     * que el plazo tambien crezca cuando la necesidad ya habia caducado
+     * esperando a un oferente que acabo retractandose.
+     */
+    const desde = Math.max(this.props.fechaVigencia.getTime(), ahora.getTime());
+    this.props.fechaVigencia = new Date(desde + diasExtra * 86_400_000);
   }
 
   /** Vista para oferentes. Nunca incluye datos de contacto (SRS RF136). */
@@ -748,4 +763,152 @@ export function adjudicar(input: {
     propuestasDescartadas: descartadas,
     solicitud,
   };
+}
+
+// ─── Puertos de salida ──────────────────────────────────────────────────────
+//
+// Las interfaces viven junto al dominio que las necesita y las implementaciones
+// en infrastructure/. Asi la dependencia apunta hacia adentro: cambiar MySQL por
+// otro motor no toca una linea de dominio.
+//
+// El reloj y el publicador de eventos NO se declaran aqui: los aporta
+// @punto-amigo/service-kit (IClock, IEventPublisher).
+
+export interface Pagina<T> {
+  elementos: readonly T[];
+  total: number;
+  pagina: number;
+  tamano: number;
+}
+
+/** Tope de pagina: sin el, una peticion puede pedir todas las necesidades. */
+export const TAMANO_PAGINA_MAXIMO = 50;
+
+export function normalizarPaginacion(entrada: {
+  pagina?: number | undefined;
+  tamano?: number | undefined;
+}): { pagina: number; tamano: number } {
+  return {
+    pagina: Math.max(1, Math.floor(entrada.pagina ?? 1)),
+    tamano: Math.min(TAMANO_PAGINA_MAXIMO, Math.max(1, Math.floor(entrada.tamano ?? 20))),
+  };
+}
+
+export interface FiltrosNecesidad {
+  idCategoria?: number | undefined;
+  texto?: string | undefined;
+}
+
+export interface INecesidadRepository {
+  findById(id: number): Promise<Necesidad | null>;
+  save(necesidad: Necesidad, creadoPor: number): Promise<Necesidad>;
+  update(necesidad: Necesidad, motivoCierre?: string | null): Promise<void>;
+  /** Cuantas tiene abiertas: alimenta el limite anti-abuso (SRS RF125, RNF86). */
+  contarAbiertasDe(idUsuario: number, ahora: Date): Promise<number>;
+  listarAbiertas(filtros: FiltrosNecesidad, pagina: number, tamano: number): Promise<Pagina<Necesidad>>;
+  listarDeAutor(idUsuario: number, pagina: number, tamano: number): Promise<Pagina<Necesidad>>;
+}
+
+export interface IPropuestaRepository {
+  findById(id: number): Promise<Propuesta | null>;
+  /** Todas las de una necesidad. La adjudicacion las necesita juntas. */
+  findByNecesidad(idNecesidad: number): Promise<Propuesta[]>;
+  save(propuesta: Propuesta, creadoPor: number): Promise<Propuesta>;
+  update(propuesta: Propuesta): Promise<void>;
+  tieneVigente(idNecesidad: number, idPrestador: number): Promise<boolean>;
+  listarDePrestador(idPrestador: number, pagina: number, tamano: number): Promise<Pagina<Propuesta>>;
+}
+
+export interface ISolicitudRepository {
+  findById(id: number): Promise<Solicitud | null>;
+  save(solicitud: Solicitud, creadoPor: number): Promise<Solicitud>;
+  update(solicitud: Solicitud, motivoEstado: string | null, completadaAt: Date | null): Promise<void>;
+  /** Fecha en que se acepto: la politica de cancelacion mide la gracia desde ahi. */
+  aceptadaAt(idSolicitud: number): Promise<Date | null>;
+  listarDeUsuario(idUsuario: number, pagina: number, tamano: number): Promise<Pagina<Solicitud>>;
+  listarDePrestador(idPrestador: number, pagina: number, tamano: number): Promise<Pagina<Solicitud>>;
+}
+
+/** Asiento del historial de una solicitud: append-only (SRS RF70). */
+export interface AsientoHistorial {
+  idSolicitud: number;
+  estadoAnterior: EstadoSolicitud | null;
+  estadoNuevo: EstadoSolicitud;
+  cambiadoPor: number;
+  motivo: string | null;
+  fechaCambio: Date;
+}
+
+export interface IHistorialRepository {
+  registrar(asiento: AsientoHistorial): Promise<void>;
+}
+
+/** Lo que se guarda de una cancelacion, ya clasificada e imputada. */
+export interface RegistroCancelacion {
+  idSolicitud: number;
+  parteCanceladora: Actor;
+  idUsuarioCancela: number;
+  idUsuarioAfectado: number;
+  estadoOrigen: EstadoSolicitud;
+  codigoMotivo: string;
+  detalle: string | null;
+  franja: Franja;
+  horasDeAntelacion: number | null;
+  peso: number;
+  computa: boolean;
+  idUsuarioImputado: number | null;
+  estado: 'REGISTRADA' | 'EN_REVISION';
+  canceladaAt: Date;
+}
+
+export interface ICancelacionRepository {
+  /** Catalogo de motivos. Null si el codigo no existe o esta desactivado. */
+  buscarMotivo(codigo: string): Promise<MotivoCancelacion | null>;
+  guardar(registro: RegistroCancelacion): Promise<number>;
+}
+
+/** Copia local de un prestador, alimentada por eventos de provider-service. */
+export interface PrestadorRef {
+  idPrestador: number;
+  idUsuario: number;
+  nombre: string;
+  especialidad: string | null;
+  estado: string;
+}
+
+/** Copia local de un servicio, alimentada por eventos de catalog-service. */
+export interface ServicioRef {
+  idServicio: number;
+  idPrestador: number;
+  idCategoria: number;
+  nombreServicio: string;
+  estado: string;
+}
+
+/**
+ * Copia local de un usuario, alimentada por eventos de auth-service.
+ *
+ * Guarda el contacto porque es de aqui de donde sale lo que se revela cuando
+ * hay acuerdo (SRS RF156, RNF84). Pedirselo a auth-service en cada consulta
+ * ataria el detalle de una contratacion a que la identidad este levantada, y
+ * ademas convertiria ese servicio en un directorio consultable.
+ */
+export interface UsuarioRef {
+  idUsuario: number;
+  nombre: string;
+  correo: string | null;
+  telefono: string | null;
+  estado: string;
+}
+
+export interface IReplicaRepository {
+  usuarioPorId(idUsuario: number): Promise<UsuarioRef | null>;
+  upsertUsuario(ref: UsuarioRef): Promise<void>;
+  prestadorPorId(idPrestador: number): Promise<PrestadorRef | null>;
+  prestadorPorUsuario(idUsuario: number): Promise<PrestadorRef | null>;
+  servicioPorId(idServicio: number): Promise<ServicioRef | null>;
+  categoriaActiva(idCategoria: number): Promise<boolean>;
+  upsertPrestador(ref: PrestadorRef): Promise<void>;
+  upsertServicio(ref: ServicioRef): Promise<void>;
+  upsertCategoria(ref: { idCategoria: number; nombreCategoria: string; activa: boolean }): Promise<void>;
 }

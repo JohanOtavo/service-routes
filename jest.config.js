@@ -28,7 +28,17 @@ module.exports = {
         '<rootDir>/packages/*/tests/**/*.unit.test.ts',
       ],
     },
-    { ...tsJest, displayName: 'integration', testMatch: ['<rootDir>/services/*/tests/**/*.int.test.ts'] },
+    {
+      ...tsJest,
+      displayName: 'integration',
+      // Tambien los paquetes compartidos: el consumidor de eventos solo se
+      // puede probar de verdad contra MySQL, porque su defecto mas grave estuvo
+      // en lo que el motor devuelve al insertar.
+      testMatch: [
+        '<rootDir>/services/*/tests/**/*.int.test.ts',
+        '<rootDir>/packages/*/tests/**/*.int.test.ts',
+      ],
+    },
   ],
   collectCoverageFrom: ['services/*/src/**/*.ts', 'packages/*/src/**/*.ts', '!**/*.d.ts'],
   coverageThreshold: {

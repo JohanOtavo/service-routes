@@ -249,6 +249,33 @@ describe('adjudicacion', () => {
     ).toThrow(AppError);
   });
 
+  /**
+   * Los dias extra se suman a lo que QUEDABA, no desde hoy. Fijarla en hoy mas
+   * N acortaria el plazo cuando la retractacion llega pronto, y la reparacion
+   * dejaria al solicitante peor que antes de adjudicar.
+   */
+  it('reabrir nunca acorta la vigencia, aunque la retractacion llegue el primer dia', () => {
+    const n = necesidadConId(1, { diasVigencia: 30 });
+    const original = n.fechaVigencia.getTime();
+    n.adjudicar(BASE.idUsuario, dias(1));
+
+    n.reabrir(dias(1), 15);
+
+    expect(n.estado).toBe('ABIERTA');
+    expect(n.fechaVigencia.getTime()).toBe(original + 15 * 86_400_000);
+  });
+
+  /** Si ya habia caducado esperando, el plazo arranca desde hoy. */
+  it('reabrir una necesidad ya caducada cuenta los dias desde hoy', () => {
+    const n = necesidadConId(1, { diasVigencia: 10 });
+    n.adjudicar(BASE.idUsuario, dias(1));
+
+    const tarde = dias(40);
+    n.reabrir(tarde, 15);
+
+    expect(n.fechaVigencia.getTime()).toBe(tarde.getTime() + 15 * 86_400_000);
+  });
+
   it('reabrir devuelve la necesidad a ABIERTA y amplia la vigencia (SRS RF184)', () => {
     const { n, propuestas } = escenario();
     adjudicar({ necesidad: n, propuestas, idPropuestaElegida: 2, idUsuarioAutor: 1, ahora: AHORA });

@@ -189,6 +189,30 @@ services:
         condition: service_completed_successfully
     networks: [punto-amigo]
 
+  request-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: services/request-service/Dockerfile
+    image: punto-amigo/request-service:local
+    container_name: pa-request
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      NODE_ENV: ${NODE_ENV:-development}
+    # Sin `depends_on` de rabbitmq: arranca con el broker caido y sus eventos
+    # esperan en el outbox. Esperarlo impediria consultar contrataciones ya
+    # cerradas solo porque la mensajeria este abajo.
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks: [punto-amigo]
+
   api-gateway:
     profiles: [apps]
     build:
@@ -203,6 +227,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       UPSTREAM_AUTH_URL: http://auth-service:3001
       UPSTREAM_PROVIDER_URL: http://provider-service:3002
+      UPSTREAM_REQUEST_URL: http://request-service:3004
     ports:
       - '127.0.0.1:${GATEWAY_PORT:-8080}:8080'
     depends_on:
