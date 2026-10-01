@@ -1,0 +1,294 @@
+/*
+ * Componentes del sistema de diseno.
+ *
+ * Clases globales con prefijo `pa-`, no modulos CSS. Es deliberado: un sistema
+ * de diseno es un vocabulario compartido, y un vocabulario que se renombra en
+ * cada compilacion no se puede inspeccionar en el navegador ni citar en una
+ * conversacion. El prefijo evita las colisiones que los modulos resolverian.
+ *
+ * Nada de aqui usa un color o un espaciado literal: todo sale de tokens.css.
+ */
+
+/* ─── Botones ──────────────────────────────────────────────────────────────*/
+
+.pa-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-2);
+  min-height: var(--toque-min);
+  padding: var(--esp-2) var(--esp-4);
+  border: 1px solid transparent;
+  border-radius: var(--radio-md);
+  font-size: var(--texto-base);
+  font-weight: var(--peso-medio);
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color var(--transicion-rapida),
+    border-color var(--transicion-rapida);
+}
+
+.pa-boton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pa-boton--primario {
+  background: var(--color-primario-600);
+  color: var(--color-texto-inverso);
+}
+.pa-boton--primario:hover:not(:disabled) { background: var(--color-primario-700); }
+
+/* El acento se reserva para UNA accion por pantalla. Dos acentos no senalan. */
+.pa-boton--acento {
+  background: var(--color-acento-600);
+  color: var(--color-texto-inverso);
+}
+.pa-boton--acento:hover:not(:disabled) { background: var(--color-acento-700); }
+
+.pa-boton--secundario {
+  background: var(--color-neutro-0);
+  color: var(--color-primario-700);
+  border-color: var(--color-borde-fuerte);
+}
+.pa-boton--secundario:hover:not(:disabled) { background: var(--color-primario-50); }
+
+/*
+ * El boton destructivo NO es rojo de relleno.
+ *
+ * Un boton rojo grande invita a pulsarlo por contraste, justo lo contrario de
+ * lo que se busca. Rojo en el borde y el texto: se encuentra cuando se busca y
+ * no llama cuando no.
+ */
+.pa-boton--peligro {
+  background: var(--color-neutro-0);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+.pa-boton--peligro:hover:not(:disabled) { background: var(--color-error-suave); }
+
+.pa-boton--fantasma {
+  background: transparent;
+  color: var(--color-primario-700);
+}
+.pa-boton--fantasma:hover:not(:disabled) { background: var(--color-primario-50); }
+
+.pa-boton--completo { width: 100%; }
+
+/* ─── Campos ───────────────────────────────────────────────────────────────*/
+
+.pa-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  margin-bottom: var(--esp-4);
+}
+
+.pa-campo__etiqueta {
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  color: var(--color-texto);
+}
+
+.pa-campo__requerido {
+  color: var(--color-error);
+  margin-left: var(--esp-1);
+}
+
+.pa-campo__control {
+  min-height: var(--toque-min);
+  padding: var(--esp-2) var(--esp-3);
+  border: 1px solid var(--color-borde-fuerte);
+  border-radius: var(--radio-md);
+  background: var(--color-neutro-0);
+  font-size: var(--texto-base);
+}
+
+.pa-campo__control:focus {
+  border-color: var(--color-primario-500);
+  box-shadow: var(--anillo-foco);
+  outline: none;
+}
+
+/* El borde rojo NO es la unica senal: tambien hay texto. Un borde de color solo
+ * no sirve a quien no distingue ese color. */
+.pa-campo__control[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+
+.pa-campo__ayuda {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-secundario);
+}
+
+.pa-campo__error {
+  font-size: var(--texto-sm);
+  color: var(--color-error);
+  font-weight: var(--peso-medio);
+}
+
+.pa-campo__control--area {
+  min-height: 7rem;
+  resize: vertical;
+  line-height: var(--alto-linea-normal);
+}
+
+/* ─── Tarjetas ─────────────────────────────────────────────────────────────*/
+
+.pa-tarjeta {
+  background: var(--color-fondo-tarjeta);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  padding: var(--esp-4);
+  box-shadow: var(--sombra-sm);
+}
+
+.pa-tarjeta--pulsable {
+  cursor: pointer;
+  transition: box-shadow var(--transicion-rapida), transform var(--transicion-rapida);
+}
+
+.pa-tarjeta--pulsable:hover {
+  box-shadow: var(--sombra-md);
+  transform: translateY(-1px);
+}
+
+.pa-tarjeta__titulo {
+  font-size: var(--texto-xl);
+  margin-bottom: var(--esp-1);
+}
+
+.pa-tarjeta__meta {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-secundario);
+}
+
+/* ─── Sellos de estado ─────────────────────────────────────────────────────
+ * Cada sello lleva color Y texto. El color acelera el reconocimiento para
+ * quien ya conoce la aplicacion; el texto es lo que la hace usable para quien
+ * no, y para quien no distingue esos colores.
+ */
+
+.pa-sello {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-1);
+  padding: var(--esp-1) var(--esp-2);
+  border-radius: var(--radio-redondo);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semi);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pa-sello--neutro { background: var(--color-neutro-100); color: var(--color-neutro-700); }
+.pa-sello--exito { background: var(--color-exito-suave); color: var(--color-exito); }
+.pa-sello--aviso { background: var(--color-aviso-suave); color: var(--color-aviso); }
+.pa-sello--error { background: var(--color-error-suave); color: var(--color-error); }
+.pa-sello--info { background: var(--color-info-suave); color: var(--color-info); }
+
+/*
+ * El sello de validado es el elemento mas importante de la interfaz.
+ *
+ * Es lo que responde a la pregunta que de verdad se hace quien contrata: puedo
+ * dejar entrar a esta persona en mi casa. Por eso lleva el color de la marca y
+ * no el verde de exito generico.
+ */
+.pa-sello--validado {
+  background: var(--color-primario-100);
+  color: var(--color-primario-800);
+}
+
+/* ─── Avisos ───────────────────────────────────────────────────────────────*/
+
+.pa-aviso {
+  display: flex;
+  gap: var(--esp-3);
+  padding: var(--esp-3) var(--esp-4);
+  border-radius: var(--radio-md);
+  border-left: 4px solid;
+  font-size: var(--texto-sm);
+  margin-bottom: var(--esp-4);
+}
+
+.pa-aviso--exito { background: var(--color-exito-suave); border-color: var(--color-exito); }
+.pa-aviso--aviso { background: var(--color-aviso-suave); border-color: var(--color-aviso); }
+.pa-aviso--error { background: var(--color-error-suave); border-color: var(--color-error); }
+.pa-aviso--info { background: var(--color-info-suave); border-color: var(--color-info); }
+
+.pa-aviso__titulo {
+  font-weight: var(--peso-semi);
+  margin-bottom: var(--esp-1);
+}
+
+/* ─── Carga y vacio ────────────────────────────────────────────────────────*/
+
+/*
+ * Esqueleto en lugar de un giro.
+ *
+ * Un esqueleto con la forma del contenido evita que la pagina salte cuando los
+ * datos llegan, y da la sensacion de que algo concreto esta en camino.
+ */
+.pa-esqueleto {
+  background: linear-gradient(
+    90deg,
+    var(--color-neutro-100) 25%,
+    var(--color-neutro-200) 50%,
+    var(--color-neutro-100) 75%
+  );
+  background-size: 200% 100%;
+  animation: pa-brillo 1.4s ease-in-out infinite;
+  border-radius: var(--radio-sm);
+  height: 1em;
+}
+
+@keyframes pa-brillo {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pa-esqueleto { animation: none; }
+}
+
+.pa-vacio {
+  text-align: center;
+  padding: var(--esp-12) var(--esp-4);
+  color: var(--color-texto-secundario);
+}
+
+.pa-vacio__titulo {
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semi);
+  color: var(--color-texto);
+  margin-bottom: var(--esp-2);
+}
+
+/* ─── Disposicion ──────────────────────────────────────────────────────────*/
+
+.pa-pila { display: flex; flex-direction: column; }
+.pa-pila--2 { gap: var(--esp-2); }
+.pa-pila--4 { gap: var(--esp-4); }
+.pa-pila--6 { gap: var(--esp-6); }
+
+.pa-fila {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  flex-wrap: wrap;
+}
+
+.pa-fila--separada { justify-content: space-between; }
+
+/* `auto-fill` y no `auto-fit`: con pocos resultados, `auto-fit` los estira a
+ * todo el ancho y una sola tarjeta queda enorme y rara. */
+.pa-rejilla {
+  display: grid;
+  gap: var(--esp-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+}
+
+.pa-seccion { padding-block: var(--esp-8); }
+.pa-texto-medida { max-width: var(--ancho-texto); }

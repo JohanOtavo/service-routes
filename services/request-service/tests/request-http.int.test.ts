@@ -236,12 +236,24 @@ describe('necesidades (SRS RF120 a RF136)', () => {
    */
   it('el listado para oferentes no revela quien publico', async () => {
     if (saltar()) return;
-    await publicarNecesidad();
+    const id = await publicarNecesidad();
 
     const r = await oferente().get('/api/v1/needs');
     expect(r.status).toBe(200);
-    expect(r.body.total).toBe(1);
-    expect(r.body.elementos[0].idUsuario).toBeUndefined();
+
+    /**
+     * No se afirma el total.
+     *
+     * Este endpoint lista TODAS las necesidades abiertas de la plataforma, no
+     * solo las de esta prueba, asi que un total exacto la hace fallar en
+     * cuanto la base tiene otros datos. Lo que importa es que la suya aparezca
+     * y que ninguna revele a su autor.
+     */
+    const elementos = r.body.elementos as Record<string, unknown>[];
+    const mia = elementos.find((n) => n['id'] === id);
+    expect(mia).toBeDefined();
+
+    for (const n of elementos) expect(n['idUsuario']).toBeUndefined();
     expect(JSON.stringify(r.body)).not.toContain(String(SOLICITANTE));
   });
 
@@ -587,6 +599,34 @@ describe('politica de cancelacion (SRS 10.2, RF174 a RF186)', () => {
 
     const fila = await knex('cancelacion').where('id_solicitud', idSolicitud).first();
     expect(fila.estado).toBe('EN_REVISION');
+  });
+
+  /**
+   * El cliente necesita la lista para ofrecerla. Que el servidor la exponga es
+   * lo que permite anadir o retirar un motivo sin desplegar nada.
+   */
+  it('el catalogo de motivos se puede consultar, y no filtra el efecto', async () => {
+    if (saltar()) return;
+
+    const r = await solicitante().get('/api/v1/requests/cancellation-reasons');
+    expect(r.status).toBe(200);
+    expect(r.body.elementos.length).toBeGreaterThanOrEqual(10);
+
+    const motivo = (r.body.elementos as Record<string, unknown>[]).find(
+      (m) => m['codigo'] === 'CONTRAPARTE_NO_SE_PRESENTO'
+    )!;
+    expect(motivo['abreRevision']).toBe(true);
+
+    // `computa` y `trasladaFalta` NO viajan: son el efecto que decide el
+    // servidor, y publicarlos invitaria a elegir el motivo por su consecuencia.
+    const cuerpo = JSON.stringify(r.body);
+    expect(cuerpo).not.toContain('computa');
+    expect(cuerpo).not.toContain('trasladaFalta');
+  });
+
+  it('el catalogo de motivos exige sesion', async () => {
+    if (saltar()) return;
+    expect((await como(null).get('/api/v1/requests/cancellation-reasons')).status).toBe(401);
   });
 
   it('un motivo que no existe en el catalogo no vale', async () => {

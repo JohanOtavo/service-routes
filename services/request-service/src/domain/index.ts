@@ -861,9 +861,39 @@ export interface RegistroCancelacion {
   canceladaAt: Date;
 }
 
+/** Motivo tal como se le ofrece a quien va a cancelar. */
+export interface MotivoOfrecido {
+  codigo: string;
+  descripcion: string;
+  /** Si al elegirlo hay que escribir una explicacion. */
+  exigeDetalle: boolean;
+  /**
+   * Si al elegirlo la cancelacion queda en revision en lugar de surtir efecto.
+   *
+   * Se dice de antemano a proposito. Quien cancela tiene derecho a saber que
+   * elegir "la contraparte no se presento" abre una disputa y no es un atajo
+   * para no cargar con la cancelacion.
+   */
+  abreRevision: boolean;
+}
+
 export interface ICancelacionRepository {
   /** Catalogo de motivos. Null si el codigo no existe o esta desactivado. */
   buscarMotivo(codigo: string): Promise<MotivoCancelacion | null>;
+  /**
+   * Los motivos activos, para que el cliente los ofrezca.
+   *
+   * Hace falta un endpoint porque la tabla existe precisamente para que un
+   * administrador pueda anadir o retirar un motivo sin desplegar (RF105). Si el
+   * cliente los llevara fijos en su codigo, cambiar la tabla no cambiaria nada
+   * de lo que la gente ve, y el acoplamiento que la tabla evita volveria por la
+   * puerta de atras.
+   *
+   * NO expone `computa` ni `trasladaFalta`: son el efecto que decide el
+   * servidor, y publicarlos invitaria a elegir el motivo por su efecto en lugar
+   * de por lo que paso.
+   */
+  listarMotivos(): Promise<readonly MotivoOfrecido[]>;
   guardar(registro: RegistroCancelacion): Promise<number>;
 }
 

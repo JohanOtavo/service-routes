@@ -1,0 +1,82 @@
+/* Portada. Es la unica pantalla con escena 3D. */
+
+.pa-heroe {
+  display: grid;
+  gap: var(--esp-8);
+  align-items: center;
+  grid-template-columns: 1fr;
+  padding-block: var(--esp-8) var(--esp-12);
+}
+
+.pa-heroe__titulo {
+  font-size: var(--texto-3xl);
+  letter-spacing: -0.02em;
+}
+
+.pa-heroe__entrada {
+  margin-top: var(--esp-4);
+  font-size: var(--texto-lg);
+  color: var(--color-texto-secundario);
+  max-width: var(--ancho-texto);
+}
+
+.pa-heroe__nota {
+  margin-top: var(--esp-6);
+  font-size: var(--texto-sm);
+  color: var(--color-texto-secundario);
+  padding-left: var(--esp-3);
+  border-left: 3px solid var(--color-primario-200);
+  max-width: var(--ancho-texto);
+}
+
+/*
+ * El hueco de la escena.
+ *
+ * El degradado NO es decoracion sobrante: es lo que se ve mientras three.js
+ * baja, y lo que queda si no baja nunca. Sin el, la mitad de la portada seria
+ * un rectangulo vacio en una conexion lenta.
+ *
+ * `aspect-ratio` reserva el alto desde el primer pintado, asi que el texto no
+ * salta cuando el lienzo aparece.
+ */
+.pa-heroe__escena {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  border-radius: var(--radio-lg);
+  background:
+    radial-gradient(circle at 35% 30%, var(--color-primario-100), transparent 60%),
+    radial-gradient(circle at 70% 70%, var(--color-acento-100), transparent 55%),
+    var(--color-neutro-100);
+  overflow: hidden;
+}
+
+/* En pantalla ancha la escena va al lado del texto; en movil, debajo y mas
+ * baja, para que el titulo y el boton entren sin desplazar. */
+@media (min-width: 60rem) {
+  .pa-heroe {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
+
+@media (max-width: 40rem) {
+  .pa-heroe__escena {
+    aspect-ratio: 16 / 11;
+  }
+
+  .pa-heroe__titulo {
+    font-size: var(--texto-2xl);
+  }
+}
+
+.pa-oficio {
+  text-decoration: none;
+  text-transform: none;
+  font-size: var(--texto-sm);
+  min-height: var(--toque-min);
+  padding-inline: var(--esp-3);
+}
+
+.pa-oficio:hover {
+  background: var(--color-primario-100);
+  color: var(--color-primario-800);
+}

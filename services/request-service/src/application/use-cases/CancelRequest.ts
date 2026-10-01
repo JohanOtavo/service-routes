@@ -44,6 +44,11 @@ export class CancelRequestUseCase {
     private readonly opciones: OpcionesCancelacion
   ) {}
 
+  /** Los motivos que se le pueden ofrecer a quien va a cancelar. */
+  async motivosDisponibles(): Promise<Record<string, unknown>> {
+    return { elementos: await this.cancelaciones.listarMotivos() };
+  }
+
   async cancelar(entrada: {
     idSolicitud: number;
     idUsuario: number;

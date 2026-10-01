@@ -1,0 +1,182 @@
+/*
+ * Sistema de diseno de Punto Amigo. Un solo sitio donde cambiar el aspecto.
+ *
+ * Las decisiones salen de quien va a usar esto: gente con telefonos de gama
+ * media, a veces a plena luz del dia, con datos contados. Y de la pregunta que
+ * de verdad resuelve el producto, que no es "que servicio quiero" sino "puedo
+ * confiar en este desconocido". De ahi los cuatro principios:
+ *
+ *   1. Contraste alto y objetivos grandes. Se lee al sol y se toca con el pulgar.
+ *   2. Las senales de confianza mandan. El estado de una contratacion, la
+ *      reputacion y el sello de validado tienen que ser lo mas legible de la
+ *      pantalla, por delante de cualquier adorno.
+ *   3. El color significa. Como lleva el estado de una solicitud, NO puede
+ *      servir ademas de decoracion.
+ *   4. Calido, no corporativo. Son vecinos ayudandose, no un banco.
+ */
+
+:root {
+  /* ─── Color de marca ─────────────────────────────────────────────────────
+   * Verde profundo con algo de azul. Verde porque lee como avanzar y confiar,
+   * y con esa pizca de azul se separa del verde "ecologico" y del azul que usa
+   * toda aplicacion financiera. El 600 tiene contraste 5.9:1 sobre blanco, asi
+   * que admite texto blanco encima cumpliendo WCAG AA.
+   */
+  --color-primario-50: #eef7f4;
+  --color-primario-100: #d3ebe4;
+  --color-primario-200: #a6d7c9;
+  --color-primario-300: #71bca8;
+  --color-primario-400: #419c85;
+  --color-primario-500: #2a8169;
+  --color-primario-600: #1f6f5c;
+  --color-primario-700: #195a4b;
+  --color-primario-800: #14453a;
+  --color-primario-900: #0e2f28;
+
+  /* ─── Acento ─────────────────────────────────────────────────────────────
+   * Terracota. Es el complemento del primario, asi que salta sin gritar, y
+   * tiene el calor del barro y del ladrillo. Se reserva para UNA accion por
+   * pantalla: si se usa para dos, deja de senalar nada.
+   */
+  --color-acento-100: #fbe8dd;
+  --color-acento-300: #eda877;
+  --color-acento-500: #d9712f;
+  --color-acento-600: #c2571f;
+  --color-acento-700: #9c4518;
+
+  /* ─── Neutros calidos ────────────────────────────────────────────────────
+   * El fondo no es blanco puro: #faf8f5 cansa menos la vista a plena luz y
+   * hace que las tarjetas blancas se despeguen sin necesidad de bordes.
+   */
+  --color-neutro-0: #ffffff;
+  --color-neutro-50: #faf8f5;
+  --color-neutro-100: #f1eee9;
+  --color-neutro-200: #e2ded7;
+  --color-neutro-300: #c9c3b9;
+  --color-neutro-400: #a39b8f;
+  --color-neutro-500: #7d756a;
+  --color-neutro-600: #5f584f;
+  --color-neutro-700: #46413a;
+  --color-neutro-800: #2e2a25;
+  --color-neutro-900: #1a1714;
+
+  /* ─── Color con significado ──────────────────────────────────────────────
+   * El exito NO es el verde de la marca. Si lo fuera, un boton primario y un
+   * aviso de "salio bien" se verian igual, y entonces el color dejaria de
+   * informar. Este verde es mas claro y mas frio.
+   */
+  --color-exito: #2f855a;
+  --color-exito-suave: #e6f4ec;
+  --color-aviso: #b7791f;
+  --color-aviso-suave: #fdf4e3;
+  --color-error: #c53030;
+  --color-error-suave: #fdecec;
+  --color-info: #2b6cb0;
+  --color-info-suave: #e9f1fa;
+
+  /* ─── Texto ──────────────────────────────────────────────────────────────
+   * El secundario llega a 4.6:1 sobre el fondo de pagina, no al minimo de
+   * 4.5:1 por casualidad: el gris de "texto apagado" es donde casi todas las
+   * interfaces incumplen el contraste sin darse cuenta.
+   */
+  --color-texto: var(--color-neutro-900);
+  --color-texto-secundario: var(--color-neutro-600);
+  --color-texto-inverso: var(--color-neutro-0);
+  --color-texto-desactivado: var(--color-neutro-400);
+
+  /* ─── Superficies ────────────────────────────────────────────────────────*/
+  --color-fondo-pagina: var(--color-neutro-50);
+  --color-fondo-tarjeta: var(--color-neutro-0);
+  --color-fondo-hundido: var(--color-neutro-100);
+  --color-borde: var(--color-neutro-200);
+  --color-borde-fuerte: var(--color-neutro-300);
+  --color-velo: rgb(26 23 20 / 55%);
+
+  /* ─── Tipografia ─────────────────────────────────────────────────────────
+   * Inter: se lee bien en tamanos pequenos, lleva bien las tildes y la ene, y
+   * es libre. Hace falta porque buena parte de la interfaz son listas densas.
+   *
+   * La escala crece despacio abajo (1.125) y mas rapido arriba (1.25): los
+   * tamanos de lista tienen que distinguirse sin desperdiciar alto de pantalla,
+   * y los titulos si necesitan separarse.
+   */
+  --fuente-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fuente-mono: ui-monospace, 'SFMono-Regular', 'Consolas', monospace;
+
+  --texto-xs: 0.75rem;    /* 12px — etiquetas, sellos */
+  --texto-sm: 0.875rem;   /* 14px — texto secundario, metadatos */
+  --texto-base: 1rem;     /* 16px — cuerpo. Nunca menos en un movil */
+  --texto-lg: 1.125rem;   /* 18px — subtitulos */
+  --texto-xl: 1.375rem;   /* 22px — titulo de tarjeta */
+  --texto-2xl: 1.75rem;   /* 28px — titulo de pantalla */
+  --texto-3xl: 2.25rem;   /* 36px — portada */
+
+  --peso-normal: 400;
+  --peso-medio: 500;
+  --peso-semi: 600;
+  --peso-fuerte: 700;
+
+  --alto-linea-ajustado: 1.25;
+  --alto-linea-normal: 1.55;
+  --alto-linea-holgado: 1.75;
+
+  /* ─── Espaciado ──────────────────────────────────────────────────────────
+   * Base de 4px. Todo margen y relleno sale de aqui: cuando se improvisa un
+   * valor suelto, el ritmo vertical se rompe y nadie sabe por que.
+   */
+  --esp-1: 0.25rem;
+  --esp-2: 0.5rem;
+  --esp-3: 0.75rem;
+  --esp-4: 1rem;
+  --esp-6: 1.5rem;
+  --esp-8: 2rem;
+  --esp-12: 3rem;
+  --esp-16: 4rem;
+
+  /* ─── Objetivos tactiles ─────────────────────────────────────────────────
+   * 44px es el minimo, no el ideal. Debajo de eso la gente falla el toque y
+   * acaba pulsando lo de al lado, que en esta aplicacion puede ser "cancelar".
+   */
+  --toque-min: 2.75rem;
+
+  /* ─── Bordes y sombras ───────────────────────────────────────────────────
+   * Las sombras son suaves y calidas, no grises: una sombra gris sobre un fondo
+   * calido se ve sucia.
+   */
+  --radio-sm: 0.375rem;
+  --radio-md: 0.625rem;
+  --radio-lg: 1rem;
+  --radio-redondo: 999px;
+
+  --sombra-sm: 0 1px 2px rgb(46 42 37 / 6%);
+  --sombra-md: 0 2px 8px rgb(46 42 37 / 8%), 0 1px 2px rgb(46 42 37 / 4%);
+  --sombra-lg: 0 8px 24px rgb(46 42 37 / 10%), 0 2px 6px rgb(46 42 37 / 5%);
+
+  /* El anillo de foco es GRUESO y de color propio. El foco tiene que verse
+   * desde lejos: quien navega con teclado no puede adivinar donde esta. */
+  --anillo-foco: 0 0 0 3px var(--color-primario-200);
+
+  /* ─── Movimiento ─────────────────────────────────────────────────────────*/
+  --transicion-rapida: 120ms ease-out;
+  --transicion-normal: 200ms ease-out;
+
+  --capa-encima: 10;
+  --capa-cabecera: 100;
+  --capa-velo: 1000;
+  --capa-dialogo: 1010;
+  --capa-aviso: 1020;
+
+  --ancho-contenido: 72rem;
+  --ancho-texto: 38rem; /* Medida de lectura: mas de ~75 caracteres cansa */
+}
+
+/*
+ * Quien pide menos movimiento lo pide en serio: puede ser mareo o migrana. Se
+ * anula la animacion, incluida la de las escenas 3D, que son lo que mas marea.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transicion-rapida: 1ms;
+    --transicion-normal: 1ms;
+  }
+}

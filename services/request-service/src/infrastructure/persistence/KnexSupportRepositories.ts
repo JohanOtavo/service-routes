@@ -6,6 +6,7 @@ import type {
   IHistorialRepository,
   IReplicaRepository,
   MotivoCancelacion,
+  MotivoOfrecido,
   PrestadorRef,
   RegistroCancelacion,
   ServicioRef,
@@ -70,6 +71,29 @@ export class KnexCancelacionRepository implements ICancelacionRepository {
       exigeValidacion: Boolean(fila.exige_validacion),
       exigeDetalle: Boolean(fila.exige_detalle),
     };
+  }
+
+  /**
+   * Los motivos activos, ordenados por descripcion.
+   *
+   * Solo lo que quien cancela necesita ver. `computa` y `traslada_falta` se
+   * quedan fuera: son el efecto que decide el servidor, y ofrecerlos seria
+   * invitar a elegir el motivo por su consecuencia y no por lo que paso.
+   */
+  async listarMotivos(): Promise<readonly MotivoOfrecido[]> {
+    const filas = await this.db('motivo_cancelacion')
+      .where({ activo: true })
+      .orderBy('descripcion', 'asc')
+      .select('codigo', 'descripcion', 'exige_detalle', 'traslada_falta', 'exige_validacion');
+
+    return filas.map((f) => ({
+      codigo: String(f.codigo),
+      descripcion: String(f.descripcion),
+      exigeDetalle: Boolean(f.exige_detalle),
+      // Los dos caminos que abren revision se presentan como uno: a quien
+      // cancela le da igual por que motivo tecnico su caso se va a revisar.
+      abreRevision: Boolean(f.traslada_falta) || Boolean(f.exige_validacion),
+    }));
   }
 
   async guardar(registro: RegistroCancelacion): Promise<number> {

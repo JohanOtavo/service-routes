@@ -1,0 +1,125 @@
+/* Reinicio y estilos de base. Despues de los tokens, antes de los componentes. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  /* El usuario puede haber subido el tamano de letra del sistema. No se fija
+   * un `font-size` en px aqui para no anular esa decision. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--fuente-sans);
+  font-size: var(--texto-base);
+  line-height: var(--alto-linea-normal);
+  color: var(--color-texto);
+  background-color: var(--color-fondo-pagina);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: var(--alto-linea-ajustado);
+  font-weight: var(--peso-semi);
+  /* `balance` reparte los titulos en varias lineas sin dejar una palabra
+   * huerfana al final, que es lo que peor se ve en pantallas estrechas. */
+  text-wrap: balance;
+}
+
+h1 { font-size: var(--texto-2xl); }
+h2 { font-size: var(--texto-xl); }
+h3 { font-size: var(--texto-lg); }
+
+p {
+  /* `pretty` evita lineas finales de una sola palabra en los parrafos. */
+  text-wrap: pretty;
+}
+
+img,
+svg,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--color-primario-700);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--color-primario-800);
+}
+
+/*
+ * El foco se ve SIEMPRE. No se usa `:focus-visible` a secas sin respaldo ni se
+ * anula con `outline: none`: quitar el indicador de foco deja la aplicacion
+ * inutilizable con teclado, y es el incumplimiento de accesibilidad mas comun
+ * que existe.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-primario-600);
+  outline-offset: 2px;
+  border-radius: var(--radio-sm);
+}
+
+/* Texto solo para lectores de pantalla. Se usa para las etiquetas que la vista
+ * ya deja claras por contexto pero que un lector necesita oir. */
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Salto al contenido: el primer elemento enfocable de la pagina. Aparece solo
+ * al recibir foco, para quien navega con teclado y no quiere recorrer el menu
+ * en cada pantalla. */
+.salto-contenido {
+  position: absolute;
+  top: var(--esp-2);
+  left: var(--esp-2);
+  z-index: var(--capa-aviso);
+  padding: var(--esp-2) var(--esp-4);
+  background: var(--color-primario-600);
+  color: var(--color-texto-inverso);
+  border-radius: var(--radio-sm);
+  transform: translateY(-200%);
+  transition: transform var(--transicion-rapida);
+}
+
+.salto-contenido:focus {
+  transform: translateY(0);
+}
+
+.contenido {
+  width: 100%;
+  max-width: var(--ancho-contenido);
+  margin-inline: auto;
+  /* Respeta la zona segura de los moviles con muesca. */
+  padding-inline: max(var(--esp-4), env(safe-area-inset-left));
+}

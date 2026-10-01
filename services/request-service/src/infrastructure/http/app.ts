@@ -442,6 +442,21 @@ export function createApp(deps: AppDeps): Express {
   );
 
   /**
+   * Catalogo de motivos de cancelacion.
+   *
+   * Lo necesita el cliente para ofrecer la lista. Va antes de `/:id` porque
+   * "cancellation-reasons" no es un identificador, y exige sesion: no hay
+   * razon para que un visitante anonimo recorra los motivos de la plataforma.
+   */
+  app.get(
+    '/api/v1/requests/cancellation-reasons',
+    autenticado,
+    ruta(async (_req, res) => {
+      res.json(await deps.cancelacion.motivosDisponibles());
+    })
+  );
+
+  /**
    * Las mias, como solicitante o como oferente.
    *
    * El papel es un parametro porque la MISMA persona puede ser las dos cosas

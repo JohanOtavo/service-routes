@@ -1,0 +1,68 @@
+/* Panel de administracion: tablas densas y el relieve de actividad. */
+
+.pa-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--esp-3);
+  font-size: var(--texto-sm);
+}
+
+.pa-tabla caption {
+  text-align: left;
+  margin-bottom: var(--esp-2);
+}
+
+.pa-tabla th,
+.pa-tabla td {
+  text-align: left;
+  padding: var(--esp-2) var(--esp-3);
+  border-bottom: 1px solid var(--color-borde);
+  vertical-align: top;
+}
+
+.pa-tabla th {
+  font-weight: var(--peso-semi);
+  color: var(--color-texto-secundario);
+  /* La cabecera se queda a la vista al desplazar una tabla larga: sin esto hay
+   * que subir para recordar que columna es cual. */
+  position: sticky;
+  top: 3.5rem;
+  background: var(--color-fondo-tarjeta);
+}
+
+.pa-tabla code {
+  font-family: var(--fuente-mono);
+  font-size: var(--texto-xs);
+  background: var(--color-fondo-hundido);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radio-sm);
+}
+
+/*
+ * El hueco del relieve.
+ *
+ * `aspect-ratio` reserva el alto antes de que three.js cargue, para que la
+ * tabla de debajo no salte cuando el lienzo aparece.
+ */
+.pa-relieve {
+  aspect-ratio: 21 / 9;
+  width: 100%;
+  margin-block: var(--esp-4);
+  border-radius: var(--radio-md);
+  background: linear-gradient(180deg, var(--color-neutro-50), var(--color-neutro-100));
+  overflow: hidden;
+}
+
+/* En movil, una tabla de cinco columnas no cabe: se desplaza en horizontal en
+ * lugar de apretar el texto hasta hacerlo ilegible. */
+@media (max-width: 48rem) {
+  .pa-tabla {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .pa-relieve {
+    aspect-ratio: 4 / 3;
+  }
+}

@@ -286,6 +286,29 @@ paths:
         '404': { $ref: '_shared.yaml#/components/responses/NoEncontrado' }
         '409': { description: El servicio no esta disponible, o seria contratarse a si mismo }
 
+  /api/v1/requests/cancellation-reasons:
+    get:
+      tags: [Contrataciones]
+      summary: Catalogo de motivos de cancelacion (SRS 10.2.4)
+      description: >
+        Los motivos viven en una tabla y no en una enumeracion del codigo para
+        que un administrador pueda anadir o retirar uno sin desplegar. Por eso
+        hace falta este endpoint: si el cliente los llevara fijos, cambiar la
+        tabla no cambiaria nada de lo que la gente ve.
+
+        Devuelve `exigeDetalle` y `abreRevision`, que es lo que quien cancela
+        necesita saber antes de elegir. NO devuelve `computa` ni
+        `trasladaFalta`: son el efecto que decide el servidor, y publicarlos
+        invitaria a elegir el motivo por su consecuencia en lugar de por lo que
+        de verdad paso.
+
+        Exige sesion: no hay razon para que un visitante anonimo recorra los
+        motivos de la plataforma.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Motivos activos }
+        '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
+
   /api/v1/requests/mine:
     get:
       tags: [Contrataciones]
