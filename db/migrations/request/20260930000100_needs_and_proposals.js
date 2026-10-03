@@ -211,6 +211,10 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('propuesta');
   await knex.schema.dropTableIfExists('necesidad');
+  // Esta tabla se creaba en el `up` pero no se borraba aqui, asi que el
+  // rollback dejaba `reputacion_ref` en pie y la remigracion fallaba con
+  // "Table 'reputacion_ref' already exists". Solo se veia al hacer reset.
+  await knex.schema.dropTableIfExists('reputacion_ref');
   await knex.schema.dropTableIfExists('categoria_ref');
   await knex.schema.dropTableIfExists('servicio_ref');
   await knex.schema.dropTableIfExists('prestador_ref');

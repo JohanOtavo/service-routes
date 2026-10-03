@@ -73,7 +73,18 @@ function exigirEntornoSeguro(operacion) {
 async function seed(key) {
   exigirEntornoSeguro('Cargar seeds');
   return withConnection(key, async (db) => {
-    const [files] = await db.seed.run();
+    let files;
+    try {
+      [files] = await db.seed.run();
+    } catch (error) {
+      // Un servicio sin seeds no tiene directorio, y knex lanza ENOENT al
+      // listarlo. Git no versiona directorios vacios, asi que en un clon
+      // limpio `db/seeds/<servicio>` simplemente no existe para los cinco
+      // servicios todavia sin seed, y esto solo se rompia fuera de la
+      // maquina de quien los creo. Cualquier otro error se propaga.
+      if (error && error.code === 'ENOENT') return `${key}: sin seeds`;
+      throw error;
+    }
     return files.length === 0 ? `${key}: sin seeds` : `${key}: ${files.length} seed(s)`;
   });
 }
