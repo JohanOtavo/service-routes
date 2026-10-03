@@ -26,6 +26,17 @@ import knexLib, { type Knex } from 'knex';
  * TypeScript con `allowJs`, y ninguno de esos archivos esta escrito para eso.
  * Es el mismo caso que `services/api-gateway/tests/openapi-coverage.unit.test.ts`.
  */
+/**
+ * Las variables se definen ANTES de los `require`, no en `beforeAll`.
+ *
+ * `db/seeds/auth/01_roles_and_users.js` lee `SEED_DEV_PASSWORD` al cargarse y
+ * lanza si falta, asi que hacerlo en `beforeAll` llega tarde: el modulo ya se
+ * cargo. En local no se notaba porque la variable venia del `.env` del
+ * entorno; en CI no existe, y la suite entera fallaba al arrancar.
+ */
+process.env['SEED_DEV_PASSWORD'] ??= 'ContrasenaDeSemillaParaPruebas';
+process.env['NODE_ENV'] ??= 'test';
+
 /* eslint-disable @typescript-eslint/no-require-imports */
 const configs = require('../knexfile') as Record<string, Knex.Config>;
 const seedAuth = require('../seeds/auth/01_roles_and_users') as {
@@ -43,12 +54,6 @@ let disponible = false;
 let motivoNoDisponible = '';
 
 beforeAll(async () => {
-  // El seed de auth exige esta variable y se niega a correr sin ella. Darle un
-  // valor aqui mantiene la prueba ejecutable sin tocar el .env de quien la corre.
-  process.env['SEED_DEV_PASSWORD'] ??= 'ContrasenaDeSemillaParaPruebas';
-  // Los seeds solo se permiten en development o test; la prueba ES test.
-  process.env['NODE_ENV'] ??= 'test';
-
   try {
     auth = knexLib(configs['auth'] as Knex.Config);
     catalog = knexLib(configs['catalog'] as Knex.Config);
