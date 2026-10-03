@@ -15,6 +15,11 @@ jobs:
   migrations:
     name: Migraciones contra MySQL real
     runs-on: ubuntu-latest
+    env:
+      # `db/cli.js` solo permite reset y seeds con NODE_ENV development o test, y
+      # sin definir lo rechaza por tratar el entorno desconocido como el mas
+      # peligroso. La base del runner es efimera, asi que test es lo honesto.
+      NODE_ENV: test
     services:
       mysql:
         image: mysql:8.0
@@ -205,6 +210,16 @@ jobs:
 
       - name: Aplicar migraciones
         run: npm run db:migrate
+
+      # Sin esto el alta de usuario falla con "Roles no registrados en el
+      # catalogo: SOLICITANTE": KnexUsuarioRepository resuelve los roles contra
+      # la tabla `rol`, y las migraciones crean el esquema pero no el catalogo.
+      # En local nunca se noto porque el desarrollador ya tenia los seeds cargados.
+      - name: Cargar datos iniciales
+        env:
+          # Solo para esta ejecucion efimera; el CLI exige 12 caracteres.
+          SEED_DEV_PASSWORD: ci-solo-esta-ejecucion
+        run: npm run db:seed
 
       # Claves efimeras, solo para esta ejecucion. El codigo espera el PEM con
       # los saltos escapados como `\n`, porque es el formato que produce un
