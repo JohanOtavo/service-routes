@@ -39,3 +39,6 @@ Thumbs.db
 *.sql.gz
 dumps/
 .keys/
+
+# Claude Code — ajustes personales de esta copia de trabajo
+.claude/settings.local.json

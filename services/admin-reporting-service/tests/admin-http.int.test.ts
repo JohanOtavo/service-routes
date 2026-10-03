@@ -4,10 +4,12 @@
  *   docker compose up -d
  *   npx jest --selectProjects integration
  */
+import { randomUUID } from 'node:crypto';
 import supertest from 'supertest';
 import type { Express } from 'express';
 import type { Knex } from 'knex';
 import { buildContainer, envSchema } from '../src/main';
+import { METRICA_AUDITORIA } from '../src/application/use-cases/CalculateStatistics';
 
 const SECRETO_INTERNO = 'solo-para-pruebas-de-integracion';
 
@@ -317,5 +319,109 @@ describe('informes (SRS RF113, RF115)', () => {
   it('la serie exige decir que metrica', async () => {
     if (saltar()) return;
     expect((await admin().get('/api/v1/admin/reports/series')).status).toBe(422);
+  });
+});
+
+/**
+ * El escritor de `statistics_snapshot` (A-3).
+ *
+ * El criterio de cierre del backlog pide "una prueba que verifica que una fila
+ * aparece". Esto comprueba eso y las dos cosas que no se pueden simular sin el
+ * motor: que la clave unica `(fecha, metrica, dimension)` hace que recalcular
+ * SUSTITUYA en lugar de duplicar, y que el agregado por `DATE(...)` cuenta los
+ * asientos del dia correcto.
+ */
+describe('recalculo de series (A-3)', () => {
+  const ACCION = 'ACCION_DE_PRUEBA_ESTADISTICAS';
+
+  const limpiarEstadisticas = async (): Promise<void> => {
+    await knex('statistics_snapshot').whereIn('metrica', [METRICA_AUDITORIA]).delete();
+  };
+
+  /**
+   * La auditoria NO se puede limpiar: es append-only por disparador.
+   *
+   * Asi que esta suite no puede afirmar un valor absoluto —otras pruebas y
+   * otras ejecuciones dejan asientos del mismo dia—. Mide la DIFERENCIA que
+   * produce al escribir sus propios asientos, que es lo que de verdad prueba
+   * que el calculo los ve.
+   */
+  const valorDeHoy = async (dimension: string): Promise<number> => {
+    const fila = await knex('statistics_snapshot')
+      .select('valor')
+      .where({ metrica: METRICA_AUDITORIA, dimension })
+      .andWhereRaw('fecha = CURRENT_DATE()')
+      .first();
+    return fila === undefined ? 0 : Number(fila.valor);
+  };
+
+  const escribirAsientos = async (cuantos: number, resultado: string): Promise<void> => {
+    await knex('audit_record').insert(
+      Array.from({ length: cuantos }, () => ({
+        ocurrido_at: new Date(),
+        id_actor: ADMIN,
+        actor_rol: 'ADMINISTRADOR',
+        accion: ACCION,
+        recurso_tipo: 'PRUEBA',
+        recurso_id: '1',
+        resultado,
+        correlation_id: randomUUID(),
+      }))
+    );
+  };
+
+  it('escribe una fila por dimension y un TOTAL, y recalcular no duplica', async () => {
+    if (saltar()) return;
+    await limpiarEstadisticas();
+
+    const contenedor = buildContainer(envSchema.parse(env));
+    const calcular = contenedor.calcular;
+
+    await calcular.recalcular({ dias: 1 });
+    const exitosAntes = await valorDeHoy('EXITO');
+    const totalAntes = await valorDeHoy('TOTAL');
+
+    await escribirAsientos(3, 'EXITO');
+    await escribirAsientos(2, 'FALLO');
+    await calcular.recalcular({ dias: 1 });
+
+    expect(await valorDeHoy('EXITO')).toBe(exitosAntes + 3);
+    expect(await valorDeHoy('TOTAL')).toBe(totalAntes + 5);
+
+    // Volver a pasar sin escribir nada deja la cifra igual: la clave unica
+    // sustituye el punto del dia en lugar de anadir otro.
+    await calcular.recalcular({ dias: 1 });
+    expect(await valorDeHoy('EXITO')).toBe(exitosAntes + 3);
+
+    const filas = await knex('statistics_snapshot')
+      .where({ metrica: METRICA_AUDITORIA, dimension: 'EXITO' })
+      .andWhereRaw('fecha = CURRENT_DATE()');
+    expect(filas).toHaveLength(1);
+
+    await contenedor.knex.destroy();
+  }, 60_000);
+
+  it('la metrica recalculada aparece en el catalogo y se puede consultar como serie', async () => {
+    if (saltar()) return;
+    await limpiarEstadisticas();
+
+    const contenedor = buildContainer(envSchema.parse(env));
+    await escribirAsientos(1, 'EXITO');
+    await contenedor.calcular.recalcular({ dias: 1 });
+    await contenedor.knex.destroy();
+
+    const metricas = await admin().get('/api/v1/admin/reports/metrics');
+    expect(metricas.body.metricas).toContain(METRICA_AUDITORIA);
+
+    const serie = await admin().get(
+      `/api/v1/admin/reports/series?metrica=${METRICA_AUDITORIA}&dimension=TOTAL`
+    );
+    expect(serie.status).toBe(200);
+    expect(serie.body.total).toBeGreaterThan(0);
+    expect(serie.body.elementos[0].valor).toBeGreaterThan(0);
+  }, 60_000);
+
+  afterAll(async () => {
+    if (disponible) await limpiarEstadisticas();
   });
 });

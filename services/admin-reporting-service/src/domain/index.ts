@@ -487,6 +487,38 @@ export interface IParameterRepository {
   ): Promise<ParametroSistema>;
 }
 
+/** Un punto listo para escribir en `statistics_snapshot`. */
+export interface PuntoCalculado {
+  /** `YYYY-MM-DD`: la columna es DATE, no DATETIME. */
+  fecha: string;
+  metrica: string;
+  dimension: string;
+  valor: number;
+}
+
+/** Un conteo agregado tal como lo devuelve la base: un dia, una dimension. */
+export interface ConteoAgrupado {
+  /** `YYYY-MM-DD`. */
+  fecha: string;
+  dimension: string;
+  valor: number;
+}
+
+/**
+ * De donde salen las cifras que se precalculan.
+ *
+ * Esta separado de `IStatisticsRepository` a proposito: ese lee y escribe la
+ * tabla de series, y este agrega las tablas de origen. Juntarlos haria que el
+ * caso de uso del recalculo y el de los informes dependieran de lo mismo sin
+ * necesitarlo.
+ */
+export interface IStatisticsSourceRepository {
+  /** Asientos de auditoria por dia y `resultado` (EXITO, FALLO, DENEGADO). */
+  conteoAuditoriaPorDiaYResultado(desde: Date, hasta: Date): Promise<ConteoAgrupado[]>;
+  /** Moderaciones por dia y `recurso_tipo`. */
+  conteoModeracionPorDiaYTipo(desde: Date, hasta: Date): Promise<ConteoAgrupado[]>;
+}
+
 export interface IStatisticsRepository {
   /** Serie de una metrica precalculada, acotada por fechas (RF113). */
   serie(
@@ -501,6 +533,13 @@ export interface IStatisticsRepository {
   ): Promise<Pagina<PuntoSerie>>;
   /** Metricas disponibles: sin esto el administrador tendria que adivinarlas. */
   metricas(): Promise<readonly string[]>;
+  /**
+   * Escribe o sustituye puntos, y devuelve cuantos. Cierra A-3.
+   *
+   * Sustituye y no acumula: la clave unica `(fecha, metrica, dimension)` existe
+   * para que recalcular un dia pise su punto anterior en lugar de duplicarlo.
+   */
+  registrar(puntos: readonly PuntoCalculado[]): Promise<number>;
 }
 
 export interface IBackupRepository {

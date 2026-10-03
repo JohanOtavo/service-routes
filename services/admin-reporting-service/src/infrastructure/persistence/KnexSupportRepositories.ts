@@ -1,12 +1,15 @@
 import type { Knex } from 'knex';
 import { currentDb } from '@punto-amigo/service-kit';
 import type {
+  ConteoAgrupado,
   EstadoRespaldo,
   IBackupRepository,
   IParameterRepository,
   IStatisticsRepository,
+  IStatisticsSourceRepository,
   Pagina,
   ParametroSistema,
+  PuntoCalculado,
   PuntoSerie,
   TipoParametro,
 } from '../../domain';
@@ -141,6 +144,103 @@ export class KnexStatisticsRepository implements IStatisticsRepository {
       .orderBy('metrica', 'asc')) as unknown as { metrica: string }[];
 
     return filas.map((f) => String(f.metrica));
+  }
+
+  /**
+   * Escribe los puntos recalculados, sustituyendo los del mismo dia.
+   *
+   * Un solo INSERT con todas las filas y no uno por punto: son decenas por
+   * ejecucion, y la clave unica `uq_snapshot_punto (fecha, metrica, dimension)`
+   * resuelve el choque en el motor. `calculado_at` se refresca para que se
+   * pueda ver cuando se calculo por ultima vez, que es distinto del dia que
+   * describe la fila.
+   */
+  async registrar(puntos: readonly PuntoCalculado[]): Promise<number> {
+    if (puntos.length === 0) return 0;
+
+    await this.db('statistics_snapshot')
+      .insert(
+        puntos.map((p) => ({
+          fecha: p.fecha,
+          metrica: p.metrica,
+          dimension: p.dimension,
+          valor: p.valor,
+          calculado_at: new Date(),
+        }))
+      )
+      .onConflict(['fecha', 'metrica', 'dimension'])
+      .merge(['valor', 'calculado_at']);
+
+    /**
+     * Se devuelve la longitud de la entrada, no las filas afectadas.
+     *
+     * En MySQL, ON DUPLICATE KEY UPDATE cuenta 1 por alta y 2 por
+     * actualizacion, y 0 cuando el valor no cambia. Ese numero no es "cuantos
+     * puntos se escribieron" y leerlo como tal daria cifras absurdas en el log.
+     */
+    return puntos.length;
+  }
+}
+
+/**
+ * Agregados sobre las tablas de origen de `pa_admin`.
+ *
+ * Solo dos consultas porque solo hay dos tablas con volumen propio en este
+ * esquema. Las dos agrupan por `DATE(...)` en el motor en lugar de traerse las
+ * filas y contarlas en memoria: la auditoria es la tabla que mas crece del
+ * proyecto, y cada agregado esta cubierto por su indice —`idx_auditoria_fecha`
+ * y `idx_moderacion_fecha`—.
+ */
+export class KnexStatisticsSourceRepository implements IStatisticsSourceRepository {
+  constructor(private readonly knex: Knex) {}
+
+  private get db(): Knex | Knex.Transaction {
+    return currentDb(this.knex);
+  }
+
+  async conteoAuditoriaPorDiaYResultado(desde: Date, hasta: Date): Promise<ConteoAgrupado[]> {
+    return this.agrupar('audit_record', 'ocurrido_at', 'resultado', desde, hasta);
+  }
+
+  async conteoModeracionPorDiaYTipo(desde: Date, hasta: Date): Promise<ConteoAgrupado[]> {
+    return this.agrupar('content_moderation', 'moderado_at', 'recurso_tipo', desde, hasta);
+  }
+
+  /**
+   * `COUNT(*)` por dia y por una columna, dentro de un rango.
+   *
+   * El orden por fecha ascendente no es cosmetico: el caso de uso construye el
+   * punto `TOTAL` de cada dia agrupando en el orden en que llegan las filas, y
+   * una serie que saliera desordenada se escribiria igual pero se leeria peor
+   * en cualquier registro de diagnostico.
+   */
+  private async agrupar(
+    tabla: string,
+    columnaFecha: string,
+    columnaDimension: string,
+    desde: Date,
+    hasta: Date
+  ): Promise<ConteoAgrupado[]> {
+    const filas = (await this.db(tabla)
+      .select(
+        this.knex.raw('DATE(??) as fecha', [columnaFecha]),
+        this.knex.raw('?? as dimension', [columnaDimension])
+      )
+      .count<{ valor: number }[]>({ valor: '*' })
+      .whereBetween(columnaFecha, [desde, hasta])
+      .groupByRaw('DATE(??), ??', [columnaFecha, columnaDimension])
+      .orderByRaw('DATE(??) asc', [columnaFecha])) as unknown as Record<string, unknown>[];
+
+    return filas.map((f) => ({
+      // MySQL devuelve DATE como Date con la conexion en UTC; se recorta a
+      // `YYYY-MM-DD` porque es lo que espera la columna de destino.
+      fecha:
+        f['fecha'] instanceof Date
+          ? f['fecha'].toISOString().slice(0, 10)
+          : String(f['fecha']).slice(0, 10),
+      dimension: String(f['dimension']),
+      valor: Number(f['valor']),
+    }));
   }
 }
 
