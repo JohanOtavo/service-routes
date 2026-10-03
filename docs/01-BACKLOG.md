@@ -8,6 +8,11 @@ Un elemento solo se cierra cuando se cumple su criterio de cierre y su verificac
 queda registrada. Un pendiente marcado «decisión» no se puede cerrar con trabajo
 técnico: necesita una respuesta tuya.
 
+> **Fase 5 cerrada el 3/10/2026.** A-1, A-2, A-3 (y sus duplicados B-2 y B-3) y
+> AT-004 están cerrados con código y prueba; el detalle está en
+> [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md). El grupo **I** es nuevo: cuatro
+> hallazgos que aparecieron al construirlos y que no estaban registrados.
+>
 > **Los 13 pendientes de los grupos A, B y C ya tienen decisión.** Se tomaron el
 > 3/10/2026 y están en [02-DECISIONES.md](02-DECISIONES.md): 1 cerrado, 9 asignados a
 > las Fases 5, 6 y 9, y 3 duplicados que se cierran con su original. Tener decisión
@@ -20,15 +25,16 @@ técnico: necesita una respuesta tuya.
 
 | Grupo | Orígenes | Elementos | Abiertos | Decisión pendiente |
 |---|---|---|---|---|
-| A. Pendientes de la Fase 1 | `FASE-1-ENTREGA.md` §6 | 3 | 3 | 0 · asignados a Fase 5 |
-| B. Pendientes de la Fase 2 | `FASE-2-ENTREGA.md` §6 | 6 | 6 | 0 · decididos el 3/10 |
+| A. Pendientes de la Fase 1 | `FASE-1-ENTREGA.md` §6 | 3 | **0** | 0 · los 3 cerrados en Fase 5 |
+| B. Pendientes de la Fase 2 | `FASE-2-ENTREGA.md` §6 | 6 | **4** | 0 · B-2 y B-3 cerrados en Fase 5 |
 | C. Pendientes de la Fase 3 | `FASE-3-ENTREGA.md` §7 | 4 | **3** | 0 · C-2 cerrado |
-| D. Deuda técnica registrada | `05-architecture/overview.md` §14 | 7 | 7 | 3 (AT-001, AT-003, AT-006) |
+| D. Deuda técnica registrada | `05-architecture/overview.md` §14 | 7 | **6** | 3 (AT-001, AT-003, AT-006) · AT-004 cerrado |
 | E. Preguntas abiertas | `srs-microservices.md` §11 | 12 | 12 | 5 bloqueantes |
 | F. Brechas de trazabilidad | `traceability-matrix.md` §10 | 8 | 8 | 0 |
 | G. Calidad del repositorio | medido el 3/10/2026 | 8 | **1** | 0 · G-3 decidido |
 | H. Documentación ausente | §H, abajo | 9 | 9 | 0 |
-| **Total** | | **57** | **49** | **8** |
+| I. Hallazgos de la Fase 5 | §I, abajo | 4 | 4 | 0 |
+| **Total** | | **61** | **48** | **8** |
 
 El recuento de G subió de 5 a 8 porque G-6, G-7 y G-8 se añadieron después de la
 primera versión de esta tabla y no se habían contado. Siete de los ocho están
@@ -53,7 +59,14 @@ documento; los reales son los de los grupos A, B y C.
 
 Origen: `FASE-1-ENTREGA.md` §6.
 
-### A-1 · Las semillas borran antes de insertar
+### A-1 · Las semillas borran antes de insertar — **CERRADO** el 3/10/2026
+**Cerrado con.** Upsert por clave natural en los dos seeds, y 6 pruebas en
+`db/tests/seeds.int.test.ts`. Verificado por la ruta del CLI: `db:reset` y luego
+tres `db:seed` dan 4 usuarios nuevos, 0 y 0, con los identificadores 1-4
+intactos, 4 filas `UserRegistered` en lugar de 12 y 7 asignaciones de rol en
+lugar de 21. Detalle en [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md) §2.
+
+Lo que decia este elemento:
 **Qué pasa.** Cada `db:seed` borra las filas y luego inserta. Los identificadores
 cambian en cada ejecución, así que los perfiles derivados quedan apuntando a
 usuarios que ya no existen y los datos de la sesión anterior desaparecen.
@@ -62,7 +75,17 @@ usuarios que ya no existen y los datos de la sesión anterior desaparecen.
 referencial, y hay una prueba que lo demuestra ejecutándolos dos veces seguidas.
 **Fase destino.** 5 (Datos y operación).
 
-### A-2 · Las réplicas no se pueden reconstruir
+### A-2 · Las réplicas no se pueden reconstruir — **CERRADO** el 3/10/2026
+**Cerrado con.** `node db/cli.js reemit` (`npm run db:reemit`), 5 pruebas en
+`db/tests/reemit.int.test.ts` —incluida la que el criterio pedia: borrar
+`prestador_ref` y recuperarla— y una ejecucion real que encolo 4 eventos de
+usuario y 13 de categoria. Detalle en [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md) §3.
+
+**Lo que NO cubre, y queda abierto:** `cancelacion_ref`. Su evento imputa la
+cancelacion a la tasa de un usuario, asi que re-emitirlo contaria dos veces
+cancelaciones reales y podria suspender a un prestador. Ver §I.
+
+Lo que decia este elemento:
 **Qué pasa.** Las tablas `*_ref` se alimentan de eventos consumidos. Si se pierde
 `outbox_event` o `processed_event`, no hay forma de volver a poblarlas. El catálogo
 se queda sin prestadores.
@@ -72,7 +95,13 @@ es prerrequisito de AT-004.
 ha ejecutado al menos una vez reconstruyendo `prestador_ref` desde cero.
 **Fase destino.** 5.
 
-### A-3 · `statistics_snapshot` no tiene a nadie que la escriba
+### A-3 · `statistics_snapshot` no tiene a nadie que la escriba — **CERRADO** el 3/10/2026
+**Cerrado con.** `CalculateStatisticsUseCase` y un barrido horario en
+`admin-reporting-service`, con 6 pruebas unitarias y 2 de integracion. Dos
+metricas, `auditoria_eventos` y `moderaciones`, que son las unicas calculables
+sin salir de `pa_admin`. Detalle en [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md) §4.
+
+Lo que decia este elemento:
 **Qué pasa.** La tabla existe en `pa_admin`, `admin-reporting-service` la lee y
 consulta, y **ningún proceso la calcula**. Los reportes salen vacíos.
 **Por qué importa.** Los reportes y las estadísticas son el módulo 13 del SRS y una
@@ -224,12 +253,12 @@ Origen: `05-architecture/overview.md` §14. **Los siete tienen destino
 | AT-001 | Configuración final de AWS o GCP | P2 | Elige nube y existen los archivos de infraestructura. **Decisión** |
 | AT-002 | Estructura REST definitiva | P1 | Las rutas de los 63 endpoints están congeladas y el SRS refleja la decisión |
 | AT-003 | Organización de los repositorios | P2 | Se decide si `friend-point-docs` y `friend-point-development` se fusionan, se separan o se quedan. **Decisión** |
-| **AT-004** | **Procedimiento de restauración de respaldados** | **P1 · High** | Hay un runbook escrito **y una restauración probada de verdad**. La tabla `backup_record` tiene `restauracion_probada_at` y hoy siempre vale NULL |
+| ~~AT-004~~ | ~~Procedimiento de restauración de respaldos~~ · **CERRADO** 3/10/2026 | ~~P1 · High~~ | Cumplido: [03-RUNBOOK-RESPALDOS.md](03-RUNBOOK-RESPALDOS.md) y `db/respaldo.sh`. Los 7 esquemas restaurados y verificados, 69 tablas comparadas, `restauracion_probada_at` con valor real en las 7 filas |
 | AT-005 | Herramientas de monitoreo y logging | P2 | Todos los servicios emiten logs estructurados con `correlation_id` y hay panel de métricas |
 | AT-006 | Valores de expiración de JWT | P1 | Access, refresh y denylist tienen caducidad decidida, documentada y testeada |
 | AT-007 | Límites de escalabilidad | P2 | Hay una prueba k6 con el umbral de la estrategia: P95 < 300 ms, error < 1 % |
 
-**AT-004 es el único de severidad High del proyecto.** Es bloqueante de la Fase 10.
+~~**AT-004 es el único de severidad High del proyecto.**~~ Cerrado el 3/10/2026. Ya no bloquea la Fase 10; lo que sigue bloqueándola es la política de datos personales.
 
 ---
 
@@ -401,6 +430,60 @@ aprobada todavía». Los tres ADRs están aceptados desde el 30/09/2026. Es una 
 por servicio.
 
 ---
+
+---
+
+## I. Hallazgos de la Fase 5 que no estaban registrados
+
+Aparecieron al construir la re-emisión y el escritor de métricas. Ninguno estaba
+en este backlog antes del 3/10/2026.
+
+### I-1 · Tres réplicas sin ningún escritor
+**Qué pasa.** Tienen migración y **cero código** que las alimente:
+
+| Réplica | Esquema | Evento que debería alimentarla |
+|---|---|---|
+| `usuario_ref` | `pa_provider` | `UserRegistered` — no hay consumidor |
+| `usuario_ref` | `pa_rating` | `UserRegistered` — no hay consumidor |
+| `reputacion_ref` | `pa_request` | `ReputationRecalculated` — su único consumidor es catalog, y escribe `service_rating_summary`, no esta tabla |
+
+**Por qué importa.** Hoy están vacías, así que no son una fuga de datos, pero son
+tres copias declaradas que nadie mantiene. O se consumen o se borran: una tabla
+réplica permanentemente vacía hará que alguien escriba un JOIN contra ella.
+**Cierra cuando.** Cada una tiene un consumidor que la escribe, o su migración se
+elimina con una justificación.
+**Fase destino.** 9 si se eliminan (es documentación y modelo), 6 si se alimentan.
+
+### I-2 · `cancelacion_ref` no se puede reconstruir
+**Qué pasa.** `db/cli.js reemit` deja fuera `ServiceRequestCancelled` a propósito:
+su consumidor imputa la cancelación a la tasa de un usuario, así que re-emitirlo
+contaría dos veces cancelaciones reales y podría cruzar el umbral que suspende a
+un prestador. El payload original enmascara `peso` y `computa` según el estado de
+la revisión y recalcula `faceta`, de modo que tampoco se puede reconstruir
+fielmente desde la tabla.
+**Cierra cuando.** Existe un evento de re-emisión que puebla la réplica **sin**
+pasar por el cálculo de la tasa, o se acepta por escrito que esa réplica se
+reconstruye a mano.
+**Fase destino.** 8 (operación).
+
+### I-3 · `processed_event` tiene un índice para una purga que no existe
+**Qué pasa.** `db/helpers.js` crea `idx_processed_purga` en los seis esquemas que
+consumen eventos. No hay ningún código que purgue esa tabla.
+**Por qué importa.** Crece una fila por evento consumido y por consumidor, para
+siempre.
+**Cierra cuando.** Hay un proceso de purga con su plazo, que depende de la
+decisión 4.1 de [04-POLITICA-DATOS-PERSONALES.md](04-POLITICA-DATOS-PERSONALES.md).
+**Fase destino.** 8.
+
+### I-4 · `exigirEstadoPrestador` está exportada y nunca se llama
+**Qué pasa.** `catalog-service/src/application/use-cases/SyncProviderRef.ts` la
+exporta con la lista de estados válidos y un error claro. El manejador real hace
+`String(...) as EstadoPrestador`, un cast sin comprobar.
+**Por qué importa.** Un estado desconocido entra en `prestador_ref`, y el filtro
+`estado = 'ACTIVE'` de la búsqueda pública lo excluye para siempre sin ruido: el
+prestador desaparece del catálogo y nadie sabe por qué.
+**Cierra cuando.** El manejador la usa, o la función se elimina.
+**Fase destino.** 6.
 
 ## Cómo se cierra un elemento de este backlog
 

@@ -90,8 +90,8 @@ resolvieron el 3/10/2026 en [02-DECISIONES.md](02-DECISIONES.md), de modo que la
 | 2 | Backend seguro | 8 microservicios detrás del gateway, 63 endpoints documentados, 187 unitarias + 133 de integración | **Completada**; sus 6 pendientes asignados a las Fases 5, 6 y 9 | [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) |
 | 3 | Cliente web PWA | React 18 + TypeScript sobre Vite, 18 pantallas, sistema de diseño propio, PWA instalable | **Completada**; 1 pendiente cerrado, 3 asignados a la Fase 6 | [FASE-3-ENTREGA.md](FASE-3-ENTREGA.md) |
 | 4 | Cierre de calidad y deuda heredada | Que `npm run verify` y CI pasen en verde, y decidir los 13 pendientes abiertos | **Completada** el 3/10/2026 | [FASE-4-PLAN.md](FASE-4-PLAN.md) · [02-DECISIONES.md](02-DECISIONES.md) |
-| 5 | Datos y operación | Semillas idempotentes, re-emisión de réplicas, escritor de métricas, política de datos personales | **Siguiente** | §5 |
-| 6 | Experiencia del cliente | Teléfono desde el perfil de prestador, recuperación de contraseña con correo transaccional, E2E del recorrido | Aprobada | §5 |
+| 5 | Datos y operación | Semillas idempotentes, re-emisión de réplicas, escritor de métricas, restauración probada, política de datos personales | **Completada** el 3/10/2026; la política queda en borrador | [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md) |
+| 6 | Experiencia del cliente | Teléfono desde el perfil de prestador, recuperación de contraseña con correo transaccional, E2E del recorrido | **Siguiente** | §5 |
 | ~~7~~ | ~~Notificaciones fuera del MVP~~ | ~~Correo y push~~ | **Eliminada.** Push y correo de producto descartados; el correo transaccional pasa a la Fase 6 | [02-DECISIONES.md](02-DECISIONES.md) §2 |
 | 8 | Observabilidad y despliegue | Logging estructurado, métricas, k6, entornos dev/staging/prod, despliegue | Aprobada | §5 |
 | 9 | Documentación y trazabilidad | 6 de 8 servicios sin documentar, SRS inglés obsoleto, contratos duplicados, backlog formal | Aprobada · puede ir en paralelo ya | §5 |
@@ -216,24 +216,37 @@ Cada una se apoya en pendientes que **ya están registrados** en los documentos 
 proyecto. No invento trabajo: reordeno lo que está escrito y le doy un orden de
 ejecución.
 
-### Fase 5 — Datos y operación
+### Fase 5 — Datos y operación · completada el 3/10/2026
 
-Por qué es la primera de las futuras: casi todo lo demás depende de que los datos
-se puedan reproducir.
+Era la primera de las futuras porque casi todo lo demás dependía de que los datos
+se pudieran reproducir. Detalle en [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md).
+
+Cuatro de sus cinco elementos están cerrados con código y prueba: semillas
+idempotentes (A-1, B-3), comando de re-emisión de réplicas (A-2, B-2), escritor
+de `statistics_snapshot` (A-3) y restauración de respaldos probada de verdad
+sobre los siete esquemas (AT-004, el único `High` del proyecto). El quinto, la
+política de datos personales, es un borrador con **seis decisiones abiertas** que
+siguen bloqueando producción.
+
+Esta fase destapó además **tres réplicas sin ningún escritor** que no estaban en
+el backlog: `usuario_ref` en `pa_provider` y en `pa_rating`, y `reputacion_ref`
+en `pa_request`. Tienen migración y cero código que las alimente.
 
 - **Semillas idempotentes.** Hoy `db/seeds` borra antes de insertar, así que cada
   `docker compose up` de desarrollo destruye lo anterior y deja huérfanos los
   perfiles derivados. Cierra los pendientes F1-1 y F2-3, que son el mismo problema.
 - **Re-emisión de réplicas.** No hay forma de reconstruir `prestador_ref` o
   `servicio_ref` si se pierden los eventos consumidos. Cierra F1-2 y F2-2.
-- **Escritor de `statistics_snapshot`.** La tabla existe, `admin-reporting-service`
-  la lee, y **nadie la escribe**. Los reportes devuelven siempre vacío.
-- **Política de conservación y anonimización de datos personales.** El SRS la marca
-  como decisión abierta y dice que **debe resolverse antes del despliegue en
-  producción**. Es un bloqueante duro, no una mejora.
-- **Procedimiento de restauración de respaldados.** Deuda técnica AT-004, la única
-  marcada como `High`. Existe `backup_record` con `restauracion_probada_at` y nadie
-  lo comprueba.
+- ~~**Escritor de `statistics_snapshot`.**~~ **Hecho.** Dos métricas calculables
+  localmente, recalculadas cada hora. Las de RF109 a RF112 siguen sin datos
+  porque `pa_admin` no tiene ninguna réplica.
+- **Política de conservación y anonimización de datos personales.** Borrador en
+  [04-POLITICA-DATOS-PERSONALES.md](04-POLITICA-DATOS-PERSONALES.md), con el
+  inventario hecho y **seis decisiones abiertas**. El SRS dice que debe
+  resolverse antes del despliegue en producción: sigue siendo un bloqueante duro.
+- ~~**Procedimiento de restauración de respaldos.**~~ **Hecho.** `db/respaldo.sh`
+  y [03-RUNBOOK-RESPALDOS.md](03-RUNBOOK-RESPALDOS.md); 69 tablas comparadas y
+  `restauracion_probada_at` con valor real en los siete esquemas.
 
 ### Fase 6 — Experiencia del cliente
 
@@ -319,8 +332,8 @@ Fase 1 ──┐
         ┌─────────────────────┼─────────────────────┐
         v                     v                     v
     Fase 5               Fase 6               Fase 9
-   (datos)            (experiencia)        (documentación)
-  <-- aqui                   │              en paralelo
+  COMPLETADA          (experiencia)        (documentación)
+        │             <-- aqui              en paralelo
         │                     │
         └──────────┬──────────┘
                    v
@@ -335,8 +348,9 @@ lo único que sobrevivió de ella, es ahora una tarea de la Fase 6.
 
 - ~~La Fase 4 **no** puede esperar a la 5~~ — cumplido: la puerta quedó en verde antes
   de empezar cualquier trabajo nuevo.
-- La Fase 5 bloquea a la 6: si las semillas destruyen datos y las réplicas no se
-  reconstruyen, el E2E de la Fase 6 será imposible de ejecutar de forma fiable.
+- ~~La Fase 5 bloquea a la 6~~ — cumplido: las semillas ya no destruyen estado y
+  `npm run db:reemit` reconstruye las réplicas, que era lo que hacía imposible
+  ejecutar el E2E de forma fiable.
 - La Fase 9 **puede** ir en paralelo desde ya. No bloquea a nadie y es la que más
   riesgo tiene de olvidarse.
 - Nada llega a la Fase 10 sin la Fase 8. No se despliega lo que no se puede observar.
@@ -415,7 +429,7 @@ documento**. Es la pieza que falta para poder afirmar trazabilidad de extremo a 
 | AT-001 | Configuración final de AWS o GCP | P2 |
 | AT-002 | Estructura REST definitiva | P1 |
 | AT-003 | Organización de los repositorios | P2 |
-| **AT-004** | **Procedimiento de restauración de respaldos** | **P1, severidad High** |
+| ~~AT-004~~ | ~~Procedimiento de restauración de respaldos~~ · **CERRADO** 3/10/2026 | ~~P1, High~~ |
 | AT-005 | Herramientas de monitoreo y logging | P2 |
 | AT-006 | Valores de expiración de JWT | P1 |
 | AT-007 | Límites de escalabilidad | P2 |
@@ -483,6 +497,9 @@ la Fase 5.
 | [README.md](README.md) | Índice del conjunto documental de entrega |
 | [01-BACKLOG.md](01-BACKLOG.md) | Los 13 pendientes, AT-001..007, O-01..O-12 y GAP-001..008 con criterio de cierre |
 | [02-DECISIONES.md](02-DECISIONES.md) | Las 13 decisiones resueltas, con su motivo y su fase destino |
+| [03-RUNBOOK-RESPALDOS.md](03-RUNBOOK-RESPALDOS.md) | Respaldo y restauración: el procedimiento y la primera restauración verificada (AT-004) |
+| [04-POLITICA-DATOS-PERSONALES.md](04-POLITICA-DATOS-PERSONALES.md) | Inventario de datos personales y las 6 decisiones que bloquean producción |
+| [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md) | Registro de la Fase 5 |
 | [FASE-4-PLAN.md](FASE-4-PLAN.md) | La Fase 4, completada, en detalle |
 | [FASE-1-ENTREGA.md](FASE-1-ENTREGA.md) | Registro de la Fase 1 |
 | [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) | Registro de la Fase 2 |
