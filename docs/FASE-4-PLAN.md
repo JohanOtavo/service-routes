@@ -1,6 +1,10 @@
 # Fase 4 — Cierre de calidad y deuda heredada
 
-**Estado: en curso.** Inicio: 2 de octubre de 2026.
+**Estado: completada.** Inicio: 2 de octubre de 2026 · cierre: 3 de octubre de 2026.
+
+Las diez casillas de la lista de salida están marcadas. La última —las 13 decisiones—
+se resolvió en [02-DECISIONES.md](02-DECISIONES.md). Dos de las tres discrepancias de
+la estrategia de pruebas se cierran **diferidas con motivo**, no resueltas; ver §5.
 
 Las Fases 1, 2 y 3 están construidas y probadas. Ninguna tiene el gate de calidad del
 repositorio en verde. Esta fase existe para cerrar esa distancia antes de empezar
@@ -78,10 +82,22 @@ trabajo; si esa sesión se da por terminada, se evalúa qué parte sirve.
 
 Detalle en [01-BACKLOG.md](01-BACKLOG.md). Lo que esta fase produce no es
 implementarlos, sino una decisión registrada para cada uno: entra en una fase
-posterior, o se descarta con su motivo. Los que necesitan una respuesta tuya:
+posterior, o se descarta con su motivo.
 
-- **B-1** el teléfono que no llega al contacto tras el acuerdo
-- **B-6 / Fase 7** si correo y push entran o se descartan
+**Hecho el 3/10/2026**, en [02-DECISIONES.md](02-DECISIONES.md). Las dos que
+necesitaban una respuesta del propietario:
+
+- ~~**B-1** el teléfono que no llega al contacto tras el acuerdo~~ — sale del
+  **perfil de prestador**, opción (c)
+- ~~**B-6 / Fase 7** si correo y push entran o se descartan~~ — **push descartado**,
+  correo de producto descartado, y entra solo el **correo transaccional** de
+  recuperación de contraseña, en la Fase 6. La Fase 7 se elimina del plan
+
+Al registrar las decisiones apareció un pendiente que ningún documento tenía: la
+recuperación de contraseña **genera un token, lo publica y nadie lo consume**, así que
+el enlace no llega a ningún sitio. Es lo que obligó a revisar B-6 — un canal de
+recuperación tiene que funcionar sin sesión, y la bandeja intraaplicación no puede.
+Ver [02-DECISIONES.md](02-DECISIONES.md) §4.
 
 ### 4. Ajustar los tres documentos de entrega
 
@@ -96,12 +112,25 @@ Que solo afirmen lo verificado. Concretamente:
 
 ### 5. Cerrar las tres discrepancias de la estrategia de pruebas
 
-1. `branches` global está en 70 %; la estrategia exige 75 %
+1. `branches` global está en 52 %; la estrategia exige 75 %
 2. No hay override de `./src/domain/` a 90/85 que la estrategia exige
 3. Los criterios E2E y k6 de la estrategia no existen en el código
 
-Las dos primeras se cierran en esta fase. La tercera es trabajo de la Fase 6 y la 8,
-pero aquí se deja escrito que la puerta no se puede abrir sin ellas.
+**Esto no salió como decía este apartado.** Lo que estaba escrito aquí era «las dos
+primeras se cierran en esta fase», y **ninguna de las dos se cierra**. Conviene que
+quede como desvío y no reescrito como si siempre hubiera dicho esto:
+
+- La cifra que este apartado daba para `branches` —70 %— era el **umbral configurado**,
+  no la cobertura real. Medida, la cobertura de ramas es **53.79 %**. La distancia
+  hasta el 75 % que exige la estrategia no es de 5 puntos: es de 21.
+- Subir ahí, y añadir el override de `src/domain/` a 90/85, es trabajo de varios días
+  de pruebas en los repositorios de persistencia. Hacerlo dentro de esta fase la
+  habría convertido en el cajón que su propio apartado «Fuera de alcance» prohíbe.
+- Decisión registrada en [02-DECISIONES.md](02-DECISIONES.md) §3: el trinquete se
+  queda en 65/52/64/67 y la brecha sigue anotada como G-3 en el backlog.
+
+La tercera es trabajo de la Fase 6 y la 8, y aquí queda escrito que la puerta de
+producción no se puede abrir sin ellas.
 
 ### 6. Publicar el repositorio
 
@@ -140,8 +169,9 @@ La fase está cerrada cuando todas las casillas de esta lista están marcadas:
 - [x] Los tres documentos de entrega reflejan solo lo verificado
 - [x] El repositorio está publicado en GitHub — *`JohanOtavo/service-routes`,
       rama `develop`*
-- [ ] Los 13 pendientes tienen una decisión registrada — *sigue abierto: son
-      decisiones de producto y de contrato, no de código*
+- [x] Los 13 pendientes tienen una decisión registrada — *en
+      [02-DECISIONES.md](02-DECISIONES.md): 1 cerrado, 9 asignados a fase, 3
+      duplicados que se cierran con su original*
 
 ---
 

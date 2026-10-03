@@ -1,32 +1,51 @@
 # Backlog de trabajo abierto
 
 Todo lo que está pendiente en Punto Amigo, con su origen documental, su prioridad
-y **qué hay que cumplir exactamente para poder cerrarlo**. Fecha de corte: 2 de
+y **qué hay que cumplir exactamente para poder cerrarlo**. Fecha de corte: 3 de
 octubre de 2026.
 
 Un elemento solo se cierra cuando se cumple su criterio de cierre y su verificación
 queda registrada. Un pendiente marcado «decisión» no se puede cerrar con trabajo
 técnico: necesita una respuesta tuya.
 
+> **Los 13 pendientes de los grupos A, B y C ya tienen decisión.** Se tomaron el
+> 3/10/2026 y están en [02-DECISIONES.md](02-DECISIONES.md): 1 cerrado, 9 asignados a
+> las Fases 5, 6 y 9, y 3 duplicados que se cierran con su original. Tener decisión
+> **no** es estar cerrado: el criterio de cierre de cada uno sigue siendo el que está
+> escrito aquí abajo.
+
 ---
 
 ## Resumen
 
-| Grupo | Orígenes | Elementos | Con decisión tuya |
-|---|---|---|---|
-| A. Pendientes de la Fase 1 | `FASE-1-ENTREGA.md` §6 | 3 | 0 |
-| B. Pendientes de la Fase 2 | `FASE-2-ENTREGA.md` §6 | 6 | 1 |
-| C. Pendientes de la Fase 3 | `FASE-3-ENTREGA.md` §7 | 4 | 0 |
-| D. Deuda técnica registrada | `05-architecture/overview.md` §14 | 7 | 3 |
-| E. Preguntas abiertas | `srs-microservices.md` §11 | 12 | 5 bloqueantes |
-| F. Brechas de trazabilidad | `traceability-matrix.md` §10 | 8 | 0 |
-| G. Calidad del repositorio | medido el 2/10/2026 | 5 | 1 |
-| H. Documentación ausente |(counted below) | 9 | 0 |
-| **Total** | | **54** | **10** |
+| Grupo | Orígenes | Elementos | Abiertos | Decisión pendiente |
+|---|---|---|---|---|
+| A. Pendientes de la Fase 1 | `FASE-1-ENTREGA.md` §6 | 3 | 3 | 0 · asignados a Fase 5 |
+| B. Pendientes de la Fase 2 | `FASE-2-ENTREGA.md` §6 | 6 | 6 | 0 · decididos el 3/10 |
+| C. Pendientes de la Fase 3 | `FASE-3-ENTREGA.md` §7 | 4 | **3** | 0 · C-2 cerrado |
+| D. Deuda técnica registrada | `05-architecture/overview.md` §14 | 7 | 7 | 3 (AT-001, AT-003, AT-006) |
+| E. Preguntas abiertas | `srs-microservices.md` §11 | 12 | 12 | 5 bloqueantes |
+| F. Brechas de trazabilidad | `traceability-matrix.md` §10 | 8 | 8 | 0 |
+| G. Calidad del repositorio | medido el 3/10/2026 | 8 | **1** | 0 · G-3 decidido |
+| H. Documentación ausente | §H, abajo | 9 | 9 | 0 |
+| **Total** | | **57** | **49** | **8** |
+
+El recuento de G subió de 5 a 8 porque G-6, G-7 y G-8 se añadieron después de la
+primera versión de esta tabla y no se habían contado. Siete de los ocho están
+cerrados; el único abierto es **G-3**, la brecha de cobertura hasta el 80 %.
+
+A las ocho decisiones pendientes hay que añadir una que no está en ningún grupo: la
+**revisión por Pull Request** (`00-FLUJO-DEL-PROYECTO.md` §11.5), que bloquea el
+Go/No-Go de la Fase 10.
 
 Fases 1 y 2 comparten dos pendientes que son en realidad el mismo problema: los
-seeds no idempotentes aparecen como F1-1 y F2-3, y la re-emisión de réplicas como
-F1-2 y F2-2. El recuento real de trabajo distinto es de **50**, no de 54.
+seeds no idempotentes aparecen como A-1 y B-3, y la re-emisión de réplicas como
+A-2 y B-2. El teléfono aparece dos veces más, como B-1 y C-4. Descontando los tres
+duplicados, el recuento real de trabajo distinto abierto es de **46**, no de 49.
+
+Nota: las versiones anteriores de este párrafo llamaban a estos pendientes `F1-1`,
+`F2-3`, `F1-2` y `F2-2`. Esos identificadores no existen en ninguna parte del
+documento; los reales son los de los grupos A, B y C.
 
 ---
 
@@ -69,16 +88,21 @@ documentadas, y una prueba que verifica que una fila aparece.
 Origen: `FASE-2-ENTREGA.md` §6. El propio documento dice que ninguno bloquea la
 Fase 3 y que conviene resolverlos. Siguen abiertos.
 
-### B-1 · El teléfono no llega al contacto posterior al acuerdo · **DECISIÓN**
+### B-1 · El teléfono no llega al contacto posterior al acuerdo · **DECIDIDO**
 **Qué pasa.** Tras adjudicarse una solicitud, la pantalla de detalle de
-contratación no muestra el teléfono de la contraparte. Hay tres opciones sobre la
-mesa y el documento recomienda una.
-**Cierra cuando.** Tú eliges una de las tres y queda implementada con prueba.
-**Opciones, según `FASE-2-ENTREGA.md` §6.1:**
-  - (a) mostrar el teléfono del usuario registrado
-  - (b) mostrar un teléfono de contacto dedicado
-  - (c) **recomendada** — que salga del perfil de prestador, que es donde el
-    oferente declara el dato *para que le contacten*
+contratación no muestra el teléfono de la contraparte.
+**Decisión del 3/10/2026.** Opción **(c)**: sale del **perfil de prestador**, que es
+donde el oferente declara el dato *para que le contacten*. Motivo en
+[02-DECISIONES.md](02-DECISIONES.md) §2.
+**Cierra cuando.** La pantalla de detalle de contratación muestra el teléfono del
+perfil de prestador tras la adjudicación, y **solo a las dos partes** de esa
+solicitud. Con prueba del caso negativo: un tercero no lo ve.
+**Fase destino.** 6. Cierra B-1 y C-4 a la vez.
+**Opciones que se descartaron, según `FASE-2-ENTREGA.md` §6.1:**
+  - (a) el teléfono del usuario registrado — se dio para administrar la cuenta, no
+    para publicarlo a una contraparte
+  - (b) un teléfono de contacto dedicado — resuelve la privacidad, pero añade
+    migración y pantalla nueva para un dato que ya existe en el sitio correcto
 
 ### B-2 · Réplicas no reconstruibles
 Duplicado de A-2. Se cierran juntos.
@@ -105,11 +129,21 @@ código.
 de guardar una copia, y no queda ninguna segunda versión.
 **Fase destino.** 9.
 
-### B-6 · Fuera del alcance del MVP
+### B-6 · Fuera del alcance del MVP · **DECIDIDO**
 Pagos, notificaciones por correo o push, y el cálculo de `statistics_snapshot`.
-Los tres están explícitamente fuera del alcance MVP. Se resuelven así:
-`statistics_snapshot` entra en la Fase 5 (A-3). Pagos y push dependen de tu
-decisión: Fase 7 o descarte.
+
+**Decisión del 3/10/2026**, en cinco partes:
+
+| Canal | Resolución |
+|---|---|
+| Push | **Descartado.** La bandeja intraaplicación cubre el MVP |
+| Correo de producto (avisos, propuestas, adjudicaciones) | **Descartado.** Mismo motivo |
+| **Correo transaccional** (recuperación de contraseña) | **Entra, Fase 6.** Sin él, C-1 es imposible de cerrar |
+| Pagos | Fuera de alcance, sin cambio. Ya excluido en `01-context/scope.md` |
+| `statistics_snapshot` | Entra en la Fase 5. Es A-3; estaba mal agrupado aquí, no es un canal de notificación |
+
+**Consecuencia:** la **Fase 7 se elimina** del plan de fases. Motivo completo en
+[02-DECISIONES.md](02-DECISIONES.md) §2 y §4.
 
 ---
 
@@ -117,24 +151,56 @@ decisión: Fase 7 o descarte.
 
 Origen: `FASE-3-ENTREGA.md` §7.
 
-### C-1 · Recuperación de contraseña sin interfaz
-**Qué pasa.** El backend está completo: `/auth/password-recovery` y
-`/auth/password-reset` funcionan. Las pantallas se empezaron a construir y están
-**sin cablear en el enrutado y sin compilar**.
-**Cierra cuando.** Las rutas funcionan de extremo a extremo: pedir recuperación,
-recibir el enlace, restablecer, entrar con la contraseña nueva. Con pruebas.
-**Fase destino.** 6.
-**Nota de estado.** Existe trabajo a medias en `apps/web`: `Recuperar.tsx`,
-`Restablecer.tsx` y sus pruebas, más un error de compilación en `Restablecer.tsx`.
-Ver G-5.
+### C-1 · Recuperación de contraseña sin canal de entrega · **DECIDIDO**
+**El título de este pendiente era incorrecto.** Decía «sin interfaz», y la interfaz
+ya está: las pantallas compilan y las rutas `/recuperar` y `/restablecer` están
+cableadas en `App.tsx` desde la Fase 4 (ver G-5). Lo que falta es **el canal**.
 
-### C-2 · Faltan los iconos del PWA
-**Qué pasa.** Sin icono propio, la aplicación se instala con el icono por defecto.
-**Cierra cuando.** `icono-192.png`, `icono-512.png` y `icono.svg` existen, están
-declarados en el manifiesto y se ven bien en pantalla de inicio.
+**Qué pasa de verdad.** `PasswordRecovery.solicitar()` crea el token y lo mete en un
+evento `UserProfileUpdated` con `accion: 'RECUPERACION_SOLICITADA'`
+(`services/auth-service/src/application/use-cases/PasswordRecovery.ts:66`). El relevo
+del outbox lo publica. **Nadie lo consume:** `notification-service/src/main.ts`
+registra 11 manejadores y `UserProfileUpdated` no está entre ellos, así que el
+consumidor hace `ack` y el token **se descarta en silencio**. El enlace de
+restablecimiento no llega a ningún sitio.
+
+La bandeja intraaplicación no lo arregla: quien olvidó la contraseña no puede iniciar
+sesión, y sin sesión no puede leer la bandeja. Es circular.
+
+**Decisión del 3/10/2026.** Entra el **correo transaccional** —y solo el
+transaccional— con un consumidor de `UserProfileUpdated` que envíe el enlace. Ver
+[02-DECISIONES.md](02-DECISIONES.md) §4.
+**Cierra cuando.** El recorrido completo pasa en una prueba: pedir recuperación →
+llegar el correo → abrir el enlace → restablecer → entrar con la contraseña nueva.
+**Al implementarlo.** Es el único evento del sistema que transporta un secreto. Su
+consumidor debe seguir siendo único, el token no puede acabar en un log, y el cuerpo
+del correo no puede confirmar si la cuenta existe: el endpoint devuelve 202 siempre
+justo para no ser un verificador de correos registrados.
 **Fase destino.** 6.
-**Nota de estado.** Los iconos ya se han generado. Falta verificar que el manifiesto
-los declara.
+
+### C-2 · Faltan los iconos del PWA — **CERRADO** el 3/10/2026
+**Criterio de cierre.** `icono-192.png`, `icono-512.png` y `icono.svg` existen, están
+declarados en el manifiesto y se ven bien en pantalla de inicio.
+
+**Verificado:**
+
+| Comprobación | Resultado |
+|---|---|
+| `icono-192.png` existe y mide 192×192 | sí |
+| `icono-512.png` existe y mide 512×512 | sí |
+| `icono-maskable-512.png` existe y mide 512×512, `purpose: maskable` | sí |
+| `icono.svg` existe | sí |
+| `manifest.webmanifest` declara los cuatro | sí |
+| `index.html` enlaza el manifiesto y el `apple-touch-icon` | sí, líneas 18-19 |
+
+Las dimensiones se midieron con `sharp`, no se dedujeron del nombre del archivo. Esa
+distinción importa: el bug que G-5 encontró aquí era que `icono-192.png` e
+`icono-512.png` eran byte a byte idénticos porque el generador declaraba el tamaño y
+no lo usaba al rasterizar.
+
+**Lo único que no se verifica automáticamente** es «se ven bien en pantalla de
+inicio»: requiere instalar la PWA en un dispositivo. Queda como comprobación manual
+dentro del E2E de la Fase 6 (C-3), no como pendiente abierto.
 
 ### C-3 · No hay pruebas de extremo a extremo
 **Qué pasa.** `11-quality/testing-strategy.md` §E2E las exige para el Go/No-Go. El
@@ -225,15 +291,32 @@ el token de restablecimiento estaba escrito a mano en una constante, así que la
 página nunca podía restablecer una contraseña real. Ahora sale de la URL.
 `npm run typecheck` sale con código 0.
 
-### G-3 · La cobertura nunca se ha medido — **CERRADO**
-Medida con las 320 pruebas en verde: **66.04 % sentencias, 53.79 % ramas, 65.27 %
-funciones, 68.03 % líneas**. Muy lejos del 80/80/80/70 que pedía la estrategia.
+### G-3 · La brecha de cobertura hasta el 80 % — **ABIERTO**, con decisión tomada
+La parte de «nunca se ha medido» está **cerrada**. Medida con las 320 pruebas en
+verde: **66.04 % sentencias, 53.79 % ramas, 65.27 % funciones, 68.03 % líneas**. Muy
+lejos del 80/80/80/70 que pedía la estrategia.
 
 El umbral de `jest.config.js` se baja a los valores reales medidos menos ~1 punto
 (65/52/64/67) como **trinquete**: la cobertura puede subir, pero si baja, la puerta
 se pone en rojo. Es el mecanismo que la propia estrategia pide («if a PR lowers
 coverage, CI fails»); el 80 % queda como objetivo a alcanzar con pruebas, no como
 una puerta que se declara verde sin comprobarla.
+
+**Decisión del 3/10/2026: el trinquete se queda donde está.** Subir al 80 % son unos
+14 puntos de sentencias y 20 de ramas, concentrados en los repositorios de
+persistencia: varios días de pruebas, no un ajuste de configuración. Ver
+[02-DECISIONES.md](02-DECISIONES.md) §3.
+
+**Lo que sigue abierto, y es por lo que este elemento no está cerrado:**
+
+| Exigido por `11-quality/testing-strategy.md` | Configurado | Distancia |
+|---|---|---|
+| Ramas global 75 % | 52 % | 21 puntos |
+| `./src/domain/` líneas 90 % | sin override | sin medir por capa |
+| `./src/domain/` ramas 85 % | sin override | sin medir por capa |
+
+Estas dos filas de override son las dos discrepancias que `FASE-4-PLAN.md` §5 se
+proponía cerrar en la Fase 4 y que **no se cerraron**. Quedan aquí, no en la Fase 4.
 
 ### G-4 · Las pruebas de integración no se ejecutaban — **CERRADO**
 **133/133 en verde** contra MySQL, RabbitMQ y Redis reales, y tres ejecuciones

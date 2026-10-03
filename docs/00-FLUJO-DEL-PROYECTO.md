@@ -4,8 +4,8 @@ Documento maestro. Es la respuesta a tres preguntas que hasta ahora no tenían
 respuesta escrita en ningún sitio: **qué fases existen, en qué estado está cada
 una, y qué queda por hacer**.
 
-- Fecha de corte: **2 de octubre de 2026**
-- Rama de trabajo: `develop` · último commit: `e217012 feat(web): build the PWA client`
+- Fecha de corte: **3 de octubre de 2026**
+- Rama de trabajo: `develop` · último commit: `77d437b docs: close the phase-4 checklist now that the gate is green`
 - Repositorio de código: `friend-point-development` (este repositorio)
 - Repositorio de requisitos y arquitectura: `friend-point-docs` (congelado desde el 30/09/2026)
 
@@ -62,8 +62,9 @@ local, es la primera vez que el proyecto arranca desde cero.
 
 **Consecuencia:** las Fases 1, 2 y 3 están **construidas, probadas y verificadas por
 CI**. El run `37146895812` dejó en verde los dos jobs: migraciones reversibles contra
-MySQL real y `verify` completo. Lo único que queda abierto de esta fase son los
-13 pendientes de decisión, que no son de código.
+MySQL real y `verify` completo. Los 13 pendientes de decisión que quedaban abiertos se
+resolvieron el 3/10/2026 en [02-DECISIONES.md](02-DECISIONES.md), de modo que la
+**Fase 4 está cerrada** y la siguiente es la 5.
 
 ### Las 3 puertas que hoy no se pueden ejecutar
 
@@ -85,20 +86,22 @@ MySQL real y `verify` completo. Lo único que queda abierto de esta fase son los
 
 | # | Fase | Objetivo | Estado | Documento |
 |---|---|---|---|---|
-| 1 | Base de datos | 7 esquemas aislados, 55 tablas, 7 usuarios MySQL con privilegio mínimo, invariantes verificados contra MySQL real | **Completada** (3 pendientes abiertos) | [FASE-1-ENTREGA.md](FASE-1-ENTREGA.md) |
-| 2 | Backend seguro | 8 microservicios detrás del gateway, 63 endpoints documentados, 187 unitarias + 133 de integración | **Completada** (6 pendientes abiertos) | [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) |
-| 3 | Cliente web PWA | React 18 + TypeScript sobre Vite, 18 pantallas, sistema de diseño propio, PWA instalable | **Completada** (4 pendientes propios) | [FASE-3-ENTREGA.md](FASE-3-ENTREGA.md) |
-| 4 | Cierre de calidad y deuda heredada | Que `npm run verify` y CI pasen en verde, y decidir los 13 pendientes abiertos | **Gate en verde**; solo faltan las 13 decisiones | [FASE-4-PLAN.md](FASE-4-PLAN.md) |
-| 5 | Datos y operación | Semillas idempotentes, re-emisión de réplicas, escritor de métricas, política de datos personales | **Propuesta** | §5 |
-| 6 | Experiencia del cliente | Teléfono que llega al contacto, recuperación de contraseña completa, E2E del recorrido | **Propuesta** | §5 |
-| 7 | Notificaciones fuera del MVP | Correo y push; hoy solo existe la bandeja dentro de la app | **Propuesta** | §5 |
-| 8 | Observabilidad y despliegue | Logging estructurado, métricas, k6, entornos dev/staging/prod, despliegue | **Propuesta** | §5 |
-| 9 | Documentación y trazabilidad | 6 de 8 servicios sin documentar, SRS inglés obsoleto, contratos duplicados, backlog formal | **Propuesta** | §5 |
-| 10 | Preparación de producción | Go/No-Go, Definition of Done completo, cierre de deuda técnica AT-001..007 | **Propuesta** | §5 |
+| 1 | Base de datos | 7 esquemas aislados, 55 tablas, 7 usuarios MySQL con privilegio mínimo, invariantes verificados contra MySQL real | **Completada**; sus 3 pendientes asignados a la Fase 5 | [FASE-1-ENTREGA.md](FASE-1-ENTREGA.md) |
+| 2 | Backend seguro | 8 microservicios detrás del gateway, 63 endpoints documentados, 187 unitarias + 133 de integración | **Completada**; sus 6 pendientes asignados a las Fases 5, 6 y 9 | [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) |
+| 3 | Cliente web PWA | React 18 + TypeScript sobre Vite, 18 pantallas, sistema de diseño propio, PWA instalable | **Completada**; 1 pendiente cerrado, 3 asignados a la Fase 6 | [FASE-3-ENTREGA.md](FASE-3-ENTREGA.md) |
+| 4 | Cierre de calidad y deuda heredada | Que `npm run verify` y CI pasen en verde, y decidir los 13 pendientes abiertos | **Completada** el 3/10/2026 | [FASE-4-PLAN.md](FASE-4-PLAN.md) · [02-DECISIONES.md](02-DECISIONES.md) |
+| 5 | Datos y operación | Semillas idempotentes, re-emisión de réplicas, escritor de métricas, política de datos personales | **Siguiente** | §5 |
+| 6 | Experiencia del cliente | Teléfono desde el perfil de prestador, recuperación de contraseña con correo transaccional, E2E del recorrido | Aprobada | §5 |
+| ~~7~~ | ~~Notificaciones fuera del MVP~~ | ~~Correo y push~~ | **Eliminada.** Push y correo de producto descartados; el correo transaccional pasa a la Fase 6 | [02-DECISIONES.md](02-DECISIONES.md) §2 |
+| 8 | Observabilidad y despliegue | Logging estructurado, métricas, k6, entornos dev/staging/prod, despliegue | Aprobada | §5 |
+| 9 | Documentación y trazabilidad | 6 de 8 servicios sin documentar, SRS inglés obsoleto, contratos duplicados, backlog formal | Aprobada · puede ir en paralelo ya | §5 |
+| 10 | Preparación de producción | Go/No-Go, Definition of Done completo, cierre de deuda técnica AT-001..007 | Aprobada | §5 |
 
-**Total de trabajo abierto: 13 pendientes de las Fases 1–3, 7 ítems de deuda
-técnica registrada (AT-001..AT-007), 12 preguntas abiertas (O-01..O-12) y 8
-brechas de trazabilidad (GAP-001..GAP-008).** Todo el detalle en
+**Trabajo abierto, al 3/10/2026: los 13 pendientes de las Fases 1–3 ya tienen
+decisión registrada** —1 cerrado, 9 asignados a fase, 3 duplicados— **y quedan 7
+ítems de deuda técnica (AT-001..AT-007), 12 preguntas abiertas (O-01..O-12) y 8
+brechas de trazabilidad (GAP-001..GAP-008).** Las decisiones están en
+[02-DECISIONES.md](02-DECISIONES.md); el detalle de cada elemento, en
 [01-BACKLOG.md](01-BACKLOG.md).
 
 ---
@@ -173,10 +176,9 @@ PWA, E2E, y el teléfono que sigue sin llegar.
 
 ---
 
-## 4. Fase en curso: Fase 4 — Cierre de calidad
+## 4. Fase 4 — Cierre de calidad · completada el 3/10/2026
 
-Detalle completo en [FASE-4-PLAN.md](FASE-4-PLAN.md). En resumen, su lista de
-salida es:
+Detalle completo en [FASE-4-PLAN.md](FASE-4-PLAN.md). Su lista de salida, cerrada:
 
 1. ~~`npm run verify` en verde~~ — **hecho**: formato, lint sin un solo aviso, tipos,
    pruebas, cobertura y auditoría, en local y en el runner
@@ -187,11 +189,24 @@ salida es:
    `verify` entero contra MySQL, Redis y RabbitMQ reales
 4. Actualizar los tres documentos de entrega para que solo afirmen lo verificado —
    **hecho**
-5. **Pendiente:** cerrar o diferir explícitamente los 13 pendientes de las Fases 1-3.
-   Es lo único que separa esta fase de cerrarse, y no es trabajo de código: son
-   decisiones tuyas.
+5. ~~Cerrar o diferir explícitamente los 13 pendientes de las Fases 1-3~~ —
+   **hecho** el 3/10/2026, en [02-DECISIONES.md](02-DECISIONES.md): 1 cerrado
+   (C-2, los iconos del PWA, verificados), 9 asignados a las Fases 5, 6 y 9, y 3
+   duplicados que se cierran con su original
 
 Los puntos 1 a 4 cerraron con el run de CI `37146895812` en verde.
+
+**La fase se cierra con una deuda explícita, no con todo resuelto.** Dos de las tres
+discrepancias de la estrategia de pruebas que su §5 se proponía cerrar —la cobertura
+de ramas al 75 % y el override de `src/domain/` a 90/85— quedan **diferidas con
+motivo**, no cerradas. Ver `FASE-4-PLAN.md` §5 y
+[02-DECISIONES.md](02-DECISIONES.md) §3.
+
+**Y destapó un pendiente que nadie había registrado.** Al decidir C-1 se encontró que
+la recuperación de contraseña genera un token, lo publica y **nadie lo consume**: el
+enlace de restablecimiento no llega a ningún sitio. No era una interfaz que faltaba,
+era un flujo roto de extremo a extremo. El detalle está en
+[02-DECISIONES.md](02-DECISIONES.md) §4.
 
 ---
 
@@ -222,22 +237,30 @@ se puedan reproducir.
 
 ### Fase 6 — Experiencia del cliente
 
-- **Teléfono que llega al contacto.** Tres opciones sobre la mesa; la recomendada es
-  que salga del perfil de prestador, que es donde el oferente declara el dato *para
-  que le contacten*. Hoy la pantalla de detalle de contratación no lo muestra.
-  **Necesita tu decisión.**
-- **Recuperación de contraseña.** El backend está completo (`/auth/password-recovery`
-  y `/auth/password-reset`); falta la interfaz. Las pantallas existen pero están
-  sin cablear y sin compilar.
+- **Teléfono desde el perfil de prestador.** **Decidido** el 3/10/2026: opción (c).
+  Es donde el oferente declara el dato *para que le contacten*. La pantalla de detalle
+  de contratación debe mostrarlo tras la adjudicación, y solo a las dos partes de esa
+  solicitud. Cierra B-1 y C-4. Ver [02-DECISIONES.md](02-DECISIONES.md) §2.
+- **Recuperación de contraseña, de extremo a extremo.** Las pantallas y las rutas ya
+  están cableadas; lo que falta es **el canal**. Hoy el token se genera, se publica en
+  un evento y nadie lo consume, así que el enlace no llega a ningún sitio. Entra el
+  correo transaccional —y solo el transaccional— para cerrarlo. Ver
+  [02-DECISIONES.md](02-DECISIONES.md) §4.
 - **E2E del recorrido completo.** Publicar necesidad → recibir propuestas →
   adjudicar → cancelar. `11-quality/testing-strategy.md` lo pide y es lo único que
   probaría el flujo de negocio de extremo a extremo, que hoy está cubierto por partes.
+  Incluye la comprobación manual de los iconos del PWA en pantalla de inicio, que es
+  la única parte de C-2 que no se puede verificar automáticamente.
 
-### Fase 7 — Notificaciones fuera del MVP
+### ~~Fase 7 — Notificaciones fuera del MVP~~ · eliminada
 
-Hoy la bandeja es intraaplicación. Falta correo y push. Es explícitamente fuera del
-alcance del MVP según `FASE-2-ENTREGA.md` §6.6, así que es una decisión de producto,
-no una tarea.
+**Decidido el 3/10/2026.** Push y correo de producto **descartados**: la bandeja
+intraaplicación cubre el MVP, y un service worker con permisos de navegador,
+proveedor y preferencias por canal es trabajo real para un valor que el MVP no pide.
+
+Lo único que sobrevive es el **correo transaccional** para la recuperación de
+contraseña, y pasa a la Fase 6 porque C-1 no se puede cerrar sin él. Motivo completo
+en [02-DECISIONES.md](02-DECISIONES.md) §2 y §4.
 
 ### Fase 8 — Observabilidad y despliegue
 
@@ -291,23 +314,27 @@ Fase 1 ──┐
          │                    │
          └────────────────────┤
                               v
-                     Fase 4 (calidad)   <-- estamos aqui
+                     Fase 4 (calidad)   COMPLETADA
                               │
         ┌─────────────────────┼─────────────────────┐
         v                     v                     v
     Fase 5               Fase 6               Fase 9
    (datos)            (experiencia)        (documentación)
+  <-- aqui                   │              en paralelo
         │                     │
         └──────────┬──────────┘
                    v
-              Fase 7  ──>  Fase 8  ──>  Fase 10
-            (canales)   (operación)     (producción)
+              Fase 8  ──>  Fase 10
+           (operación)    (producción)
 ```
+
+La Fase 7 ya no está en el grafo: se eliminó el 3/10/2026 y el correo transaccional,
+lo único que sobrevivió de ella, es ahora una tarea de la Fase 6.
 
 **Reglas que imponen el orden:**
 
-- La Fase 4 **no** puede esperar a la 5: sin `verify` en verde, cualquier fase nueva
-  empieza con la puerta rota.
+- ~~La Fase 4 **no** puede esperar a la 5~~ — cumplido: la puerta quedó en verde antes
+  de empezar cualquier trabajo nuevo.
 - La Fase 5 bloquea a la 6: si las semillas destruyen datos y las réplicas no se
   reconstruyen, el E2E de la Fase 6 será imposible de ejecutar de forma fiable.
 - La Fase 9 **puede** ir en paralelo desde ya. No bloquea a nadie y es la que más
@@ -420,21 +447,32 @@ en el plan de fases propuesto.
 
 ## 11. Decisiones que necesito de ti
 
-Bloquean trabajo concreto. Ninguna se puede resolver solo.
+Bloquean trabajo concreto. Ninguna se puede resolver solo. **Cuatro de las cinco
+están resueltas**; el registro completo, con motivo, está en
+[02-DECISIONES.md](02-DECISIONES.md).
 
-1. **Teléfono tras el acuerdo** (Fase 6). La recomendación es tomarlo del perfil
-   de prestador. Sin tu confirmación no se implementa.
-2. **Correo y push** (Fase 7). ¿Entran en el producto o se descartan?
-3. **Nivel de exigencia de cobertura.** El trinquete está en 67/65/52/64, que es lo
-   que el código alcanza hoy. La estrategia pide 80/80/80/70 y casi el 90 en
-   `src/domain/`. ¿Subimos el listón —y se acepta el trabajo de pruebas que implica—
-   o el trinquete se queda aquí y la brecha sigue anotada en el backlog?
+1. ~~**Teléfono tras el acuerdo**~~ (Fase 6). **Resuelto** el 3/10/2026: sale del
+   **perfil de prestador**, opción (c). Es donde el oferente declara el dato para que
+   le contacten.
+2. ~~**Correo y push**~~ (Fase 7). **Resuelto** el 3/10/2026: **push descartado** y
+   **correo de producto descartado**; entra solo el **correo transaccional** de
+   recuperación de contraseña, en la Fase 6. La Fase 7 se elimina del plan.
+3. ~~**Nivel de exigencia de cobertura.**~~ **Resuelto** el 3/10/2026: el trinquete se
+   queda en **65/52/64/67**. Subir al 80 % son unos 14 puntos de sentencias y 20 de
+   ramas en los repositorios de persistencia, y la brecha sigue anotada como G-3 en el
+   backlog. Nota: la cifra que este apartado daba antes —«67/65/52/64»— tenía los
+   valores desordenados; el orden del umbral es sentencias/ramas/funciones/líneas.
 4. ~~**Nombre, visibilidad y organización del repositorio.**~~ **Resuelto.** Público, en
    inglés, en [`JohanOtavo/service-routes`](https://github.com/JohanOtavo/service-routes),
    rama `develop`, remoto configurado y puerta en verde.
-5. **Review por Pull Request.** La Definition of Done lo exige y ninguna fase lo
-   cumple. ¿Revisamos por Pull Request a partir de ahora, o aceptamos explícitamente
-   que este proyecto queda excluido de ese requisito?
+5. **Review por Pull Request** — **sigue abierta.** La Definition of Done lo exige y
+   ninguna fase lo cumple. ¿Revisamos por Pull Request a partir de ahora, o aceptamos
+   explícitamente que este proyecto queda excluido de ese requisito? Es la única de
+   las cinco que no se resolvió, y bloquea el Go/No-Go de la Fase 10.
+
+Fuera de estas cinco siguen sin decidir **AT-001** (AWS o GCP), **AT-003**
+(organización de los repositorios) y **AT-006** (expiración de JWT). Ninguna bloquea
+la Fase 5.
 
 ---
 
@@ -444,7 +482,8 @@ Bloquean trabajo concreto. Ninguna se puede resolver solo.
 |---|---|
 | [README.md](README.md) | Índice del conjunto documental de entrega |
 | [01-BACKLOG.md](01-BACKLOG.md) | Los 13 pendientes, AT-001..007, O-01..O-12 y GAP-001..008 con criterio de cierre |
-| [FASE-4-PLAN.md](FASE-4-PLAN.md) | La fase en curso, en detalle |
+| [02-DECISIONES.md](02-DECISIONES.md) | Las 13 decisiones resueltas, con su motivo y su fase destino |
+| [FASE-4-PLAN.md](FASE-4-PLAN.md) | La Fase 4, completada, en detalle |
 | [FASE-1-ENTREGA.md](FASE-1-ENTREGA.md) | Registro de la Fase 1 |
 | [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) | Registro de la Fase 2 |
 | [FASE-3-ENTREGA.md](FASE-3-ENTREGA.md) | Registro de la Fase 3 |
