@@ -49,6 +49,23 @@ jobs:
           sudo apt-get install -y mysql-client
           bash db/init/01-schemas-and-users.sh
 
+      # Sin esto, `CREATE TRIGGER` falla con "You do not have the SUPER
+      # privilege and binary logging is enabled". La imagen mysql:8.0 trae el log
+      # binario activo, y crear un disparador con el binario abierto exige SUPER o
+      # esta variable. Conceder SUPER a pa_admin_svc romperia el privilegio minimo
+      # (SRS RNF28), asi que se ajusta el servidor, que es lo que ya hace
+      # docker-compose.yml en local con --log-bin-trust-function-creators=ON.
+      - name: Permitir disparadores sin SUPER
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_ROOT_PASSWORD: ci-root
+        run: |
+          sudo apt-get install -y mysql-client
+          mysql -h "$MYSQL_HOST" -uroot -p"$MYSQL_ROOT_PASSWORD" \
+            -e "SET GLOBAL log_bin_trust_function_creators = 1;"
+          mysql -h "$MYSQL_HOST" -uroot -p"$MYSQL_ROOT_PASSWORD" -N -B \
+            -e "SELECT CONCAT('log_bin_trust_function_creators=', @@log_bin_trust_function_creators);"
+
       - name: Aplicar migraciones
         env:
           MYSQL_HOST: 127.0.0.1
@@ -177,6 +194,14 @@ jobs:
         run: |
           sudo apt-get install -y mysql-client
           bash db/init/01-schemas-and-users.sh
+
+      # Ver el job de migraciones: la imagen mysql:8.0 trae el log binario
+      # activo, y sin esta variable `CREATE TRIGGER` exige SUPER.
+      - name: Permitir disparadores sin SUPER
+        run: |
+          sudo apt-get install -y mysql-client
+          mysql -h "$MYSQL_HOST" -uroot -p"$MYSQL_ROOT_PASSWORD" \
+            -e "SET GLOBAL log_bin_trust_function_creators = 1;"
 
       - name: Aplicar migraciones
         run: npm run db:migrate
