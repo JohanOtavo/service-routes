@@ -126,20 +126,22 @@ Explícitamente, para que esta fase no se convierta en un cajón:
 
 ## Lista de salida
 
-La fase está cerrada cuando las siete casillas están marcadas:
+La fase está cerrada cuando todas las casillas de esta lista están marcadas:
 
-- [ ] `npm run verify` sale con código 0
-- [ ] `npm run lint` sale con código 0, sin un solo aviso
-- [ ] `npm run typecheck` sale con código 0
-- [ ] Las 187 unitarias del backend y las del cliente pasan
-- [ ] Las 131 de integración se han ejecutado y pasan contra MySQL real
+- [x] `npm run verify` sale con código 0
+- [x] `npm run lint` sale con código 0, sin un solo aviso
+- [x] `npm run typecheck` sale con código 0
+- [x] Las 187 unitarias del backend y las 127 del cliente pasan
+- [x] Las 133 de integración se han ejecutado y pasan contra MySQL real
 - [x] La cobertura está medida y su cifra real está escrita en los documentos
 - [x] `apps/web` compila: el trabajo a medias está terminado — *las rutas de
-      recuperación están en `App.tsx`, `ProveedorModo` mounted en `main.tsx`, y
+      recuperación están en `App.tsx`, `ProveedorModo` montado en `main.tsx`, y
       `rutas.test.tsx` monta `App` de verdad para que no vuelva a pasar*
 - [x] Los tres documentos de entrega reflejan solo lo verificado
-- [ ] Los 13 pendientes tienen una decisión registrada
-- [ ] El repositorio está publicado en GitHub
+- [x] El repositorio está publicado en GitHub — *`JohanOtavo/service-routes`,
+      rama `develop`*
+- [ ] Los 13 pendientes tienen una decisión registrada — *sigue abierto: son
+      decisiones de producto y de contrato, no de código*
 
 ---
 
@@ -176,8 +178,29 @@ Express del gateway y los helpers de comparación nula. Si alguna falla, es un h
 real, no un obstáculo de la fase.
 
 **Trabajo concurrente.** Hubo dos sesiones editando el mismo árbol el 2 de octubre.
-Todo lo que no sea de la sesión que veja esto necesita revisión antes de darlo por
+Todo lo que no sea de la sesión que vea esto necesita revisión antes de darlo por
 bueno, y hay que decidir qué hacer con lo que quedó a medias.
+
+### Lo que la puerta verde local no podía ver
+
+Todo lo anterior pasó con `npm run verify` en verde en local. Los cuatro fallos que
+siguieron son la razón de que el plan obligue a ejecutar CI con servicios de verdad, y
+merecen quedar escritos porque todos tienen la misma forma: **la máquina de quien
+desarrolla tenía un estado que el runner no tiene.**
+
+| Fallo | Por qué no se veía en local |
+| --- | --- |
+| `CREATE TRIGGER` exigía SUPER | `docker-compose.yml` ya pasa `--log-bin-trust-function-creators=ON`; el contenedor de CI, no. |
+| `db:reset` se negaba a ejecutarse | Sin `NODE_ENV`, el guardián de `db/cli.js` lo rechaza por diseño. En local venía de `.env`. |
+| `db:seed` abortaba con `ENOENT` | Los directorios de los cinco servicios sin seeds estaban vacíos en el disco, y **git no versiona directorios vacíos**, así que en el clon limpio no existían. |
+| `reputacion_ref` bloqueaba la remigración | El `down` de `needs_and_proposals` no la borraba. Nadie había hecho `db:reset` completo. |
+
+La lección no es «faltaban cuatro fallos»: es que una puerta verde sobre datos
+y configuración que solo existen en un ordenador no es una puerta. El CI arranca
+siempre desde cero, y eso es exactamente su valor.
+
+Las cuatro correcciones están en `849f832`, `03e38b6` y `d5e87d7`, con el porqué en
+el mensaje de cada commit. La puerta quedó en verde en el run `37146895812`.
 
 ---
 
@@ -186,5 +209,6 @@ bueno, y hay que decidir qué hacer con lo que quedó a medias.
 Esta fase no produce funcionalidad. Produce **una base fiable** sobre la que las
 Fases 5 a 10 pueden construir sin partir de una puerta rota.
 
-Es también la única fase que puede empezar ya sin esperar ninguna decisión tuya,
-salvo el nombre y la visibilidad del repositorio de GitHub.
+Es también la única fase que puede empezar ya sin esperar ninguna decisión tuya:
+el nombre y la visibilidad del repositorio ya están decididos — *público, en
+inglés, `JohanOtavo/service-routes`* — y la puerta de calle está en verde.

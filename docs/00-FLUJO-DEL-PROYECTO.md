@@ -22,8 +22,9 @@ una, y qué queda por hacer**.
 ## 1. Estado real del gate de calidad
 
 Todo lo que se afirma en los documentos de entrega se apoya en
-`npm run verify`. Ese comando es el gate, y **ahora pasa**. Estado medido el
-3/10/2026, con las 320 pruebas de Jest y las 127 de Vitest en verde:
+`npm run verify`. Ese comando es el gate, y **ahora pasa**, en local y en CI.
+Estado medido el 3/10/2026, con las 320 pruebas de Jest y las 127 de Vitest en
+verde:
 
 | Puerta | Comando | Estado | Detalle |
 |---|---|---|---|
@@ -52,10 +53,17 @@ Las tres están corregidas: `verify` incluye ahora las pruebas web, y CI ejecuta
 bajó a los valores reales medidos (67/65/52/64) como trinquete, con la distancia
 hasta el 80 % anotada en el backlog. Ver `G-1` a `G-6`.
 
-**Consecuencia:** las Fases 1, 2 y 3 están **construidas y probadas**, pero ninguna
-tiene el gate del repositorio en verde. Es la diferencia entre "funciona" y
-"está verificado", y este proyecto se rige por la segunda. La Fase 4 existe
-precisamente para cerrar esa distancia.
+**Cuarta cosa, y la más incómoda: una puerta verde en local no es una puerta.** Con
+todo lo anterior ya corregido, el primer run de CI encontró cuatro fallos que en la
+máquina de desarrollo eran invisibles, todos por la misma razón — datos o
+configuración que solo existían en ese ordenador. El detalle está en
+[FASE-4-PLAN.md](FASE-4-PLAN.md); la moraleja es que CI no es una copia de la puerta
+local, es la primera vez que el proyecto arranca desde cero.
+
+**Consecuencia:** las Fases 1, 2 y 3 están **construidas, probadas y verificadas por
+CI**. El run `37146895812` dejó en verde los dos jobs: migraciones reversibles contra
+MySQL real y `verify` completo. Lo único que queda abierto de esta fase son los
+13 pendientes de decisión, que no son de código.
 
 ### Las 3 puertas que hoy no se pueden ejecutar
 
@@ -78,9 +86,9 @@ precisamente para cerrar esa distancia.
 | # | Fase | Objetivo | Estado | Documento |
 |---|---|---|---|---|
 | 1 | Base de datos | 7 esquemas aislados, 55 tablas, 7 usuarios MySQL con privilegio mínimo, invariantes verificados contra MySQL real | **Completada** (3 pendientes abiertos) | [FASE-1-ENTREGA.md](FASE-1-ENTREGA.md) |
-| 2 | Backend seguro | 8 microservicios detrás del gateway, 63 endpoints documentados, 187 unitarias + 131 de integración | **Completada** (6 pendientes abiertos) | [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) |
+| 2 | Backend seguro | 8 microservicios detrás del gateway, 63 endpoints documentados, 187 unitarias + 133 de integración | **Completada** (6 pendientes abiertos) | [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) |
 | 3 | Cliente web PWA | React 18 + TypeScript sobre Vite, 18 pantallas, sistema de diseño propio, PWA instalable | **Completada** (4 pendientes propios) | [FASE-3-ENTREGA.md](FASE-3-ENTREGA.md) |
-| 4 | Cierre de calidad y deuda heredada | Que `npm run verify` y CI pasen en verde, y decidir los 13 pendientes abiertos | **En curso** | [FASE-4-PLAN.md](FASE-4-PLAN.md) |
+| 4 | Cierre de calidad y deuda heredada | Que `npm run verify` y CI pasen en verde, y decidir los 13 pendientes abiertos | **Gate en verde**; solo faltan las 13 decisiones | [FASE-4-PLAN.md](FASE-4-PLAN.md) |
 | 5 | Datos y operación | Semillas idempotentes, re-emisión de réplicas, escritor de métricas, política de datos personales | **Propuesta** | §5 |
 | 6 | Experiencia del cliente | Teléfono que llega al contacto, recuperación de contraseña completa, E2E del recorrido | **Propuesta** | §5 |
 | 7 | Notificaciones fuera del MVP | Correo y push; hoy solo existe la bandeja dentro de la app | **Propuesta** | §5 |
@@ -139,7 +147,7 @@ datos mantenida: cada servicio solo toca su esquema y recibe el resto por evento
 - **63 endpoints**, los 63 documentados en `contracts/openapi/` y cubiertos por una
   prueba que falla si un endpoint no está declarado
 - **187 pruebas unitarias** (verificadas el 2/10/2026, en verde)
-- **131 pruebas de integración** contra MySQL real (no re-verificadas: sin Docker)
+- **133 pruebas de integración** contra MySQL real (re-verificadas el 3/10/2026)
 - `correlation_id` propagado desde el gateway a través de eventos y auditoría
 - Patrón outbox transaccional en los 6 servicios que publican
 - Idempotencia de consumidores sobre `processed_event`
@@ -170,14 +178,20 @@ PWA, E2E, y el teléfono que sigue sin llegar.
 Detalle completo en [FASE-4-PLAN.md](FASE-4-PLAN.md). En resumen, su lista de
 salida es:
 
-1. `npm run verify` en verde: formato, lint sin un solo aviso, tipos, pruebas, cobertura, auditoría
-2. Resolver o revertir el trabajo a medias que hay ahora en `apps/web` (pantallas
-   de recuperación de contraseña y modo oscuro, sin cablear en el enrutado y con dos
-   errores de compilación)
-3. Ejecutar también las pruebas de integración dentro de la puerta `quality` de CI,
-   no solo en `tests`, para que la puerta de calidad dé una señal completa
-4. Cerrar o diferir explícitamente los 13 pendientes de las Fases 1–3
-5. Actualizar los tres documentos de entrega para que solo afirmen lo verificado
+1. ~~`npm run verify` en verde~~ — **hecho**: formato, lint sin un solo aviso, tipos,
+   pruebas, cobertura y auditoría, en local y en el runner
+2. ~~Resolver el trabajo a medias de `apps/web`~~ — **hecho**: las pantallas de
+   recuperación de contraseña están cableadas en el enrutado, el arranque funciona y
+   hay una prueba que monta `App` de verdad
+3. ~~Ejecutar la integración dentro de la puerta de CI~~ — **hecho**: el job corre
+   `verify` entero contra MySQL, Redis y RabbitMQ reales
+4. Actualizar los tres documentos de entrega para que solo afirmen lo verificado —
+   **hecho**
+5. **Pendiente:** cerrar o diferir explícitamente los 13 pendientes de las Fases 1-3.
+   Es lo único que separa esta fase de cerrarse, y no es trabajo de código: son
+   decisiones tuyas.
+
+Los puntos 1 a 4 cerraron con el run de CI `37146895812` en verde.
 
 ---
 
@@ -314,7 +328,8 @@ seguridad · integración · interfaz · documentación · Git y Pull Request. L
 que hoy no se cumplen en ninguna fase:
 
 - *"The code has been reviewed by at least one team member through a Pull Request."*
-- *"All applicable tests pass."* — las de integración no se han ejecutado desde hace semanas
+- *"All applicable tests pass."* — ahora sí, y en CI; antes las de integración no se
+  ejecutaban en ningún runner y nadie las había visto en semanas
 - *"An exception must not be used to ignore a critical security, functionality or
   acceptance criterion."* — el SRS marca la política de datos personales como bloqueante
   y no existe
@@ -410,11 +425,13 @@ Bloquean trabajo concreto. Ninguna se puede resolver solo.
 1. **Teléfono tras el acuerdo** (Fase 6). La recomendación es tomarlo del perfil
    de prestador. Sin tu confirmación no se implementa.
 2. **Correo y push** (Fase 7). ¿Entran en el producto o se descartan?
-3. **Nivel de exigencia de cobertura.** ¿Subimos `branches` de 70 a 75 y añadimos
-   el override de `src/domain/` al 90/85 que exige la estrategia, o primero medimos
-   dónde estamos para saber cuánto trabajo de pruebas falta?
-4. **Nombre, visibilidad y organización del repositorio en GitHub.** No hay remoto
-   configurado; el repositorio no existe todavía en GitHub.
+3. **Nivel de exigencia de cobertura.** El trinquete está en 67/65/52/64, que es lo
+   que el código alcanza hoy. La estrategia pide 80/80/80/70 y casi el 90 en
+   `src/domain/`. ¿Subimos el listón —y se acepta el trabajo de pruebas que implica—
+   o el trinquete se queda aquí y la brecha sigue anotada en el backlog?
+4. ~~**Nombre, visibilidad y organización del repositorio.**~~ **Resuelto.** Público, en
+   inglés, en [`JohanOtavo/service-routes`](https://github.com/JohanOtavo/service-routes),
+   rama `develop`, remoto configurado y puerta en verde.
 5. **Review por Pull Request.** La Definition of Done lo exige y ninguna fase lo
    cumple. ¿Revisamos por Pull Request a partir de ahora, o aceptamos explícitamente
    que este proyecto queda excluido de ese requisito?
