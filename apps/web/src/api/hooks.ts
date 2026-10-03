@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { z } from 'zod';
 import { ejecutar, pedir } from './cliente';
 import * as e from './esquemas';
@@ -37,7 +43,7 @@ export const claves = {
 
 // ─── Catalogo ───────────────────────────────────────────────────────────────
 
-export function useCategorias() {
+export function useCategorias(): UseQueryResult<e.ListaCategorias> {
   return useQuery({
     queryKey: claves.categorias,
     queryFn: () => pedir('/api/v1/categories', e.listaCategorias, { publica: true }),
@@ -53,7 +59,9 @@ export interface FiltrosCatalogo {
   pagina?: number;
 }
 
-export function useBuscarServicios(filtros: FiltrosCatalogo) {
+export function useBuscarServicios(
+  filtros: FiltrosCatalogo
+): UseQueryResult<e.Pagina<e.ServicioListado>> {
   return useQuery({
     queryKey: claves.servicios(filtros),
     queryFn: () =>
@@ -68,7 +76,7 @@ export function useBuscarServicios(filtros: FiltrosCatalogo) {
   });
 }
 
-export function useServicio(id: number) {
+export function useServicio(id: number): UseQueryResult<e.ServicioListado> {
   return useQuery({
     queryKey: claves.servicio(id),
     queryFn: () => pedir(`/api/v1/services/${id}`, e.servicioListado, { publica: true }),
@@ -76,14 +84,18 @@ export function useServicio(id: number) {
   });
 }
 
-export function useMisServicios() {
+export function useMisServicios(): UseQueryResult<e.Pagina<e.ServicioPropio>> {
   return useQuery({
     queryKey: claves.misServicios,
     queryFn: () => pedir('/api/v1/services/mine', e.pagina(e.servicioPropio)),
   });
 }
 
-export function usePublicarServicio() {
+export function usePublicarServicio(): UseMutationResult<
+  e.ServicioPropio,
+  Error,
+  { nombre: string; descripcion: string; idCategoria: number }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -97,7 +109,7 @@ export function usePublicarServicio() {
   });
 }
 
-export function useDesactivarServicio() {
+export function useDesactivarServicio(): UseMutationResult<void, Error, number> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -111,7 +123,7 @@ export function useDesactivarServicio() {
 
 // ─── Prestadores ────────────────────────────────────────────────────────────
 
-export function usePerfilPublico(id: number) {
+export function usePerfilPublico(id: number): UseQueryResult<e.PrestadorPublico> {
   return useQuery({
     queryKey: claves.prestador(id),
     queryFn: () => pedir(`/api/v1/providers/${id}`, e.prestadorPublico, { publica: true }),
@@ -134,7 +146,18 @@ export function useMiPerfil(): UseQueryResult<e.PrestadorPrivado> {
   });
 }
 
-export function useCrearPerfil() {
+export function useCrearPerfil(): UseMutationResult<
+  e.PrestadorPrivado,
+  Error,
+  {
+    nombre: string;
+    especialidad: string;
+    experiencia?: string | null;
+    telefono?: string | null;
+    correo?: string | null;
+    disponibilidad?: string | null;
+  }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -158,17 +181,23 @@ export interface FiltrosNecesidades {
   pagina?: number;
 }
 
-export function useNecesidadesAbiertas(filtros: FiltrosNecesidades) {
+export function useNecesidadesAbiertas(
+  filtros: FiltrosNecesidades
+): UseQueryResult<e.Pagina<e.NecesidadPublica>> {
   return useQuery({
     queryKey: claves.necesidades(filtros),
     queryFn: () =>
       pedir('/api/v1/needs', e.pagina(e.necesidadPublica), {
-        consulta: { texto: filtros.texto, idCategoria: filtros.idCategoria, pagina: filtros.pagina },
+        consulta: {
+          texto: filtros.texto,
+          idCategoria: filtros.idCategoria,
+          pagina: filtros.pagina,
+        },
       }),
   });
 }
 
-export function useNecesidad(id: number) {
+export function useNecesidad(id: number): UseQueryResult<e.NecesidadPublica> {
   return useQuery({
     queryKey: claves.necesidad(id),
     queryFn: () => pedir(`/api/v1/needs/${id}`, e.necesidadPublica),
@@ -176,14 +205,25 @@ export function useNecesidad(id: number) {
   });
 }
 
-export function useMisNecesidades() {
+export function useMisNecesidades(): UseQueryResult<e.Pagina<e.NecesidadPropia>> {
   return useQuery({
     queryKey: claves.misNecesidades,
     queryFn: () => pedir('/api/v1/needs/mine', e.pagina(e.necesidadPropia)),
   });
 }
 
-export function usePublicarNecesidad() {
+export function usePublicarNecesidad(): UseMutationResult<
+  e.NecesidadPropia,
+  Error,
+  {
+    titulo: string;
+    descripcion: string;
+    idCategoria: number;
+    presupuestoEstimado?: string | null;
+    fechaDeseada?: string | null;
+    ubicacionAproximada?: string | null;
+  }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -202,7 +242,11 @@ export function usePublicarNecesidad() {
   });
 }
 
-export function useCerrarNecesidad() {
+export function useCerrarNecesidad(): UseMutationResult<
+  void,
+  Error,
+  { id: number; estado: 'CERRADA' | 'CANCELADA'; motivo?: string | null }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -221,7 +265,7 @@ export function useCerrarNecesidad() {
 // ─── Demanda: propuestas ────────────────────────────────────────────────────
 
 /** Solo el autor de la necesidad puede verlas. El servidor lo decide. */
-export function usePropuestasDe(idNecesidad: number) {
+export function usePropuestasDe(idNecesidad: number): UseQueryResult<e.Propuesta[]> {
   return useQuery({
     queryKey: claves.propuestasDe(idNecesidad),
     // Arreglo plano, no paginado: este endpoint devuelve TODAS las propuestas de
@@ -232,14 +276,24 @@ export function usePropuestasDe(idNecesidad: number) {
   });
 }
 
-export function useMisPropuestas() {
+export function useMisPropuestas(): UseQueryResult<e.Pagina<e.Propuesta>> {
   return useQuery({
     queryKey: claves.misPropuestas,
     queryFn: () => pedir('/api/v1/proposals/mine', e.pagina(e.propuesta)),
   });
 }
 
-export function useEnviarPropuesta() {
+export function useEnviarPropuesta(): UseMutationResult<
+  e.Propuesta,
+  Error,
+  {
+    idNecesidad: number;
+    precio: string;
+    tiempoEstimado: number;
+    mensaje: string;
+    idServicio?: number | null;
+  }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -263,7 +317,7 @@ export function useEnviarPropuesta() {
   });
 }
 
-export function useRetirarPropuesta() {
+export function useRetirarPropuesta(): UseMutationResult<void, Error, number> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -276,7 +330,11 @@ export function useRetirarPropuesta() {
  * Adjudicar cambia cuatro cosas de golpe: la necesidad, la propuesta elegida,
  * todas las demas y la contratacion nueva. Por eso invalida tanto.
  */
-export function useAdjudicar() {
+export function useAdjudicar(): UseMutationResult<
+  e.Solicitud,
+  Error,
+  { idNecesidad: number; idPropuesta: number }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -295,14 +353,16 @@ export function useAdjudicar() {
 
 // ─── Contrataciones ─────────────────────────────────────────────────────────
 
-export function useMisContrataciones(como: 'SOLICITANTE' | 'OFERENTE') {
+export function useMisContrataciones(
+  como: 'SOLICITANTE' | 'OFERENTE'
+): UseQueryResult<e.Pagina<e.Solicitud>> {
   return useQuery({
     queryKey: claves.misContrataciones(como),
     queryFn: () => pedir('/api/v1/requests/mine', e.pagina(e.solicitud), { consulta: { como } }),
   });
 }
 
-export function useContratacion(id: number) {
+export function useContratacion(id: number): UseQueryResult<e.Solicitud> {
   return useQuery({
     queryKey: claves.contratacion(id),
     queryFn: () => pedir(`/api/v1/requests/${id}`, e.solicitud),
@@ -310,7 +370,11 @@ export function useContratacion(id: number) {
   });
 }
 
-export function useContratarServicio() {
+export function useContratarServicio(): UseMutationResult<
+  e.Solicitud,
+  Error,
+  { idServicio: number; descripcionProblema: string }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -327,7 +391,15 @@ export function useContratarServicio() {
  * catalogo y devuelve la clasificacion. El tipo lo impide, para que nadie
  * intente cancelar por este camino y se salte la politica.
  */
-export function useCambiarEstado() {
+export function useCambiarEstado(): UseMutationResult<
+  e.Solicitud,
+  Error,
+  {
+    id: number;
+    destino: 'ACEPTADA' | 'RECHAZADA' | 'COMPLETADA';
+    motivo?: string | null;
+  }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -354,7 +426,16 @@ export function useCambiarEstado() {
  * haria que la medida no disuadiera a nadie: lo que no se ve no corrige el
  * comportamiento.
  */
-export function useCancelar() {
+export function useCancelar(): UseMutationResult<
+  e.ResultadoCancelacion,
+  Error,
+  {
+    id: number;
+    codigoMotivo: string;
+    detalle?: string | null;
+    fechaAcordada?: string | null;
+  }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -380,6 +461,19 @@ export function useCancelar() {
   });
 }
 
+const esquemaMotivos = z.object({
+  elementos: z.array(
+    z.object({
+      codigo: z.string(),
+      descripcion: z.string(),
+      exigeDetalle: z.boolean(),
+      abreRevision: z.boolean(),
+    })
+  ),
+});
+
+export type ListaMotivosCancelacion = z.infer<typeof esquemaMotivos>;
+
 /**
  * Catalogo de motivos de cancelacion.
  *
@@ -387,23 +481,10 @@ export function useCancelar() {
  * que un administrador pueda cambiar los motivos sin desplegar, y una lista
  * escrita aqui anularia eso.
  */
-export function useMotivosCancelacion() {
+export function useMotivosCancelacion(): UseQueryResult<ListaMotivosCancelacion> {
   return useQuery({
     queryKey: claves.motivosCancelacion,
-    queryFn: () =>
-      pedir(
-        '/api/v1/requests/cancellation-reasons',
-        z.object({
-          elementos: z.array(
-            z.object({
-              codigo: z.string(),
-              descripcion: z.string(),
-              exigeDetalle: z.boolean(),
-              abreRevision: z.boolean(),
-            })
-          ),
-        })
-      ),
+    queryFn: () => pedir('/api/v1/requests/cancellation-reasons', esquemaMotivos),
     // Cambian muy poco: no hay razon para pedirlos en cada cancelacion.
     staleTime: 30 * 60 * 1000,
   });
@@ -411,7 +492,7 @@ export function useMotivosCancelacion() {
 
 // ─── Reputacion ─────────────────────────────────────────────────────────────
 
-export function useReputacion(idUsuario: number) {
+export function useReputacion(idUsuario: number): UseQueryResult<e.ReputacionUsuario> {
   return useQuery({
     queryKey: claves.reputacion(idUsuario),
     queryFn: () => pedir(`/api/v1/ratings/users/${idUsuario}`, e.reputacionUsuario),
@@ -422,7 +503,7 @@ export function useReputacion(idUsuario: number) {
 export function useCalificacionesRecibidas(
   idUsuario: number,
   faceta: 'COMO_OFERENTE' | 'COMO_SOLICITANTE'
-) {
+): UseQueryResult<e.Pagina<e.Calificacion>> {
   return useQuery({
     queryKey: claves.recibidas(idUsuario, faceta),
     queryFn: () =>
@@ -433,7 +514,11 @@ export function useCalificacionesRecibidas(
   });
 }
 
-export function useCalificar() {
+export function useCalificar(): UseMutationResult<
+  e.Calificacion,
+  Error,
+  { idSolicitud: number; puntuacion: number; comentario?: string | null }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -455,11 +540,10 @@ export function useCalificar() {
 
 // ─── Avisos ─────────────────────────────────────────────────────────────────
 
-export function useAvisos(estado?: 'NO_LEIDA' | 'LEIDA') {
+export function useAvisos(estado?: 'NO_LEIDA' | 'LEIDA'): UseQueryResult<e.BandejaAvisos> {
   return useQuery({
     queryKey: claves.avisos(estado),
-    queryFn: () =>
-      pedir('/api/v1/notifications', e.bandejaAvisos, { consulta: { estado } }),
+    queryFn: () => pedir('/api/v1/notifications', e.bandejaAvisos, { consulta: { estado } }),
   });
 }
 
@@ -470,7 +554,7 @@ export function useAvisos(estado?: 'NO_LEIDA' | 'LEIDA') {
  * pide treinta veces por sesion gasta datos de alguien para mostrar un numero
  * que casi nunca cambia.
  */
-export function useNoLeidas() {
+export function useNoLeidas(): UseQueryResult<e.ContadorAvisos> {
   return useQuery({
     queryKey: claves.noLeidas,
     queryFn: () => pedir('/api/v1/notifications/unread-count', e.contadorAvisos),
@@ -479,7 +563,7 @@ export function useNoLeidas() {
   });
 }
 
-export function useMarcarLeida() {
+export function useMarcarLeida(): UseMutationResult<void, Error, number> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -491,7 +575,7 @@ export function useMarcarLeida() {
   });
 }
 
-export function useMarcarTodasLeidas() {
+export function useMarcarTodasLeidas(): UseMutationResult<{ marcadas: number }, Error, void> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -510,14 +594,14 @@ export function useMarcarTodasLeidas() {
 
 const esquemaPendientes = e.pagina(e.prestadorPrivado);
 
-export function usePrestadoresPendientes() {
+export function usePrestadoresPendientes(): UseQueryResult<e.Pagina<e.PrestadorPrivado>> {
   return useQuery({
     queryKey: claves.pendientes,
     queryFn: () => pedir('/api/v1/providers/pending', esquemaPendientes),
   });
 }
 
-export function useValidarPrestador() {
+export function useValidarPrestador(): UseMutationResult<e.PrestadorPrivado, Error, number> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -531,7 +615,11 @@ export function useValidarPrestador() {
   });
 }
 
-export function useRechazarPrestador() {
+export function useRechazarPrestador(): UseMutationResult<
+  e.PrestadorPrivado,
+  Error,
+  { id: number; motivo: string }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -548,15 +636,13 @@ const esquemaActividad = z.object({
   desde: z.string().nullable(),
   hasta: z.string().nullable(),
   totalAsientos: z.number(),
-  porAccion: z.array(
-    z.object({ accion: z.string(), resultado: z.string(), total: z.number() })
-  ),
+  porAccion: z.array(z.object({ accion: z.string(), resultado: z.string(), total: z.number() })),
   porDia: z.array(z.object({ fecha: z.string(), total: z.number() })),
 });
 
 export type Actividad = z.infer<typeof esquemaActividad>;
 
-export function useActividad() {
+export function useActividad(): UseQueryResult<Actividad> {
   return useQuery({
     queryKey: ['actividad'],
     queryFn: () => pedir('/api/v1/admin/reports/activity', esquemaActividad),
@@ -578,7 +664,12 @@ const esquemaAsiento = z.object({
   ipOrigen: z.string().nullable(),
 });
 
-export function useAuditoria(filtros: { accion?: string; resultado?: string }) {
+export type Asiento = z.infer<typeof esquemaAsiento>;
+
+export function useAuditoria(filtros: {
+  accion?: string;
+  resultado?: string;
+}): UseQueryResult<e.Pagina<Asiento>> {
   return useQuery({
     queryKey: ['auditoria', filtros],
     queryFn: () =>
@@ -597,14 +688,25 @@ const esquemaParametro = z.object({
   creadoPor: z.number().nullable(),
 });
 
-export function useParametros() {
+export type Parametro = z.infer<typeof esquemaParametro>;
+
+export function useParametros(): UseQueryResult<e.Pagina<Parametro>> {
   return useQuery({
     queryKey: ['parametros'],
     queryFn: () => pedir('/api/v1/admin/parameters', e.pagina(esquemaParametro)),
   });
 }
 
-export function useGuardarParametro() {
+export function useGuardarParametro(): UseMutationResult<
+  Parametro,
+  Error,
+  {
+    clave: string;
+    valor: string;
+    descripcion?: string | null;
+    tipoDato: 'string' | 'number' | 'boolean';
+  }
+> {
   const cliente = useQueryClient();
 
   return useMutation({
@@ -628,5 +730,61 @@ export function useGuardarParametro() {
       // Cambiar un parametro deja asiento: la bitacora tambien cambio.
       void cliente.invalidateQueries({ queryKey: ['auditoria'] });
     },
+  });
+}
+
+// ─── Recuperacion de contrasena ────────────────────────────────────────────
+
+/**
+ * Pide el enlace de recuperacion.
+ *
+ * Vive aqui, y no como un `pedir` suelto dentro de la pagina, porque la
+ * pantalla necesita el estado de "enviando" para bloquear el boton mientras va
+ * y porque asi queda el unico sitio donde se ve que esta ruta es PUBLICA: sin
+ * token y sin intento de renovar.
+ *
+ * El servidor responde SIEMPRE 202, exista la cuenta o no (SRS RF12). Que el
+ * cuerpo no diga si el correo esta registrado es justamente lo que evita que
+ * este formulario sea un verificador de cuentas, asi que lo que devuelve se
+ * muestra tal cual y no se reescribe.
+ *
+ * No invalida ninguna clave: una peticion de correo no cambia nada de lo que
+ * haya en cache.
+ */
+export function usePedirRecuperacion(): UseMutationResult<e.RecuperacionSolicitada, Error, string> {
+  return useMutation({
+    mutationFn: (correo: string) =>
+      pedir('/api/v1/auth/password-recovery', e.recuperacionSolicitada, {
+        metodo: 'POST',
+        publica: true,
+        cuerpo: { correo },
+      }),
+  });
+}
+
+/**
+ * Cambia la contrasena con el token que venia en el enlace.
+ *
+ * Devuelve 204 sin cuerpo, asi que no hay nada que validar: por eso usa
+ * `ejecutar` y no `pedir`.
+ *
+ * El backend revoca ademas TODAS las sesiones abiertas de esa cuenta
+ * (SRS RF13). No es un efecto secundario: es lo que expulsa a quien hubiera
+ * entrado con la contrasena anterior, que suele ser justo quien motivo el
+ * cambio. La pantalla lo dice, porque de lo contrario quien estaba conectado en
+ * otro movil no entiende por que se salio de golpe.
+ */
+export function useRestablecerContrasena(): UseMutationResult<
+  void,
+  Error,
+  { token: string; contrasena: string; confirmacionContrasena: string }
+> {
+  return useMutation({
+    mutationFn: (datos: { token: string; contrasena: string; confirmacionContrasena: string }) =>
+      ejecutar('/api/v1/auth/password-reset', {
+        metodo: 'POST',
+        publica: true,
+        cuerpo: datos,
+      }),
   });
 }

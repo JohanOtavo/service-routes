@@ -86,15 +86,13 @@ export class KnexUsuarioRepository implements IUsuarioRepository {
   }
 
   async update(usuario: Usuario): Promise<void> {
-    await this.db('usuario')
-      .where({ id_usuario: usuario.id })
-      .update({
-        nombre: usuario.nombre,
-        contrasena_hash: usuario.contrasenaHash,
-        telefono: usuario.telefono,
-        estado: usuario.estado,
-        ultimo_acceso_at: usuario.ultimoAccesoAt,
-      });
+    await this.db('usuario').where({ id_usuario: usuario.id }).update({
+      nombre: usuario.nombre,
+      contrasena_hash: usuario.contrasenaHash,
+      telefono: usuario.telefono,
+      estado: usuario.estado,
+      ultimo_acceso_at: usuario.ultimoAccesoAt,
+    });
 
     await this.sincronizarRoles(usuario.id, usuario.roles.toArray(), null);
   }
@@ -169,7 +167,6 @@ export class KnexUsuarioRepository implements IUsuarioRepository {
 function esCorreoDuplicado(error: unknown): boolean {
   const e = error as { code?: string; errno?: number; sqlMessage?: string };
   return (
-    (e.code === 'ER_DUP_ENTRY' || e.errno === 1062) &&
-    (e.sqlMessage?.includes('correo') ?? false)
+    (e.code === 'ER_DUP_ENTRY' || e.errno === 1062) && (e.sqlMessage?.includes('correo') ?? false)
   );
 }

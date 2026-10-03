@@ -35,7 +35,10 @@ export class ReputationRecalculator {
     idServicio: number | null;
     correlationId: string;
   }): Promise<void> {
-    const agregado = await this.calificaciones.agregadoDeReceptor(entrada.idUsuario, entrada.faceta);
+    const agregado = await this.calificaciones.agregadoDeReceptor(
+      entrada.idUsuario,
+      entrada.faceta
+    );
 
     const reputacion = Reputacion.recalcular({
       idUsuario: entrada.idUsuario,

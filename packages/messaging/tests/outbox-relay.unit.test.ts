@@ -26,23 +26,41 @@ interface FilaFalsa {
 }
 
 /**
+ * La parte encadenable del doble. Se declara aparte porque sus metodos se
+ * devuelven a si mismos y una anotacion en linea no podria nombrarse.
+ */
+interface ApiFalsa {
+  whereNull(_columna: string): ApiFalsa;
+  where(a: unknown, b?: unknown, c?: unknown): ApiFalsa;
+  orderBy(): ApiFalsa;
+  limit(n: number): ApiFalsa;
+  update(cambios: Partial<FilaFalsa>): Promise<number>;
+  increment(columna: keyof FilaFalsa, cantidad: number): ApiFalsa;
+  count(): Promise<{ n: number }[]>;
+  then(resolver: (filas: FilaFalsa[]) => unknown): Promise<unknown>;
+}
+
+/**
  * Knex falso con el minimo de la interfaz fluida que usa el relevo.
  *
  * Se prefiere sobre una base real porque estas pruebas comprueban la logica de
  * decision del relevo, no el SQL; el SQL ya se verifica en las pruebas de
  * integracion.
  */
-function knexFalso(filas: FilaFalsa[]) {
+function knexFalso(filas: FilaFalsa[]): {
+  constructor: never;
+  estado: { filas: FilaFalsa[] };
+} {
   const estado = { filas };
 
-  const constructor = (_tabla: string) => {
+  const constructor = (_tabla: string): ApiFalsa => {
     let filtroNulo = false;
     let maxIntentos = Number.POSITIVE_INFINITY;
     let minIntentos = -1;
     let idObjetivo: number | null = null;
     let limite = Number.POSITIVE_INFINITY;
 
-    const api = {
+    const api: ApiFalsa = {
       whereNull(_columna: string) {
         filtroNulo = true;
         return api;
@@ -98,7 +116,12 @@ function knexFalso(filas: FilaFalsa[]) {
   return { constructor: constructor as never, estado };
 }
 
-function brokerFalso(opciones: { disponible?: boolean; fallar?: boolean } = {}) {
+function brokerFalso(opciones: { disponible?: boolean; fallar?: boolean } = {}): {
+  broker: Broker;
+  publicados: { clave: string; eventId: string }[];
+  caer: () => void;
+  volver: () => void;
+} {
   const publicados: { clave: string; eventId: string }[] = [];
   let disponible = opciones.disponible ?? true;
   let fallar = opciones.fallar ?? false;

@@ -1,4 +1,4 @@
-import { AppError, EventName } from '@punto-amigo/shared';
+import { AppError, EventName, esVacio } from '@punto-amigo/shared';
 import type { IClock, IEventPublisher } from '@punto-amigo/service-kit';
 import {
   Necesidad,
@@ -58,7 +58,9 @@ export class ManageNeedsUseCase {
       idCategoria: entrada.datos.idCategoria,
       categoriaActiva,
       presupuestoEstimado: entrada.datos.presupuestoEstimado ?? null,
-      fechaDeseada: entrada.datos.fechaDeseada == null ? null : new Date(entrada.datos.fechaDeseada),
+      fechaDeseada: esVacio(entrada.datos.fechaDeseada)
+        ? null
+        : new Date(entrada.datos.fechaDeseada),
       ubicacionAproximada: entrada.datos.ubicacionAproximada ?? null,
       abiertasDelUsuario: await this.necesidades.contarAbiertasDe(entrada.idUsuario, ahora),
       maximoAbiertas: this.limites.maximoAbiertas,

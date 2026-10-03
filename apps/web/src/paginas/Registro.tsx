@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ErrorApi, pedir } from '../api/cliente';
 import { useSesion } from '../autenticacion/ContextoSesion';
@@ -18,7 +18,7 @@ const MINIMO_CONTRASENA = 12;
  * banner arriba. Lo que NO hace es confiar en esta validacion: el servidor
  * vuelve a comprobarlo todo.
  */
-export default function Registro() {
+export default function Registro(): ReactElement {
   const navegar = useNavigate();
   const { entrar } = useSesion();
 
@@ -90,9 +90,7 @@ export default function Registro() {
           setGeneral('Ya existe una cuenta con ese correo. Pruebe a entrar.');
         } else if (fallo.detalles.length > 0) {
           // Los errores por campo del servidor se pintan junto a su campo.
-          setErrores(
-            Object.fromEntries(fallo.detalles.map((d) => [d.field, d.message]))
-          );
+          setErrores(Object.fromEntries(fallo.detalles.map((d) => [d.field, d.message])));
         } else {
           setGeneral(fallo.message);
         }

@@ -47,7 +47,14 @@ const env = {
   RABBITMQ_PASSWORD: process.env['RABBITMQ_PASSWORD'] ?? 'local',
 };
 
-const como = (userId: number | null, roles: string[] = []) => {
+const como = (
+  userId: number | null,
+  roles: string[] = []
+): {
+  get: (ruta: string) => supertest.Test;
+  post: (ruta: string) => supertest.Test;
+  delete: (ruta: string) => supertest.Test;
+} => {
   const agente = supertest(app);
   const preparar = (m: 'get' | 'post' | 'delete') => (ruta: string) => {
     let p = agente[m](ruta).set('x-internal-secret', SECRETO_INTERNO);
@@ -59,10 +66,10 @@ const como = (userId: number | null, roles: string[] = []) => {
   return { get: preparar('get'), post: preparar('post'), delete: preparar('delete') };
 };
 
-const solicitante = () => como(SOLICITANTE, ['SOLICITANTE']);
-const oferente = () => como(OFERENTE, ['OFERENTE']);
-const ajeno = () => como(AJENO, ['SOLICITANTE', 'OFERENTE']);
-const admin = () => como(ADMIN, ['ADMINISTRADOR']);
+const solicitante = (): ReturnType<typeof como> => como(SOLICITANTE, ['SOLICITANTE']);
+const oferente = (): ReturnType<typeof como> => como(OFERENTE, ['OFERENTE']);
+const ajeno = (): ReturnType<typeof como> => como(AJENO, ['SOLICITANTE', 'OFERENTE']);
+const admin = (): ReturnType<typeof como> => como(ADMIN, ['ADMINISTRADOR']);
 
 beforeAll(async () => {
   if (env.DB_RATING_PASSWORD === '') {
@@ -130,14 +137,17 @@ const saltar = (): boolean => {
     if (process.env['REQUIRE_INTEGRATION'] === '1') {
       throw new Error(`Las pruebas de integracion no pudieron arrancar: ${motivoNoDisponible}`);
     }
-    // eslint-disable-next-line no-console
     console.warn(`pruebas de integracion omitidas: ${motivoNoDisponible}`);
     return true;
   }
   return false;
 };
 
-const calificar = (quien: ReturnType<typeof como>, puntuacion: number, comentario?: string) =>
+const calificar = (
+  quien: ReturnType<typeof como>,
+  puntuacion: number,
+  comentario?: string
+): supertest.Test =>
   quien.post('/api/v1/ratings').send({
     idSolicitud: SOLICITUD,
     puntuacion,
@@ -221,9 +231,7 @@ describe('periodo ciego (SRS RF166)', () => {
 
     // Revelarlas juntas quita la posibilidad de represalia: cuando una se ve,
     // la otra ya estaba escrita.
-    expect(new Date(filas[0].visible_at).getTime()).toBe(
-      new Date(filas[1].visible_at).getTime()
-    );
+    expect(new Date(filas[0].visible_at).getTime()).toBe(new Date(filas[1].visible_at).getTime());
 
     const publicas = await ajeno().get(`/api/v1/ratings/users/${OFERENTE}/received`);
     expect(publicas.body.total).toBe(1);
@@ -290,7 +298,9 @@ describe('periodo ciego (SRS RF166)', () => {
     await calificar(solicitante(), 5);
     await calificar(oferente(), 4);
 
-    const antes = await knex('calificacion').where('id_solicitud', SOLICITUD).orderBy('id_calificacion');
+    const antes = await knex('calificacion')
+      .where('id_solicitud', SOLICITUD)
+      .orderBy('id_calificacion');
 
     const reveladas = await runInTransaction(knex, () =>
       calificarUseCase.vencerPeriodosCiegos({
@@ -300,10 +310,10 @@ describe('periodo ciego (SRS RF166)', () => {
     );
     expect(reveladas).toBe(0);
 
-    const despues = await knex('calificacion').where('id_solicitud', SOLICITUD).orderBy('id_calificacion');
-    expect(new Date(despues[0].visible_at).getTime()).toBe(
-      new Date(antes[0].visible_at).getTime()
-    );
+    const despues = await knex('calificacion')
+      .where('id_solicitud', SOLICITUD)
+      .orderBy('id_calificacion');
+    expect(new Date(despues[0].visible_at).getTime()).toBe(new Date(antes[0].visible_at).getTime());
   });
 });
 

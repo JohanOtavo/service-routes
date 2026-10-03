@@ -18,11 +18,31 @@ const PORT = Number(process.env.MYSQL_PORT || 3306);
 /** Servicios que poseen un esquema. El api-gateway no aparece: solo usa Redis. */
 const SERVICES = [
   { key: 'auth', schema: 'pa_auth', userVar: 'DB_AUTH_USER', passVar: 'DB_AUTH_PASSWORD' },
-  { key: 'provider', schema: 'pa_provider', userVar: 'DB_PROVIDER_USER', passVar: 'DB_PROVIDER_PASSWORD' },
-  { key: 'catalog', schema: 'pa_catalog', userVar: 'DB_CATALOG_USER', passVar: 'DB_CATALOG_PASSWORD' },
-  { key: 'request', schema: 'pa_request', userVar: 'DB_REQUEST_USER', passVar: 'DB_REQUEST_PASSWORD' },
+  {
+    key: 'provider',
+    schema: 'pa_provider',
+    userVar: 'DB_PROVIDER_USER',
+    passVar: 'DB_PROVIDER_PASSWORD',
+  },
+  {
+    key: 'catalog',
+    schema: 'pa_catalog',
+    userVar: 'DB_CATALOG_USER',
+    passVar: 'DB_CATALOG_PASSWORD',
+  },
+  {
+    key: 'request',
+    schema: 'pa_request',
+    userVar: 'DB_REQUEST_USER',
+    passVar: 'DB_REQUEST_PASSWORD',
+  },
   { key: 'rating', schema: 'pa_rating', userVar: 'DB_RATING_USER', passVar: 'DB_RATING_PASSWORD' },
-  { key: 'notification', schema: 'pa_notification', userVar: 'DB_NOTIFICATION_USER', passVar: 'DB_NOTIFICATION_PASSWORD' },
+  {
+    key: 'notification',
+    schema: 'pa_notification',
+    userVar: 'DB_NOTIFICATION_USER',
+    passVar: 'DB_NOTIFICATION_PASSWORD',
+  },
   { key: 'admin', schema: 'pa_admin', userVar: 'DB_ADMIN_USER', passVar: 'DB_ADMIN_PASSWORD' },
 ];
 

@@ -75,7 +75,10 @@ exports.up = async function up(knex) {
     table.bigInteger('id_usuario').unsigned().notNullable();
     table.string('tipo', 60).notNullable();
     table.boolean('habilitada').notNullable().defaultTo(true);
-    table.datetime('updated_at').notNullable().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+    table
+      .datetime('updated_at')
+      .notNullable()
+      .defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
 
     table.primary(['id_usuario', 'tipo']);
     table

@@ -36,9 +36,7 @@ export class ManageServiceCatalogUseCase {
   private async exigirPerfil(idUsuario: number): Promise<PrestadorRef> {
     const ref = await this.prestadores.findByUsuario(idUsuario);
     if (ref === null) {
-      throw AppError.conflict(
-        'Necesita un perfil de prestador validado para publicar servicios.'
-      );
+      throw AppError.conflict('Necesita un perfil de prestador validado para publicar servicios.');
     }
     return ref;
   }
@@ -55,7 +53,10 @@ export class ManageServiceCatalogUseCase {
    * duplicacion es deliberada: aqui se decide el ORDEN de los errores, alli se
    * cierra el paso a cualquier camino que no pase por este caso de uso.
    */
-  private async exigirPropio(idServicio: number, idUsuario: number): Promise<{
+  private async exigirPropio(
+    idServicio: number,
+    idUsuario: number
+  ): Promise<{
     servicio: Servicio;
     ref: PrestadorRef;
   }> {

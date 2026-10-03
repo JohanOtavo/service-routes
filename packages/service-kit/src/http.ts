@@ -63,7 +63,6 @@ export function validateBody(schema: ZodTypeAny) {
   };
 }
 
-
 /**
  * Valida la cadena de consulta y la sustituye por el resultado tipado.
  *
@@ -141,10 +140,7 @@ export function requireInternalCaller(secreto: string) {
     }
 
     const candidato = Buffer.from(recibido);
-    if (
-      candidato.length !== esperado.length ||
-      !timingSafeEqual(candidato, esperado)
-    ) {
+    if (candidato.length !== esperado.length || !timingSafeEqual(candidato, esperado)) {
       next(AppError.forbidden('Esta ruta solo es accesible a traves del gateway.'));
       return;
     }

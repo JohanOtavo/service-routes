@@ -1,0 +1,26 @@
+{
+  "//": [
+    "Solution de TypeScript. No hay codigo aqui: solo la lista de proyectos que",
+    "`tsc --build` debe comprobar en orden. Cada microservicio y cada paquete es",
+    "un proyecto compuesto (composite: true) que declara a su vez lo que usa, de",
+    "modo que el orden sale de las referencias y no de este archivo.",
+    "",
+    "No incluir apps/web a proposito: Vite compila ese proyecto con esbuild y su",
+    "tsconfig lleva noEmit, asi que no puede ser un proyecto referenciado. Se",
+    "comprueba aparte con `tsc -p apps/web`, en el script typecheck."
+  ],
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/service-kit" },
+    { "path": "./packages/messaging" },
+    { "path": "./services/auth-service" },
+    { "path": "./services/provider-service" },
+    { "path": "./services/catalog-service" },
+    { "path": "./services/request-service" },
+    { "path": "./services/rating-service" },
+    { "path": "./services/notification-service" },
+    { "path": "./services/admin-reporting-service" },
+    { "path": "./services/api-gateway" }
+  ]
+}

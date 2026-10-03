@@ -266,6 +266,71 @@
   margin-bottom: var(--esp-2);
 }
 
+/* ─── Conmutador de modo ────────────────────────────────────────────────────
+ * Grupo de botones segmentado. Cada boton mide `--toque-min` de alto, que es
+ * el objetivo tactil del proyecto y de sobra el minimo de WCAG 2.5.8.
+ */
+
+.pa-conmutador {
+  display: inline-flex;
+  gap: var(--esp-1);
+  padding: var(--esp-1);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
+  background: var(--color-fondo-hundido);
+}
+
+.pa-conmutador__opcion {
+  min-height: var(--toque-min);
+  white-space: nowrap;
+  /* El mismo tamano que los enlaces de la cabecera, con la que convive. */
+  font-size: var(--texto-sm);
+  line-height: var(--alto-linea-ajustado);
+}
+
+/*
+ * El modo activo se rellena de marca y el resto se queda en el fondo hundido.
+ *
+ * El relleno entero, y no un borde o un fondo claro, porque el hueco entre las
+ * dos opciones tiene que leerse en un vistazo: es la unica senal de en que lado
+ * esta mirando ahora mismo. El 600 sobre blanco da 5.9:1, asi que el texto
+ * blanco cumple AA sin ampliar el tamano.
+ */
+.pa-conmutador__opcion[aria-pressed='true'] {
+  background: var(--color-primario-600);
+  color: var(--color-texto-inverso);
+  font-weight: var(--peso-semi);
+}
+
+.pa-conmutador__opcion[aria-pressed='false'] {
+  color: var(--color-texto-secundario);
+}
+
+/* El foco lo pone el `:focus-visible` global de base.css. No se repite aqui a
+ * proposito: el anillo es el mismo en toda la aplicacion y una segunda regla
+ * solo crea un sitio mas donde puede quedar anulado. */
+
+/*
+ * En pantalla estrecha el conmutador ocupa su fila entera y las dos opciones se
+ * reparten el ancho.
+ *
+ * Al lado de la marca y de los botones de cuenta, dos etiquetas de veinte
+ * caracteres no caben en 360px. Repartir el ancho es mejor que dejar las
+ * opciones con anchos distintos: partir el grupo en mitades es lo que lo hace
+ * leerse como un control y no como dos botones sueltos.
+ */
+@media (max-width: 48rem) {
+  .pa-conmutador {
+    width: 100%;
+  }
+
+  .pa-conmutador__opcion {
+    flex: 1;
+    justify-content: center;
+    padding-inline: var(--esp-2);
+  }
+}
+
 /* ─── Disposicion ──────────────────────────────────────────────────────────*/
 
 .pa-pila { display: flex; flex-direction: column; }

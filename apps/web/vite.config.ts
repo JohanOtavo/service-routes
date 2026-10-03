@@ -32,9 +32,17 @@ export default defineConfig({
         background_color: '#faf8f5',
         theme_color: '#1f6f5c',
         icons: [
-          { src: '/icono-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icono-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icono-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/icono-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icono-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          // Aparte del "any": Android recorta con su propia mascara, que puede
+          // comerse las esquinas. Reusar aqui el icono normal deja huecos
+          // translucidos en la pantalla de inicio.
+          {
+            src: '/icono-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       workbox: {

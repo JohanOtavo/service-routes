@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { esVacio } from '@punto-amigo/shared';
 import type { ISessionRepository, SesionRefresco } from '../../domain/ports/out';
 import { currentDb } from './transaction';
 
@@ -109,7 +110,7 @@ export class KnexSessionRepository implements ISessionRepository {
       const fila = await this.dbSinTransaccion<FilaSesion>('refresh_session')
         .where({ id_sesion: actual })
         .first();
-      if (fila?.reemplazado_por != null) pendientes.push(fila.reemplazado_por);
+      if (!esVacio(fila?.reemplazado_por)) pendientes.push(fila.reemplazado_por);
 
       const anteriores = await this.dbSinTransaccion<FilaSesion>('refresh_session')
         .where({ reemplazado_por: actual })

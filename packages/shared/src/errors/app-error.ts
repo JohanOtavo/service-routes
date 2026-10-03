@@ -92,12 +92,7 @@ export class AppError extends Error {
   }
 
   static conflict(message: string, context?: Record<string, unknown>): AppError {
-    return new AppError(
-      ErrorCode.CONFLICT,
-      409,
-      message,
-      context === undefined ? {} : { context }
-    );
+    return new AppError(ErrorCode.CONFLICT, 409, message, context === undefined ? {} : { context });
   }
 
   /** Incluye las transiciones validas para que el cliente pueda orientar al usuario. */
@@ -135,12 +130,10 @@ export class AppError extends Error {
   }
 
   static internal(cause: unknown, context?: Record<string, unknown>): AppError {
-    return new AppError(
-      ErrorCode.INTERNAL,
-      500,
-      'Ocurrio un error inesperado.',
-      { cause, ...(context === undefined ? {} : { context }) }
-    );
+    return new AppError(ErrorCode.INTERNAL, 500, 'Ocurrio un error inesperado.', {
+      cause,
+      ...(context === undefined ? {} : { context }),
+    });
   }
 }
 

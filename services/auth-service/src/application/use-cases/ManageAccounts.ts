@@ -1,4 +1,5 @@
 import { AppError, EventName } from '@punto-amigo/shared';
+import type { Usuario } from '../../domain/entities/Usuario';
 import { parseUserRole, type UserRole } from '../../domain/value-objects/UserRole';
 import type {
   IClock,
@@ -168,7 +169,7 @@ export class ManageAccountsUseCase {
     );
   }
 
-  private async exigirUsuario(id: number) {
+  private async exigirUsuario(id: number): Promise<Usuario> {
     const usuario = await this.usuarios.findById(id);
     if (usuario === null) throw AppError.notFound('La cuenta no existe.');
     return usuario;

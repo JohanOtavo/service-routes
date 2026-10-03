@@ -1,6 +1,15 @@
 import knexLib from 'knex';
+import type { Express } from 'express';
+import type { Knex } from 'knex';
 import { z } from 'zod';
-import { EventName, assertProductionSafety, baseEnvSchema, loadEnv } from '@punto-amigo/shared';
+import {
+  EventName,
+  assertProductionSafety,
+  baseEnvSchema,
+  enteroONulo,
+  esVacio,
+  loadEnv,
+} from '@punto-amigo/shared';
 import { Broker, EventConsumer, OutboxRelay } from '@punto-amigo/messaging';
 import {
   OutboxEventPublisher,
@@ -47,8 +56,9 @@ const envSchema = baseEnvSchema.extend({
 
 const logger = {
   info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    // eslint-disable-next-line no-console
-    console.warn(JSON.stringify({ level: 'info', service: 'rating-service', mensaje, ...contexto }));
+    console.warn(
+      JSON.stringify({ level: 'info', service: 'rating-service', mensaje, ...contexto })
+    );
   },
   error(mensaje: string, contexto: Record<string, unknown> = {}): void {
     console.error(
@@ -57,7 +67,13 @@ const logger = {
   },
 };
 
-export function buildContainer(env: z.infer<typeof envSchema>) {
+export function buildContainer(env: z.infer<typeof envSchema>): {
+  app: Express;
+  knex: Knex;
+  calificar: SubmitRatingUseCase;
+  cancelaciones: TrackCancellationRateUseCase;
+  solicitudes: KnexSolicitudRefRepository;
+} {
   const knex = knexLib({
     client: 'mysql2',
     connection: {
@@ -88,12 +104,7 @@ export function buildContainer(env: z.infer<typeof envSchema>) {
     eventos,
     clock
   );
-  const consultar = new QueryReputationUseCase(
-    calificaciones,
-    reputaciones,
-    tasas,
-    recalculador
-  );
+  const consultar = new QueryReputationUseCase(calificaciones, reputaciones, tasas, recalculador);
   const cancelaciones = new TrackCancellationRateUseCase(
     tasas,
     eventos,
@@ -161,14 +172,18 @@ async function main(): Promise<void> {
   );
 
   /** Replica de la solicitud, con el estado que traiga el evento. */
-  const replicar = async (sobre: { payload: Record<string, unknown> }, estado: string, completadaAt: Date | null) => {
+  const replicar = async (
+    sobre: { payload: Record<string, unknown> },
+    estado: string,
+    completadaAt: Date | null
+  ): Promise<void> => {
     const p = sobre.payload;
     await solicitudes.upsert(
       {
         idSolicitud: Number(p['idSolicitud']),
         idUsuario: Number(p['idUsuario']),
         idUsuarioPrestador: Number(p['idUsuarioPrestador']),
-        idServicio: p['idServicio'] == null ? null : Number(p['idServicio']),
+        idServicio: enteroONulo(p['idServicio']),
         estado,
         completadaAt,
       },
@@ -229,7 +244,7 @@ async function main(): Promise<void> {
 
       // Sin imputado no hay a quien cargarle nada: cancelacion en gracia,
       // excusada o pendiente de revision. Se sale sin tocar la tasa.
-      if (imputado == null) return;
+      if (esVacio(imputado)) return;
 
       await cancelaciones.alCancelar({
         cancelacion: {

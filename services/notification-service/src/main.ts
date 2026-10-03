@@ -1,6 +1,14 @@
 import knexLib from 'knex';
+import type { Express } from 'express';
+import type { Knex } from 'knex';
 import { z } from 'zod';
-import { EventName, assertProductionSafety, baseEnvSchema, loadEnv } from '@punto-amigo/shared';
+import {
+  EventName,
+  assertProductionSafety,
+  baseEnvSchema,
+  esVacio,
+  loadEnv,
+} from '@punto-amigo/shared';
 import { Broker, EventConsumer } from '@punto-amigo/messaging';
 import { SystemClock, useTransaction } from '@punto-amigo/service-kit';
 import { ManageInboxUseCase } from './application/use-cases/ManageInbox';
@@ -27,7 +35,6 @@ const envSchema = baseEnvSchema.extend({
 
 const logger = {
   info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    // eslint-disable-next-line no-console
     console.warn(
       JSON.stringify({ level: 'info', service: 'notification-service', mensaje, ...contexto })
     );
@@ -39,7 +46,12 @@ const logger = {
   },
 };
 
-export function buildContainer(env: z.infer<typeof envSchema>) {
+export function buildContainer(env: z.infer<typeof envSchema>): {
+  app: Express;
+  knex: Knex;
+  desdeEvento: CreateFromEventUseCase;
+  clock: SystemClock;
+} {
   const knex = knexLib({
     client: 'mysql2',
     connection: {
@@ -117,9 +129,9 @@ async function main(): Promise<void> {
   const avisar = (
     trx: Parameters<Parameters<typeof consumidor.on>[1]>[1],
     datos: Parameters<typeof desdeEvento.crear>[0]
-  ) => useTransaction(trx, () => desdeEvento.crear(datos));
+  ): Promise<boolean> => useTransaction(trx, () => desdeEvento.crear(datos));
 
-  // ─── Identidad ──────────────────────────────────────────────────────────
+  // â”€â”€â”€ Identidad â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   consumidor.on(EventName.UserRegistered, async (sobre, trx) => {
     const p = sobre.payload;
@@ -155,7 +167,7 @@ async function main(): Promise<void> {
     );
   });
 
-  // ─── Perfil de prestador ────────────────────────────────────────────────
+  // â”€â”€â”€ Perfil de prestador â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   consumidor.on(EventName.ServiceProviderProfileValidated, async (sobre, trx) => {
     const p = sobre.payload;
@@ -203,7 +215,7 @@ async function main(): Promise<void> {
     });
   });
 
-  // ─── Demanda y contratacion ─────────────────────────────────────────────
+  // â”€â”€â”€ Demanda y contratacion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   consumidor.on(EventName.ProposalSubmitted, async (sobre, trx) => {
     const p = sobre.payload;
@@ -223,7 +235,7 @@ async function main(): Promise<void> {
   consumidor.on(EventName.ProposalAwarded, async (sobre, trx) => {
     const p = sobre.payload;
     const destinatario = p['idUsuarioPrestador'];
-    if (destinatario == null) return;
+    if (esVacio(destinatario)) return;
 
     await avisar(trx, {
       idUsuario: Number(destinatario),
@@ -243,7 +255,7 @@ async function main(): Promise<void> {
     if (p['origen'] === 'ADJUDICACION') return;
 
     const destinatario = p['idUsuarioPrestador'];
-    if (destinatario == null) return;
+    if (esVacio(destinatario)) return;
 
     await avisar(trx, {
       idUsuario: Number(destinatario),
@@ -302,7 +314,7 @@ async function main(): Promise<void> {
     const p = sobre.payload;
     const canceloElSolicitante = p['parteCanceladora'] === 'SOLICITANTE';
     const afectado = canceloElSolicitante ? p['idUsuarioPrestador'] : p['idUsuario'];
-    if (afectado == null) return;
+    if (esVacio(afectado)) return;
 
     await avisar(trx, {
       idUsuario: Number(afectado),
@@ -315,7 +327,7 @@ async function main(): Promise<void> {
     });
   });
 
-  // ─── Reputacion ─────────────────────────────────────────────────────────
+  // â”€â”€â”€ Reputacion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /**
    * Solo cuando la calificacion YA es publica.

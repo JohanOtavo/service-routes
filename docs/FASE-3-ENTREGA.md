@@ -1,9 +1,22 @@
 # Fase 3 — Cliente web PWA. Entrega
 
-Estado: **completa**. React 18 + TypeScript sobre Vite, 16 pantallas, sistema de
-diseño propio, PWA instalable y dos escenas 3D selectivas. 21 pruebas del
-cliente, más las 187 unitarias y 131 de integración del backend, todas verdes.
-`npm audit` sin vulnerabilidades altas ni críticas.
+Estado: **construida, con la puerta de calidad del repositorio pendiente de cerrar**.
+React 18 + TypeScript sobre Vite, 16 pantallas, sistema de diseño propio, PWA
+instalable y dos escenas 3D selectivas. 21 pruebas del cliente, más las 187
+unitarias del backend. `npm audit` sin vulnerabilidades altas ni críticas.
+
+> **Estado verificado el 3/10/2026.** Esta entrega tal como se describe pasó sus 21
+> pruebas del cliente. Después se añadieron recuperación de contraseña y modo
+> oscuro, y el repositorio estuvo roto: `typecheck` fallaba con dos errores en
+> `Restablecer.tsx` (uno de ellos el bug de fondo: el token de restablecimiento
+> estaba escrito a mano, así que la página no podía restablecer ninguna contraseña
+> real) y `lint` con 55 problemas.
+>
+> **Hoy ambas puertas pasan** y el cliente tiene 124 pruebas en verde. Queda
+> pendiente solo confirmar el cableado de las rutas nuevas en `App.tsx` (G-5).
+>
+> Estado de las puertas en [00-FLUJO-DEL-PROYECTO.md](00-FLUJO-DEL-PROYECTO.md) §1.
+> Deuda heredada en [01-BACKLOG.md](01-BACKLOG.md) grupos C y G-5.
 
 ---
 

@@ -126,11 +126,18 @@ function makeCollector() {
 
 async function compileService(service) {
   const dir = path.join(__dirname, 'migrations', service);
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.js')).sort();
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.js'))
+    .sort();
   const { fakeKnex, statements, destroy } = makeCollector();
 
   for (const file of files) {
-    // eslint-disable-next-line global-require, import/no-dynamic-require
+    // Requerido en dinamico a proposito: los archivos a compilar se descubren
+    // leyendo el directorio, asi que no hay ningun modulo que se pueda
+    // importar de forma estatica. Ademas no se ejecuta en produccion, y el
+    // `require` dentro del bucle es lo que permite informar el nombre del
+    // archivo que falla.
     const migration = require(path.join(dir, file));
     await migration.up(fakeKnex);
   }
@@ -150,7 +157,9 @@ async function main() {
       const { files, statements } = await compileService(service);
       total += statements.length;
       console.log(`\n${'='.repeat(78)}`);
-      console.log(`-- esquema pa_${service}  (${files.length} migracion(es), ${statements.length} sentencias)`);
+      console.log(
+        `-- esquema pa_${service}  (${files.length} migracion(es), ${statements.length} sentencias)`
+      );
       console.log('='.repeat(78));
       for (const sql of statements) console.log(`${sql};`);
     } catch (error) {

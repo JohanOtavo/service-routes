@@ -58,7 +58,6 @@ const saltar = (): boolean => {
     if (process.env['REQUIRE_INTEGRATION'] === '1') {
       throw new Error(`La prueba no pudo arrancar: ${motivoNoDisponible}`);
     }
-    // eslint-disable-next-line no-console
     console.warn(`prueba omitida: ${motivoNoDisponible}`);
     return true;
   }
@@ -72,7 +71,12 @@ const saltar = (): boolean => {
  * esta en lo que MySQL devuelve al insertar, asi que la base tiene que ser real
  * o la prueba no vale para nada.
  */
-function brokerFalso() {
+function brokerFalso(): {
+  broker: Broker;
+  confirmados: number[];
+  rechazados: number[];
+  entregar: (m: unknown) => void;
+} {
   let entregar: ((mensaje: unknown) => void) | null = null;
   const confirmados: number[] = [];
   const rechazados: number[] = [];

@@ -12,20 +12,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Formato, linter y tipos
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run format:check
-      - run: npm run lint
-      - run: npm run typecheck
-
   migrations:
     name: Migraciones contra MySQL real
     runs-on: ubuntu-latest
@@ -102,28 +88,82 @@ jobs:
           DB_ADMIN_PASSWORD: ci-admin
         run: npm run db:reset
 
-  tests:
-    name: Pruebas
+  # Una sola puerta, la misma que se ejecuta en local con `npm run verify`.
+  #
+  # Antes esto se repartia en tres jobs (formato/lint/tipos, unitarias e
+  # integracion por separado, y dependencias). Separate hacia bien para ver
+  # quickly que fallo, pero dejaba dos huecos reales: `test:unit` y
+  # `test:integration` no pasaban `--coverage`, asi que el umbral de cobertura no
+  # se comprobaba en ningun sitio, y las pruebas web de Vitest no se ejecutaban
+  # en CI en absoluto. Ademas el job de integracion no declaraba servicios ni
+  # variables de base de datos, asi que no podia pasar.
+  #
+  # Aqui van los tres servicios de verdad y `verify` entero, de forma que la
+  # puerta de la calle es la misma que la de la casa.
+  verify:
+    name: Puerta completa
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run test:unit
-      # REQUIRE_INTEGRATION hace que un fallo de arranque sea un fallo y no una
-      # omision silenciosa. Sin esto, una variable que el esquema exige y la
-      # prueba no pasa produce una suite verde que no ejecuto nada.
-      - name: Pruebas de integracion
+    services:
+      mysql:
+        image: mysql:8.0
         env:
-          REQUIRE_INTEGRATION: '1'
-        run: npm run test:integration
+          MYSQL_ROOT_PASSWORD: ci-root
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pci-root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      rabbitmq:
+        image: rabbitmq:3.13-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: pa_dev
+          RABBITMQ_DEFAULT_PASS: ci-rabbit
+        ports: ['5672:5672']
+        options: >-
+          --health-cmd="rabbitmq-diagnostics -q ping"
+          --health-interval=10s
+          --health-timeout=10s
+          --health-retries=20
 
-  security:
-    name: Dependencias
-    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: '3306'
+      MYSQL_ROOT_PASSWORD: ci-root
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: '6379'
+      RABBITMQ_HOST: 127.0.0.1
+      RABBITMQ_PORT: '5672'
+      RABBITMQ_USER: pa_dev
+      RABBITMQ_PASSWORD: ci-rabbit
+      INTERNAL_SERVICE_SECRET: ci-internal-secret
+      DB_AUTH_USER: pa_auth_svc
+      DB_AUTH_PASSWORD: ci-auth
+      DB_PROVIDER_USER: pa_provider_svc
+      DB_PROVIDER_PASSWORD: ci-provider
+      DB_CATALOG_USER: pa_catalog_svc
+      DB_CATALOG_PASSWORD: ci-catalog
+      DB_REQUEST_USER: pa_request_svc
+      DB_REQUEST_PASSWORD: ci-request
+      DB_RATING_USER: pa_rating_svc
+      DB_RATING_PASSWORD: ci-rating
+      DB_NOTIFICATION_USER: pa_notification_svc
+      DB_NOTIFICATION_PASSWORD: ci-notification
+      DB_ADMIN_USER: pa_admin_svc
+      DB_ADMIN_PASSWORD: ci-admin
+      # Sin esto, un fallo de arranque de las pruebas de integracion se
+      # convierte en una omision silenciosa y la suite pasa sin ejecutar nada.
+      REQUIRE_INTEGRATION: '1'
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -131,6 +171,28 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # Una vulnerabilidad alta o critica bloquea el despliegue
-      # (00-governance/security-rules.md).
-      - run: npm audit --audit-level=high
+
+      - name: Crear esquemas y usuarios
+        run: |
+          sudo apt-get install -y mysql-client
+          bash db/init/01-schemas-and-users.sh
+
+      - name: Aplicar migraciones
+        run: npm run db:migrate
+
+      # Claves efimeras, solo para esta ejecucion. El codigo espera el PEM con
+      # los saltos escapados como `\n`, porque es el formato que produce un
+      # fichero .env, y lo convierte con un replace al leerlo.
+      - name: Generar claves JWT de la ejecucion
+        run: |
+          openssl genrsa -out "$RUNNER_TEMP/private.pem" 2048
+          openssl rsa -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
+          PRIVADO=$(sed ':a;N;$!ba;s/\n/\\n/g' "$RUNNER_TEMP/private.pem")
+          PUBLICO=$(sed ':a;N;$!ba;s/\n/\\n/g' "$RUNNER_TEMP/public.pem")
+          echo "JWT_PRIVATE_KEY=$PRIVADO" >> "$GITHUB_ENV"
+          echo "JWT_PUBLIC_KEY=$PUBLICO" >> "$GITHUB_ENV"
+
+      # Formato, lint, tipos, las 320 pruebas de Jest con cobertura, las 124 de
+      # Vitest y las dependencias. Una sola puerta, igual que en local.
+      - name: verify
+        run: npm run verify

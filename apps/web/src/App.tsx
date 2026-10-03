@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactElement } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { Disposicion } from './Disposicion';
 import { RutaProtegida } from './autenticacion/RutaProtegida';
@@ -19,6 +19,11 @@ import { Cargando } from './ui';
 const Portada = lazy(() => import('./paginas/Portada'));
 const Entrar = lazy(() => import('./paginas/Entrar'));
 const Registro = lazy(() => import('./paginas/Registro'));
+// Recuperacion de contrasena. Publicas a proposito: son precisamente las que
+// ve quien ya no puede entrar. Sin estas rutas, el enlace "Olvide mi contrasena"
+// de la pantalla de acceso caia en el 404.
+const Recuperar = lazy(() => import('./paginas/Recuperar'));
+const Restablecer = lazy(() => import('./paginas/Restablecer'));
 const Servicios = lazy(() => import('./paginas/Servicios'));
 const Servicio = lazy(() => import('./paginas/Servicio'));
 const MiPerfilPrestador = lazy(() => import('./paginas/MiPerfilPrestador'));
@@ -33,16 +38,69 @@ const MiCuenta = lazy(() => import('./paginas/MiCuenta'));
 const Administracion = lazy(() => import('./paginas/Administracion'));
 const NoEncontrada = lazy(() => import('./paginas/NoEncontrada'));
 
-export function App() {
+export function App(): ReactElement {
   return (
     <Routes>
       <Route element={<Disposicion />}>
         {/* Publicas: el gateway las deja pasar sin token. */}
-        <Route index element={<Pantalla><Portada /></Pantalla>} />
-        <Route path="entrar" element={<Pantalla><Entrar /></Pantalla>} />
-        <Route path="registro" element={<Pantalla><Registro /></Pantalla>} />
-        <Route path="servicios" element={<Pantalla><Servicios /></Pantalla>} />
-        <Route path="servicios/:id" element={<Pantalla><Servicio /></Pantalla>} />
+        <Route
+          index
+          element={
+            <Pantalla>
+              <Portada />
+            </Pantalla>
+          }
+        />
+        <Route
+          path="entrar"
+          element={
+            <Pantalla>
+              <Entrar />
+            </Pantalla>
+          }
+        />
+        <Route
+          path="registro"
+          element={
+            <Pantalla>
+              <Registro />
+            </Pantalla>
+          }
+        />
+        <Route
+          path="recuperar"
+          element={
+            <Pantalla>
+              <Recuperar />
+            </Pantalla>
+          }
+        />
+        {/* El token no va en la ruta: llega en la cadena de consulta del enlace
+            que va en el correo, y la pantalla lo lee de ahi. */}
+        <Route
+          path="restablecer"
+          element={
+            <Pantalla>
+              <Restablecer />
+            </Pantalla>
+          }
+        />
+        <Route
+          path="servicios"
+          element={
+            <Pantalla>
+              <Servicios />
+            </Pantalla>
+          }
+        />
+        <Route
+          path="servicios/:id"
+          element={
+            <Pantalla>
+              <Servicio />
+            </Pantalla>
+          }
+        />
 
         {/* Oferente */}
         <Route
@@ -151,13 +209,20 @@ export function App() {
           }
         />
 
-        <Route path="*" element={<Pantalla><NoEncontrada /></Pantalla>} />
+        <Route
+          path="*"
+          element={
+            <Pantalla>
+              <NoEncontrada />
+            </Pantalla>
+          }
+        />
       </Route>
     </Routes>
   );
 }
 
 /** Envoltura de carga diferida, para no repetir el Suspense en cada ruta. */
-function Pantalla({ children }: { children: React.ReactNode }) {
+function Pantalla({ children }: { children: React.ReactNode }): ReactElement {
   return <Suspense fallback={<Cargando que="la pantalla" />}>{children}</Suspense>;
 }

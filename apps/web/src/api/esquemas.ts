@@ -15,7 +15,14 @@ import { z } from 'zod';
 export const sinCuerpo = z.undefined();
 
 /** Envoltura paginada que usan casi todos los listados. */
-export function pagina<T extends z.ZodTypeAny>(elemento: T) {
+export function pagina<T extends z.ZodTypeAny>(
+  elemento: T
+): z.ZodObject<{
+  elementos: z.ZodArray<T>;
+  total: z.ZodNumber;
+  pagina: z.ZodNumber;
+  tamano: z.ZodNumber;
+}> {
   return z.object({
     elementos: z.array(elemento),
     total: z.number(),
@@ -204,13 +211,42 @@ export const aviso = z.object({
 export const bandejaAvisos = pagina(aviso).extend({ noLeidas: z.number() });
 export const contadorAvisos = z.object({ noLeidas: z.number() });
 
+// ─── Recuperacion de contrasena ─────────────────────────────────────────────
+
+/**
+ * Respuesta 202 de la peticion de recuperacion.
+ *
+ * `mensaje` lo redacta el servidor y la pantalla lo muestra TAL CUAL, sin
+ * reescribirlo: es el mismo texto que el backend escribe para no afirmar si la
+ * cuenta existe (SRS RF12). Reescribirlo aqui solo abriria la puerta a que
+ * someday alguien escriba "hemos enviado un correo" y Rompa esa precaucion.
+ */
+export const recuperacionSolicitada = z.object({ mensaje: z.string() });
+
 export type Categoria = z.infer<typeof categoria>;
+export type ListaCategorias = z.infer<typeof listaCategorias>;
 export type ServicioListado = z.infer<typeof servicioListado>;
+export type ServicioPropio = z.infer<typeof servicioPropio>;
 export type PrestadorPublico = z.infer<typeof prestadorPublico>;
 export type PrestadorPrivado = z.infer<typeof prestadorPrivado>;
 export type NecesidadPublica = z.infer<typeof necesidadPublica>;
 export type NecesidadPropia = z.infer<typeof necesidadPropia>;
 export type Propuesta = z.infer<typeof propuesta>;
 export type Solicitud = z.infer<typeof solicitud>;
+export type ResultadoCancelacion = z.infer<typeof resultadoCancelacion>;
+export type ReputacionUsuario = z.infer<typeof reputacionUsuario>;
 export type Calificacion = z.infer<typeof calificacion>;
 export type Aviso = z.infer<typeof aviso>;
+export type BandejaAvisos = z.infer<typeof bandejaAvisos>;
+export type ContadorAvisos = z.infer<typeof contadorAvisos>;
+export type RecuperacionSolicitada = z.infer<typeof recuperacionSolicitada>;
+
+/**
+ * Tipo de una lista paginada de cualquier elemento.
+ *
+ * Los hooks necesitan nombrar lo que devuelve `pagina(...)` para declarar su
+ * tipo de retorno, y escribir `z.infer<ReturnType<typeof pagina<...>>>` en cada
+ * uno no dice nada. El tipo sale del propio esquema, de modo que anadir un
+ * campo al envoltorio lo propaga a todos los hooks sin tocar ninguno.
+ */
+export type Pagina<T> = z.infer<ReturnType<typeof pagina<z.ZodType<T>>>>;

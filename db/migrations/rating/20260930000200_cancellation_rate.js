@@ -89,7 +89,10 @@ exports.up = async function up(knex) {
 
     // El recalculo barre exactamente esto: lo que computa de una persona dentro
     // de la ventana.
-    table.index(['id_usuario_imputado', 'faceta', 'computa', 'cancelada_at'], 'idx_cancelacion_ref_ventana');
+    table.index(
+      ['id_usuario_imputado', 'faceta', 'computa', 'cancelada_at'],
+      'idx_cancelacion_ref_ventana'
+    );
   });
 
   await checkIn(knex, 'cancelacion_ref', 'faceta', FACETAS);

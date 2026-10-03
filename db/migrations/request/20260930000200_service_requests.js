@@ -181,7 +181,10 @@ exports.up = async function up(knex) {
     table.bigInteger('id_usuario').unsigned().notNullable();
     table.string('idempotency_key', 64).notNullable();
     table.string('operacion', 60).notNullable();
-    table.string('request_hash', 64).notNullable().comment('Detecta la misma clave con otro cuerpo');
+    table
+      .string('request_hash', 64)
+      .notNullable()
+      .comment('Detecta la misma clave con otro cuerpo');
     table.json('respuesta').nullable();
     table.integer('status_http').unsigned().nullable();
     table.datetime('creado_at').notNullable().defaultTo(knex.fn.now());

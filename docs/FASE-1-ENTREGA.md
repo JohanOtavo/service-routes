@@ -1,12 +1,21 @@
 # Fase 1 — Base de datos. Entrega
 
-Estado: **completa**. Siete esquemas aislados, 55 tablas de negocio, siete
-usuarios con privilegio mínimo y 31 pruebas negativas que comprueban los
-invariantes contra MySQL real.
+Estado: **construida, con la puerta de calidad del repositorio pendiente de cerrar**.
+Siete esquemas aislados, 55 tablas (43 de negocio y 12 del patrón de eventos), siete
+usuarios con privilegio mínimo y 31 pruebas negativas que comprueban los invariantes
+contra MySQL real.
 
 > Documento escrito después de la Fase 2, que es cuando el esquema se ejerció de
 > verdad. Las cifras salen de consultar la base viva y de leer los archivos, no
 > de recordar lo que se construyó.
+
+> **Alcance de la afirmación.** La Fase 1 está construida y sus invariantes se
+> comprobaron contra MySQL real en el momento de la entrega. **No** se ha vuelto a
+> ejecutar `db/verify-invariants.sh` desde entonces, y `npm run verify` no forma parte
+> de su evidencia: requiere Docker, y el 2/10/2026 Docker Desktop estaba detenido.
+> El estado medido de las puertas de calidad del repositorio está en
+> [00-FLUJO-DEL-PROYECTO.md](00-FLUJO-DEL-PROYECTO.md) §1. La deuda heredada de esta
+> fase está en [01-BACKLOG.md](01-BACKLOG.md) grupo A.
 
 ---
 
@@ -236,13 +245,13 @@ falta un comando de re-emisión por servicio.
 
 | Requisitos | Dónde |
 |---|---|
-| Modelo de datos completo (SRS sección 6) | las 11 migraciones |
+| Modelo de datos completo (SRS sección 6) | las 12 migraciones |
 | RF103 Auditoría inmutable | disparadores en `audit_record` |
 | RF105 Parámetros del sistema | `system_parameter` |
 | RF106, RF107 Respaldos y prueba de restauración | `backup_record` |
 | RF125, RNF86 Límites anti-abuso | índices y columnas que los soportan |
 | RF164–RF167 Calificación bidireccional y por faceta | `calificacion`, `reputacion` |
 | RF174–RF186 Política de cancelación | `motivo_cancelacion`, `cancelacion`, `incomparecencia`, `restriccion_usuario`, `tasa_cancelacion` |
-| RNF28 Aislamiento entre servicios | usuarios por esquema, verificado |
+| RNF28 Aislamiento entre servicios | usuarios por esquema, comprobado contra MySQL real en la entrega |
 | RNF37, RNF46 Consistencia eventual | `outbox_event`, `processed_event` |
 | ADR-004 Esquema por servicio | `db/init/01-schemas-and-users.sh` |

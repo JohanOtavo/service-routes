@@ -1,6 +1,14 @@
 import knexLib from 'knex';
+import type { Express } from 'express';
+import type { Knex } from 'knex';
 import { z } from 'zod';
-import { EventName, assertProductionSafety, baseEnvSchema, loadEnv } from '@punto-amigo/shared';
+import {
+  EventName,
+  assertProductionSafety,
+  baseEnvSchema,
+  enteroONulo,
+  loadEnv,
+} from '@punto-amigo/shared';
 import { Broker, EventConsumer, OutboxRelay } from '@punto-amigo/messaging';
 import { OutboxEventPublisher, useTransaction } from '@punto-amigo/service-kit';
 import { ManageServiceCatalogUseCase } from './application/use-cases/ManageServiceCatalog';
@@ -33,7 +41,6 @@ const envSchema = baseEnvSchema.extend({
 
 const logger = {
   info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    // eslint-disable-next-line no-console
     console.warn(
       JSON.stringify({ level: 'info', service: 'catalog-service', mensaje, ...contexto })
     );
@@ -45,7 +52,12 @@ const logger = {
   },
 };
 
-export function buildContainer(env: z.infer<typeof envSchema>) {
+export function buildContainer(env: z.infer<typeof envSchema>): {
+  app: Express;
+  knex: Knex;
+  sincronizarPrestador: SyncProviderRefUseCase;
+  sincronizarResumen: SyncRatingSummaryUseCase;
+} {
   const knex = knexLib({
     client: 'mysql2',
     connection: {
@@ -148,9 +160,10 @@ async function main(): Promise<void> {
           especialidad: p['especialidad'] === undefined ? null : String(p['especialidad']),
           // Validar deja el perfil en ACTIVE; ese evento no lleva estado.
           estado: String(
-            p['estado'] ?? (sobre.eventName === EventName.ServiceProviderProfileValidated
-              ? 'ACTIVE'
-              : 'PENDING_VALIDATION')
+            p['estado'] ??
+              (sobre.eventName === EventName.ServiceProviderProfileValidated
+                ? 'ACTIVE'
+                : 'PENDING_VALIDATION')
           ) as EstadoPrestador,
           ocurridoAt: new Date(sobre.occurredAt),
         })
@@ -178,8 +191,8 @@ async function main(): Promise<void> {
     const p = sobre.payload;
     await useTransaction(trx, () =>
       sincronizarResumen.alCalificar({
-        idServicio: p['idServicio'] == null ? null : Number(p['idServicio']),
-        puntuacion: p['puntuacion'] == null ? null : Number(p['puntuacion']),
+        idServicio: enteroONulo(p['idServicio']),
+        puntuacion: enteroONulo(p['puntuacion']),
         ocurridoAt: new Date(sobre.occurredAt),
       })
     );
@@ -190,10 +203,9 @@ async function main(): Promise<void> {
     const p = sobre.payload;
     await useTransaction(trx, () =>
       sincronizarResumen.alRecalcular({
-        idServicio: p['idServicio'] == null ? null : Number(p['idServicio']),
-        puntuacionMedia: p['puntuacionMedia'] == null ? null : Number(p['puntuacionMedia']),
-        totalCalificaciones:
-          p['totalCalificaciones'] == null ? null : Number(p['totalCalificaciones']),
+        idServicio: enteroONulo(p['idServicio']),
+        puntuacionMedia: enteroONulo(p['puntuacionMedia']),
+        totalCalificaciones: enteroONulo(p['totalCalificaciones']),
         ocurridoAt: new Date(sobre.occurredAt),
       })
     );

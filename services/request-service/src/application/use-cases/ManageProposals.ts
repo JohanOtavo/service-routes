@@ -98,7 +98,10 @@ export class ManageProposalsUseCase {
     idUsuario: number;
     cambios: { precio?: string; tiempoEstimado?: number; mensaje?: string };
   }): Promise<Record<string, unknown>> {
-    const { propuesta, prestador } = await this.exigirPropia(entrada.idPropuesta, entrada.idUsuario);
+    const { propuesta, prestador } = await this.exigirPropia(
+      entrada.idPropuesta,
+      entrada.idUsuario
+    );
 
     propuesta.modificar(prestador.idPrestador, entrada.cambios);
     await this.propuestas.update(propuesta);
@@ -112,7 +115,10 @@ export class ManageProposalsUseCase {
     idUsuario: number;
     correlationId: string;
   }): Promise<void> {
-    const { propuesta, prestador } = await this.exigirPropia(entrada.idPropuesta, entrada.idUsuario);
+    const { propuesta, prestador } = await this.exigirPropia(
+      entrada.idPropuesta,
+      entrada.idUsuario
+    );
 
     propuesta.retirar(prestador.idPrestador);
     await this.propuestas.update(propuesta);

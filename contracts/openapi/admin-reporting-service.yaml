@@ -45,13 +45,18 @@ paths:
         - { name: recursoId, in: query, schema: { type: string, maxLength: 64 } }
         - { name: resultado, in: query, schema: { type: string, enum: [EXITO, FALLO, DENEGADO] } }
         - { name: correlationId, in: query, schema: { type: string, format: uuid } }
-        - { name: campoOrden, in: query, schema: { type: string, enum: [ocurrido_at, registrado_at] } }
+        - {
+            name: campoOrden,
+            in: query,
+            schema: { type: string, enum: [ocurrido_at, registrado_at] },
+          }
         - { name: sentidoOrden, in: query, schema: { type: string, enum: [asc, desc] } }
       responses:
         '200': { description: Pagina de asientos }
         '401': { $ref: '_shared.yaml#/components/responses/SinAutenticar' }
         '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
-        '422': { description: Rango invertido, orden fuera de la lista blanca o filtro no declarado }
+        '422':
+          { description: Rango invertido, orden fuera de la lista blanca o filtro no declarado }
 
   /api/v1/admin/parameters:
     get:

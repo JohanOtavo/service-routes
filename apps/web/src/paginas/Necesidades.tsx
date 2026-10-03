@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCategorias, useNecesidadesAbiertas } from '../api/hooks';
 import {
@@ -21,7 +21,7 @@ import {
  * casas vacias. Tampoco dice quien la publico: para contactar se envia una
  * propuesta, que es toda la gracia de la intermediacion.
  */
-export default function Necesidades() {
+export default function Necesidades(): ReactElement {
   const [parametros, setParametros] = useSearchParams();
   const categorias = useCategorias();
 
@@ -90,8 +90,7 @@ export default function Necesidades() {
 
       {resultados.isError && (
         <Aviso tono="error" titulo="No se pudieron cargar las necesidades">
-          Si acaba de crear su perfil de prestador, espere a que un administrador
-          lo valide.
+          Si acaba de crear su perfil de prestador, espere a que un administrador lo valide.
         </Aviso>
       )}
 

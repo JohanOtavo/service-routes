@@ -48,7 +48,15 @@ const env = {
 };
 
 /** Cliente que imita al gateway: secreto interno mas identidad en cabeceras. */
-const como = (userId: number | null, roles: string[] = []) => {
+const como = (
+  userId: number | null,
+  roles: string[] = []
+): {
+  get: (ruta: string) => supertest.Test;
+  post: (ruta: string) => supertest.Test;
+  patch: (ruta: string) => supertest.Test;
+  delete: (ruta: string) => supertest.Test;
+} => {
   const agente = supertest(app);
   const preparar = (m: 'get' | 'post' | 'patch' | 'delete') => (ruta: string) => {
     let p = agente[m](ruta).set('x-internal-secret', SECRETO_INTERNO);
@@ -57,13 +65,18 @@ const como = (userId: number | null, roles: string[] = []) => {
     }
     return p;
   };
-  return { get: preparar('get'), post: preparar('post'), patch: preparar('patch'), delete: preparar('delete') };
+  return {
+    get: preparar('get'),
+    post: preparar('post'),
+    patch: preparar('patch'),
+    delete: preparar('delete'),
+  };
 };
 
-const solicitante = () => como(SOLICITANTE, ['SOLICITANTE']);
-const oferente = () => como(OFERENTE, ['OFERENTE']);
-const otroOferente = () => como(OTRO_OFERENTE, ['OFERENTE']);
-const ajeno = () => como(AJENO, ['SOLICITANTE', 'OFERENTE']);
+const solicitante = (): ReturnType<typeof como> => como(SOLICITANTE, ['SOLICITANTE']);
+const oferente = (): ReturnType<typeof como> => como(OFERENTE, ['OFERENTE']);
+const otroOferente = (): ReturnType<typeof como> => como(OTRO_OFERENTE, ['OFERENTE']);
+const ajeno = (): ReturnType<typeof como> => como(AJENO, ['SOLICITANTE', 'OFERENTE']);
 
 const NECESIDAD = {
   titulo: 'Fuga de agua bajo el lavaplatos',
@@ -168,7 +181,9 @@ async function limpiar(): Promise<void> {
   }
   await knex('solicitud_servicio').whereIn('id_usuario', usuarios).delete();
 
-  const necesidades = await knex('necesidad').whereIn('id_usuario', usuarios).select('id_necesidad');
+  const necesidades = await knex('necesidad')
+    .whereIn('id_usuario', usuarios)
+    .select('id_necesidad');
   for (const fila of necesidades) {
     await knex('propuesta').where('id_necesidad', Number(fila.id_necesidad)).delete();
   }
@@ -194,7 +209,6 @@ const saltar = (): boolean => {
     if (process.env['REQUIRE_INTEGRATION'] === '1') {
       throw new Error(`Las pruebas de integracion no pudieron arrancar: ${motivoNoDisponible}`);
     }
-    // eslint-disable-next-line no-console
     console.warn(`pruebas de integracion omitidas: ${motivoNoDisponible}`);
     return true;
   }
@@ -271,7 +285,9 @@ describe('necesidades (SRS RF120 a RF136)', () => {
   it('una categoria que no existe no deja publicar', async () => {
     if (saltar()) return;
 
-    const r = await solicitante().post('/api/v1/needs').send({ ...NECESIDAD, idCategoria: 999999 });
+    const r = await solicitante()
+      .post('/api/v1/needs')
+      .send({ ...NECESIDAD, idCategoria: 999999 });
     expect(r.status).toBe(409);
   });
 
@@ -369,7 +385,9 @@ describe('adjudicacion (SRS RF149 a RF153)', () => {
     expect((await knex('necesidad').where('id_necesidad', idNecesidad).first()).estado).toBe(
       'ADJUDICADA'
     );
-    expect((await knex('propuesta').where('id_propuesta', elegida).first()).estado).toBe('ACEPTADA');
+    expect((await knex('propuesta').where('id_propuesta', elegida).first()).estado).toBe(
+      'ACEPTADA'
+    );
     expect((await knex('propuesta').where('id_propuesta', perdedora).first()).estado).toBe(
       'DESCARTADA'
     );
@@ -399,9 +417,7 @@ describe('adjudicacion (SRS RF149 a RF153)', () => {
     const idNecesidad = await publicarNecesidad();
     const idPropuesta = await enviarPropuesta(idNecesidad);
 
-    const r = await ajeno()
-      .post(`/api/v1/needs/${idNecesidad}/award`)
-      .send({ idPropuesta });
+    const r = await ajeno().post(`/api/v1/needs/${idNecesidad}/award`).send({ idPropuesta });
     expect(r.status).toBe(404);
 
     // Y nada cambio: un 404 que ya escribio seria peor que un 403.
@@ -480,7 +496,9 @@ describe('contratacion directa y contacto (SRS RF60 a RF70, RF156)', () => {
     if (saltar()) return;
     const id = await crearDirecta();
 
-    const r = await solicitante().patch(`/api/v1/requests/${id}/status`).send({ destino: 'ACEPTADA' });
+    const r = await solicitante()
+      .patch(`/api/v1/requests/${id}/status`)
+      .send({ destino: 'ACEPTADA' });
     expect(r.status).toBe(409);
   });
 
@@ -497,9 +515,10 @@ describe('contratacion directa y contacto (SRS RF60 a RF70, RF156)', () => {
   it('no se puede contratar el servicio propio', async () => {
     if (saltar()) return;
 
-    const r = await como(OFERENTE, ['SOLICITANTE'])
-      .post('/api/v1/requests')
-      .send({ idServicio: SERVICIO, descripcionProblema: 'Me contrato a mi mismo para subir nota.' });
+    const r = await como(OFERENTE, ['SOLICITANTE']).post('/api/v1/requests').send({
+      idServicio: SERVICIO,
+      descripcionProblema: 'Me contrato a mi mismo para subir nota.',
+    });
 
     expect(r.status).toBe(409);
   });
@@ -510,9 +529,7 @@ describe('politica de cancelacion (SRS 10.2, RF174 a RF186)', () => {
   async function adjudicada(): Promise<{ idSolicitud: number; idNecesidad: number }> {
     const idNecesidad = await publicarNecesidad();
     const idPropuesta = await enviarPropuesta(idNecesidad);
-    const r = await solicitante()
-      .post(`/api/v1/needs/${idNecesidad}/award`)
-      .send({ idPropuesta });
+    const r = await solicitante().post(`/api/v1/needs/${idNecesidad}/award`).send({ idPropuesta });
     return { idSolicitud: r.body.id as number, idNecesidad };
   }
 
@@ -640,9 +657,9 @@ describe('politica de cancelacion (SRS 10.2, RF174 a RF186)', () => {
     expect(r.status).toBe(422);
     // La solicitud sigue viva: clasificar antes de validar el motivo habria
     // dejado una cancelacion registrada de una solicitud no cancelada.
-    expect((await knex('solicitud_servicio').where('id_solicitud', idSolicitud).first()).estado).toBe(
-      'ACEPTADA'
-    );
+    expect(
+      (await knex('solicitud_servicio').where('id_solicitud', idSolicitud).first()).estado
+    ).toBe('ACEPTADA');
   });
 });
 
@@ -650,9 +667,7 @@ describe('retractacion y reparacion (SRS RF184 a RF186)', () => {
   async function adjudicada(): Promise<{ idSolicitud: number; idNecesidad: number }> {
     const idNecesidad = await publicarNecesidad();
     const idPropuesta = await enviarPropuesta(idNecesidad);
-    const r = await solicitante()
-      .post(`/api/v1/needs/${idNecesidad}/award`)
-      .send({ idPropuesta });
+    const r = await solicitante().post(`/api/v1/needs/${idNecesidad}/award`).send({ idPropuesta });
     return { idSolicitud: r.body.id as number, idNecesidad };
   }
 
@@ -705,9 +720,9 @@ describe('retractacion y reparacion (SRS RF184 a RF186)', () => {
       .send({ codigoMotivo: 'YA_NO_LO_NECESITO' });
 
     expect(r.status).toBe(404);
-    expect((await knex('solicitud_servicio').where('id_solicitud', idSolicitud).first()).estado).toBe(
-      'ACEPTADA'
-    );
+    expect(
+      (await knex('solicitud_servicio').where('id_solicitud', idSolicitud).first()).estado
+    ).toBe('ACEPTADA');
   });
 
   /**

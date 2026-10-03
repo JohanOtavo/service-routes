@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { ErrorApi } from '../api/cliente';
 import {
   useAdjudicar,
@@ -28,7 +28,7 @@ import {
  * Es la mitad del negocio que faltaba. Antes solo el oferente podia publicar, y
  * eso dejaba fuera a quien tiene el problema y no sabe a quien buscar.
  */
-export default function MisNecesidades() {
+export default function MisNecesidades(): ReactElement {
   const necesidades = useMisNecesidades();
   const categorias = useCategorias();
   const publicar = usePublicarNecesidad();
@@ -134,18 +134,14 @@ export default function MisNecesidades() {
               inputMode="decimal"
               ayuda="Opcional. En pesos. Ayuda a que las propuestas vengan ajustadas."
               value={datos.presupuestoEstimado}
-              onChange={(ev) =>
-                setDatos((p) => ({ ...p, presupuestoEstimado: ev.target.value }))
-              }
+              onChange={(ev) => setDatos((p) => ({ ...p, presupuestoEstimado: ev.target.value }))}
             />
             <Campo
               etiqueta="Zona"
               name="ubicacionAproximada"
               ayuda="El barrio o el sector, NO la direccion exacta. La direccion se comparte cuando ya acordaron el trabajo."
               value={datos.ubicacionAproximada}
-              onChange={(ev) =>
-                setDatos((p) => ({ ...p, ubicacionAproximada: ev.target.value }))
-              }
+              onChange={(ev) => setDatos((p) => ({ ...p, ubicacionAproximada: ev.target.value }))}
             />
 
             <div className="pa-fila">
@@ -171,8 +167,8 @@ export default function MisNecesidades() {
             </Boton>
           }
         >
-          Publique lo que necesita y los oferentes le enviaran propuestas con
-          precio y plazo. Usted elige.
+          Publique lo que necesita y los oferentes le enviaran propuestas con precio y plazo. Usted
+          elige.
         </Vacio>
       )}
 
@@ -186,8 +182,7 @@ export default function MisNecesidades() {
             <p className="pa-tarjeta__meta">
               Publicada el {formatearFecha(n.fechaPublicacion)} · vigente hasta el{' '}
               {formatearFecha(n.fechaVigencia)}
-              {n.presupuestoEstimado !== null &&
-                ` · ${formatearDinero(n.presupuestoEstimado)}`}
+              {n.presupuestoEstimado !== null && ` · ${formatearDinero(n.presupuestoEstimado)}`}
             </p>
             <p style={{ marginTop: 'var(--esp-2)', whiteSpace: 'pre-wrap' }}>{n.descripcion}</p>
 
@@ -227,7 +222,13 @@ export default function MisNecesidades() {
  * es el autor de la necesidad. Si la vieran, sabrian contra que precios compiten
  * y bastaria rebajar un peso la mas barata para ganar siempre.
  */
-function Propuestas({ idNecesidad, estado }: { idNecesidad: number; estado: string }) {
+function Propuestas({
+  idNecesidad,
+  estado,
+}: {
+  idNecesidad: number;
+  estado: string;
+}): ReactElement {
   const propuestas = usePropuestasDe(idNecesidad);
   const adjudicar = useAdjudicar();
   const [error, setError] = useState<string | null>(null);
@@ -240,9 +241,7 @@ function Propuestas({ idNecesidad, estado }: { idNecesidad: number; estado: stri
       setConfirmando(null);
     } catch (fallo) {
       setError(
-        fallo instanceof ErrorApi
-          ? fallo.message
-          : 'No se pudo adjudicar. Intentelo de nuevo.'
+        fallo instanceof ErrorApi ? fallo.message : 'No se pudo adjudicar. Intentelo de nuevo.'
       );
     }
   };
@@ -272,8 +271,7 @@ function Propuestas({ idNecesidad, estado }: { idNecesidad: number; estado: stri
 
       {propuestas.data.length === 0 && (
         <p className="pa-tarjeta__meta">
-          Todavia no hay propuestas. Los oferentes del oficio que eligio ya pueden
-          verla.
+          Todavia no hay propuestas. Los oferentes del oficio que eligio ya pueden verla.
         </p>
       )}
 
@@ -304,8 +302,8 @@ function Propuestas({ idNecesidad, estado }: { idNecesidad: number; estado: stri
                    * antes y no descubrirlo despues.
                    */
                   <Aviso tono="aviso" titulo="Esto cierra la necesidad">
-                    Al elegir esta propuesta, las demas quedan descartadas y se crea
-                    la contratacion. No se puede deshacer.
+                    Al elegir esta propuesta, las demas quedan descartadas y se crea la
+                    contratacion. No se puede deshacer.
                     <div className="pa-fila" style={{ marginTop: 'var(--esp-3)' }}>
                       <Boton
                         variante="acento"

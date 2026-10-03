@@ -129,7 +129,10 @@ describe('cortacircuitos', () => {
   });
 
   it('abre al alcanzar el umbral de fallos consecutivos', () => {
-    const cb = new CircuitBreaker({ umbralFallos: 3, esperaMs: 10_000, exitosParaCerrar: 2 }, reloj);
+    const cb = new CircuitBreaker(
+      { umbralFallos: 3, esperaMs: 10_000, exitosParaCerrar: 2 },
+      reloj
+    );
 
     cb.registrarFallo('catalog-service');
     cb.registrarFallo('catalog-service');
@@ -141,7 +144,10 @@ describe('cortacircuitos', () => {
   });
 
   it('un exito intercalado reinicia la cuenta', () => {
-    const cb = new CircuitBreaker({ umbralFallos: 3, esperaMs: 10_000, exitosParaCerrar: 2 }, reloj);
+    const cb = new CircuitBreaker(
+      { umbralFallos: 3, esperaMs: 10_000, exitosParaCerrar: 2 },
+      reloj
+    );
 
     cb.registrarFallo('catalog-service');
     cb.registrarFallo('catalog-service');
@@ -153,7 +159,10 @@ describe('cortacircuitos', () => {
   });
 
   it('pasa a semiabierto cuando vence la espera', () => {
-    const cb = new CircuitBreaker({ umbralFallos: 1, esperaMs: 10_000, exitosParaCerrar: 2 }, reloj);
+    const cb = new CircuitBreaker(
+      { umbralFallos: 1, esperaMs: 10_000, exitosParaCerrar: 2 },
+      reloj
+    );
     cb.registrarFallo('catalog-service');
 
     expect(cb.permite('catalog-service')).toBe(false);
@@ -164,7 +173,10 @@ describe('cortacircuitos', () => {
   });
 
   it('un solo fallo en semiabierto reabre sin volver a contar hasta el umbral', () => {
-    const cb = new CircuitBreaker({ umbralFallos: 5, esperaMs: 10_000, exitosParaCerrar: 2 }, reloj);
+    const cb = new CircuitBreaker(
+      { umbralFallos: 5, esperaMs: 10_000, exitosParaCerrar: 2 },
+      reloj
+    );
     for (let i = 0; i < 5; i += 1) cb.registrarFallo('catalog-service');
 
     ahora += 10_001;
@@ -175,7 +187,10 @@ describe('cortacircuitos', () => {
   });
 
   it('se cierra tras los exitos requeridos en semiabierto', () => {
-    const cb = new CircuitBreaker({ umbralFallos: 1, esperaMs: 10_000, exitosParaCerrar: 2 }, reloj);
+    const cb = new CircuitBreaker(
+      { umbralFallos: 1, esperaMs: 10_000, exitosParaCerrar: 2 },
+      reloj
+    );
     cb.registrarFallo('catalog-service');
 
     ahora += 10_001;
@@ -188,7 +203,10 @@ describe('cortacircuitos', () => {
   });
 
   it('aisla los servicios entre si', () => {
-    const cb = new CircuitBreaker({ umbralFallos: 1, esperaMs: 10_000, exitosParaCerrar: 1 }, reloj);
+    const cb = new CircuitBreaker(
+      { umbralFallos: 1, esperaMs: 10_000, exitosParaCerrar: 1 },
+      reloj
+    );
     cb.registrarFallo('rating-service');
 
     // Que las calificaciones esten caidas no debe impedir buscar servicios.

@@ -40,7 +40,12 @@ const env = {
   RABBITMQ_PASSWORD: process.env['RABBITMQ_PASSWORD'] ?? 'local',
 };
 
-const como = (userId: number | null) => {
+const como = (
+  userId: number | null
+): {
+  get: (ruta: string) => supertest.Test;
+  post: (ruta: string) => supertest.Test;
+} => {
   const agente = supertest(app);
   const preparar = (m: 'get' | 'post') => (ruta: string) => {
     let p = agente[m](ruta).set('x-internal-secret', SECRETO_INTERNO);
@@ -103,7 +108,6 @@ const saltar = (): boolean => {
     if (process.env['REQUIRE_INTEGRATION'] === '1') {
       throw new Error(`Las pruebas de integracion no pudieron arrancar: ${motivoNoDisponible}`);
     }
-    // eslint-disable-next-line no-console
     console.warn(`pruebas de integracion omitidas: ${motivoNoDisponible}`);
     return true;
   }
@@ -111,7 +115,7 @@ const saltar = (): boolean => {
 };
 
 /** Crea un aviso por el mismo camino que usa un consumidor de eventos. */
-const avisar = (idUsuario: number, titulo = 'Aviso de prueba') =>
+const avisar = (idUsuario: number, titulo = 'Aviso de prueba'): Promise<boolean> =>
   runInTransaction(knex, () =>
     desdeEvento.crear({
       idUsuario,

@@ -83,11 +83,7 @@ export interface IServicioRepository {
   /** Ficha publica, con el nombre del prestador y la puntuacion ya resueltos. */
   verPublico(id: number): Promise<ServicioListado | null>;
   /** El catalogo propio del oferente, incluidos los desactivados (SRS RF52). */
-  listarDePrestador(
-    idPrestador: number,
-    pagina: number,
-    tamano: number
-  ): Promise<Pagina<Servicio>>;
+  listarDePrestador(idPrestador: number, pagina: number, tamano: number): Promise<Pagina<Servicio>>;
 }
 
 export interface ICategoriaRepository {
@@ -101,7 +97,11 @@ export interface ICategoriaRepository {
 /** Agregado desnormalizado de calificaciones por servicio (SRS RF53, RF84). */
 export interface IRatingSummaryRepository {
   /** Suma una calificacion nueva al agregado. Devuelve false si no hay servicio. */
-  acumular(datos: { idServicio: number; puntuacion: number; actualizadoAt: Date }): Promise<boolean>;
+  acumular(datos: {
+    idServicio: number;
+    puntuacion: number;
+    actualizadoAt: Date;
+  }): Promise<boolean>;
   /** Fija el agregado con el valor que rating-service considera verdadero. */
   fijar(datos: {
     idServicio: number;

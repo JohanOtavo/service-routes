@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useCalificacionesRecibidas, useReputacion } from '../api/hooks';
 import { useSesion } from '../autenticacion/ContextoSesion';
@@ -23,15 +24,15 @@ function Faceta({
     comentario: string | null;
     fecha: string;
   }[];
-}) {
+}): ReactElement {
   return (
     <Tarjeta>
       <h3 className="pa-tarjeta__titulo">{titulo}</h3>
 
       {datos.totalCalificaciones === 0 ? (
         <p className="pa-tarjeta__meta">
-          Sin calificaciones todavia. Aparecen cuando las dos partes de una
-          contratacion han calificado.
+          Sin calificaciones todavia. Aparecen cuando las dos partes de una contratacion han
+          calificado.
         </p>
       ) : (
         <>
@@ -48,9 +49,7 @@ function Faceta({
             {calificaciones.map((c) => (
               <div key={c.id}>
                 <div className="pa-fila">
-                  <Sello
-                    tono={c.puntuacion >= 4 ? 'exito' : c.puntuacion >= 3 ? 'aviso' : 'error'}
-                  >
+                  <Sello tono={c.puntuacion >= 4 ? 'exito' : c.puntuacion >= 3 ? 'aviso' : 'error'}>
                     {c.puntuacion} de 5
                   </Sello>
                   <span className="pa-tarjeta__meta">{formatearFecha(c.fecha)}</span>
@@ -72,8 +71,8 @@ function Faceta({
        */}
       {datos.tasaCancelacion !== undefined && (
         <Aviso tono="aviso" titulo="Su tasa de cancelacion es visible en su perfil">
-          {(datos.tasaCancelacion * 100).toFixed(0)}% en los ultimos 90 dias. Las
-          contrataciones que complete la haran bajar.
+          {(datos.tasaCancelacion * 100).toFixed(0)}% en los ultimos 90 dias. Las contrataciones que
+          complete la haran bajar.
         </Aviso>
       )}
     </Tarjeta>
@@ -87,7 +86,7 @@ function Faceta({
  * distintas (SRS RF165). Promediarlas destruiria informacion: alguien impecable
  * atendiendo y desastroso contratando quedaria "normal".
  */
-export default function MiCuenta() {
+export default function MiCuenta(): ReactElement {
   const { sesion, tieneRol } = useSesion();
   const idUsuario = sesion?.usuario.id ?? 0;
   const reputacion = useReputacion(idUsuario);
@@ -112,9 +111,8 @@ export default function MiCuenta() {
 
         {!tieneRol('OFERENTE') && (
           <Aviso tono="info" titulo="Tambien puede ofrecer servicios">
-            Si quiere trabajar en la plataforma, pida el rol de oferente a quien
-            la administra. Despues podra crear su perfil y publicar lo que sabe
-            hacer.
+            Si quiere trabajar en la plataforma, pida el rol de oferente a quien la administra.
+            Despues podra crear su perfil y publicar lo que sabe hacer.
           </Aviso>
         )}
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ErrorApi } from '../api/cliente';
 import { useEnviarPropuesta, useMisServicios, useNecesidad } from '../api/hooks';
@@ -16,7 +16,7 @@ import {
 } from '../ui';
 
 /** Detalle de una necesidad y envio de propuesta (SRS RF137, RF138). */
-export default function Necesidad() {
+export default function Necesidad(): ReactElement {
   const { id } = useParams();
   const idNecesidad = Number(id);
   const navegar = useNavigate();
@@ -49,9 +49,7 @@ export default function Necesidad() {
     } catch (fallo) {
       if (fallo instanceof ErrorApi) {
         setError(
-          fallo.detalles.length > 0
-            ? fallo.detalles.map((d) => d.message).join(' ')
-            : fallo.message
+          fallo.detalles.length > 0 ? fallo.detalles.map((d) => d.message).join(' ') : fallo.message
         );
       } else {
         setError('No se pudo enviar la propuesta. Intentelo de nuevo.');
@@ -71,8 +69,8 @@ export default function Necesidad() {
           </Link>
         }
       >
-        Puede que su autor la haya cerrado, que ya haya elegido una propuesta o
-        que se le haya vencido el plazo.
+        Puede que su autor la haya cerrado, que ya haya elegido una propuesta o que se le haya
+        vencido el plazo.
       </Vacio>
     );
   }
@@ -104,8 +102,8 @@ export default function Necesidad() {
       <Tarjeta>
         <h2 className="pa-tarjeta__titulo">Enviar una propuesta</h2>
         <p className="pa-tarjeta__meta">
-          Solo el autor de la necesidad vera su propuesta. Los demas oferentes no
-          saben que precio puso.
+          Solo el autor de la necesidad vera su propuesta. Los demas oferentes no saben que precio
+          puso.
         </p>
 
         {error !== null && <Aviso tono="error">{error}</Aviso>}

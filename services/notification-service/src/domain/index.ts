@@ -149,7 +149,10 @@ export class Notificacion {
     const errores: { field: string; message: string }[] = [];
 
     if (titulo.length < 3 || titulo.length > LARGO_TITULO) {
-      errores.push({ field: 'titulo', message: `Debe tener entre 3 y ${LARGO_TITULO} caracteres.` });
+      errores.push({
+        field: 'titulo',
+        message: `Debe tener entre 3 y ${LARGO_TITULO} caracteres.`,
+      });
     }
     if (mensaje.length < 3 || mensaje.length > LARGO_MENSAJE) {
       errores.push({

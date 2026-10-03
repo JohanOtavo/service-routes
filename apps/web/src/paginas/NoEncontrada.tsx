@@ -1,7 +1,8 @@
+import type { ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { Vacio } from '../ui';
 
-export default function NoEncontrada() {
+export default function NoEncontrada(): ReactElement {
   return (
     <Vacio
       titulo="Esta pagina no existe"
@@ -11,8 +12,7 @@ export default function NoEncontrada() {
         </Link>
       }
     >
-      Puede que el enlace este mal escrito, o que lo que buscaba ya no este
-      disponible.
+      Puede que el enlace este mal escrito, o que lo que buscaba ya no este disponible.
     </Vacio>
   );
 }

@@ -1,11 +1,8 @@
 import knexLib from 'knex';
+import type { Express } from 'express';
+import type { Knex } from 'knex';
 import { z } from 'zod';
-import {
-  EventName,
-  assertProductionSafety,
-  baseEnvSchema,
-  loadEnv,
-} from '@punto-amigo/shared';
+import { EventName, assertProductionSafety, baseEnvSchema, loadEnv } from '@punto-amigo/shared';
 import { Broker, EventConsumer, OutboxRelay } from '@punto-amigo/messaging';
 import { OutboxEventPublisher, SystemClock, useTransaction } from '@punto-amigo/service-kit';
 import { ManageProviderProfileUseCase } from './application/use-cases/ManageProviderProfile';
@@ -39,7 +36,6 @@ const envSchema = baseEnvSchema.extend({
 
 const logger = {
   info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    // eslint-disable-next-line no-console
     console.warn(
       JSON.stringify({ level: 'info', service: 'provider-service', mensaje, ...contexto })
     );
@@ -51,7 +47,11 @@ const logger = {
   },
 };
 
-export function buildContainer(env: z.infer<typeof envSchema>) {
+export function buildContainer(env: z.infer<typeof envSchema>): {
+  app: Express;
+  knex: Knex;
+  sincronizacion: SyncAccountStateUseCase;
+} {
   const knex = knexLib({
     client: 'mysql2',
     connection: {

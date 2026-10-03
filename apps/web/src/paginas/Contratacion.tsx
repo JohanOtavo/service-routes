@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ErrorApi } from '../api/cliente';
 import { useCambiarEstado, useContratacion } from '../api/hooks';
@@ -24,7 +24,7 @@ import { Calificar } from './partes/Calificar';
  * si el contacto se viera antes, las dos partes se irian por fuera y la
  * plataforma se quedaria sin razon de ser.
  */
-export default function Contratacion() {
+export default function Contratacion(): ReactElement {
   const { id } = useParams();
   const idSolicitud = Number(id);
   const { sesion } = useSesion();
@@ -54,16 +54,12 @@ export default function Contratacion() {
   const soySolicitante = s.idUsuario === sesion?.usuario.id;
   const hayAcuerdo = s.estado === 'ACEPTADA' || s.estado === 'COMPLETADA';
 
-  const mover = async (
-    destino: 'ACEPTADA' | 'RECHAZADA' | 'COMPLETADA'
-  ): Promise<void> => {
+  const mover = async (destino: 'ACEPTADA' | 'RECHAZADA' | 'COMPLETADA'): Promise<void> => {
     setError(null);
     try {
       await cambiar.mutateAsync({ id: idSolicitud, destino });
     } catch (fallo) {
-      setError(
-        fallo instanceof ErrorApi ? fallo.message : 'No se pudo cambiar el estado.'
-      );
+      setError(fallo instanceof ErrorApi ? fallo.message : 'No se pudo cambiar el estado.');
     }
   };
 
@@ -80,9 +76,7 @@ export default function Contratacion() {
 
       <p className="pa-tarjeta__meta">
         Solicitada el {formatearFecha(s.fechaSolicitud)} ·{' '}
-        {s.origen === 'ADJUDICACION'
-          ? 'nacio de una propuesta adjudicada'
-          : 'nacio del catalogo'}
+        {s.origen === 'ADJUDICACION' ? 'nacio de una propuesta adjudicada' : 'nacio del catalogo'}
       </p>
 
       {error !== null && <Aviso tono="error">{error}</Aviso>}
@@ -119,9 +113,7 @@ export default function Contratacion() {
                 Telefono: <a href={`tel:${s.contacto.telefono}`}>{s.contacto.telefono}</a>
               </p>
             ) : (
-              <p className="pa-tarjeta__meta">
-                No hay telefono registrado para esta persona.
-              </p>
+              <p className="pa-tarjeta__meta">No hay telefono registrado para esta persona.</p>
             )}
             {s.contacto.correo !== null && (
               <p>
@@ -134,8 +126,8 @@ export default function Contratacion() {
         <Tarjeta>
           <h2 className="pa-tarjeta__titulo">Como contactar</h2>
           <p className="pa-tarjeta__meta">
-            Los datos de contacto aparecen aqui cuando la contratacion esta
-            aceptada. Antes del acuerdo no hay nada que coordinar.
+            Los datos de contacto aparecen aqui cuando la contratacion esta aceptada. Antes del
+            acuerdo no hay nada que coordinar.
           </p>
         </Tarjeta>
       )}
@@ -182,9 +174,7 @@ export default function Contratacion() {
           )}
 
           {s.estado === 'PENDIENTE' && soySolicitante && (
-            <p className="pa-tarjeta__meta">
-              Esperando que el oferente acepte o rechace.
-            </p>
+            <p className="pa-tarjeta__meta">Esperando que el oferente acepte o rechace.</p>
           )}
 
           {s.estado === 'ACEPTADA' && soySolicitante && (

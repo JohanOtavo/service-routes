@@ -1,10 +1,5 @@
 import { AppError } from '@punto-amigo/shared';
-import {
-  Categoria,
-  Servicio,
-  normalizarCriterios,
-  TAMANO_PAGINA_MAXIMO,
-} from '../src/domain';
+import { Categoria, Servicio, normalizarCriterios, TAMANO_PAGINA_MAXIMO } from '../src/domain';
 
 const VALIDO = {
   nombre: 'Reparacion de fugas de agua',

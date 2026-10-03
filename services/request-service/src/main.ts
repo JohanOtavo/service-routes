@@ -1,4 +1,6 @@
 import knexLib from 'knex';
+import type { Express } from 'express';
+import type { Knex } from 'knex';
 import { z } from 'zod';
 import { EventName, assertProductionSafety, baseEnvSchema, loadEnv } from '@punto-amigo/shared';
 import { Broker, EventConsumer, OutboxRelay } from '@punto-amigo/messaging';
@@ -51,7 +53,6 @@ const envSchema = baseEnvSchema.extend({
 
 const logger = {
   info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    // eslint-disable-next-line no-console
     console.warn(
       JSON.stringify({ level: 'info', service: 'request-service', mensaje, ...contexto })
     );
@@ -63,7 +64,11 @@ const logger = {
   },
 };
 
-export function buildContainer(env: z.infer<typeof envSchema>) {
+export function buildContainer(env: z.infer<typeof envSchema>): {
+  app: Express;
+  knex: Knex;
+  sincronizacion: SyncReplicasUseCase;
+} {
   const knex = knexLib({
     client: 'mysql2',
     connection: {
@@ -249,7 +254,9 @@ async function main(): Promise<void> {
     );
   });
 
-  const prestadorDesde = (p: Record<string, unknown>) => ({
+  const prestadorDesde = (
+    p: Record<string, unknown>
+  ): Parameters<SyncReplicasUseCase['alCambiarPrestador']>[0] => ({
     idPrestador: Number(p['idPrestador']),
     idUsuario: Number(p['idUsuario']),
     nombre: p['nombre'] === undefined ? null : String(p['nombre']),
@@ -263,7 +270,9 @@ async function main(): Promise<void> {
     EventName.ProviderStatusChanged,
   ]) {
     consumidor.on(evento, async (sobre, trx) => {
-      await useTransaction(trx, () => sincronizacion.alCambiarPrestador(prestadorDesde(sobre.payload)));
+      await useTransaction(trx, () =>
+        sincronizacion.alCambiarPrestador(prestadorDesde(sobre.payload))
+      );
     });
   }
 

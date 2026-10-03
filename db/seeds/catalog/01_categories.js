@@ -38,6 +38,5 @@ exports.seed = async function seed(knex) {
     }))
   );
 
-  // eslint-disable-next-line no-console
   console.log(`    ${CATEGORIAS.length} categorias de servicio`);
 };

@@ -89,8 +89,11 @@ const SERVICIOS: Servicio[] = [
 
 /** Rutas que el router de Express tiene registradas, como "METODO /ruta". */
 function rutasDelCodigo(app: Express): string[] {
-  const pila = (app as unknown as { _router: { stack: { route?: { path: string; methods: Record<string, boolean> } }[] } })
-    ._router.stack;
+  const pila = (
+    app as unknown as {
+      _router: { stack: { route?: { path: string; methods: Record<string, boolean> } }[] };
+    }
+  )._router.stack;
 
   const salida: string[] = [];
   for (const capa of pila) {
@@ -124,7 +127,11 @@ function rutasDelContrato(archivo: string): string[] {
 }
 
 describe.each(SERVICIOS)('contrato OpenAPI de $nombre', ({ modulo, spec, env }) => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
+  // Requerido en dinamico porque el modulo es una de las variables de esta
+  // tabla: no se puede importar de forma estatica sin nombrar los siete
+  // servicios, y nombrar uno que no exista —porque su dist no se compilo— lo
+  // convertiria en un fallo de este archivo en lugar de una omision.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const m = require(modulo) as {
     envSchema: { parse: (e: unknown) => never };
     buildContainer: (e: never) => { app: Express; knex: { destroy: () => Promise<void> } };

@@ -153,7 +153,11 @@ export class KnexNecesidadRepository implements INecesidadRepository {
     );
   }
 
-  async listarDeAutor(idUsuario: number, pagina: number, tamano: number): Promise<Pagina<Necesidad>> {
+  async listarDeAutor(
+    idUsuario: number,
+    pagina: number,
+    tamano: number
+  ): Promise<Pagina<Necesidad>> {
     return this.paginar(
       (q) => q.where({ id_usuario: idUsuario }).whereNull('deleted_at'),
       (q) => q.orderBy('fecha_publicacion', 'desc'),

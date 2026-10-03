@@ -67,10 +67,6 @@ export class CreateFromEventUseCase {
     especialidad: string;
     syncedAt: Date;
   }): Promise<void> {
-    await this.usuarios.actualizarEspecialidad(
-      datos.idUsuario,
-      datos.especialidad,
-      datos.syncedAt
-    );
+    await this.usuarios.actualizarEspecialidad(datos.idUsuario, datos.especialidad, datos.syncedAt);
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useBuscarServicios, useCategorias } from '../api/hooks';
 import { Aviso, Boton, Campo, Cargando, Selector, Sello, Tarjeta, Vacio } from '../ui';
@@ -10,7 +10,7 @@ import { Aviso, Boton, Campo, Cargando, Selector, Sello, Tarjeta, Vacio } from '
  * resultado se pueda compartir por enlace y el boton de atras funcione como la
  * gente espera.
  */
-export default function Servicios() {
+export default function Servicios(): ReactElement {
   const [parametros, setParametros] = useSearchParams();
   const categorias = useCategorias();
 
@@ -109,8 +109,8 @@ export default function Servicios() {
             </Link>
           }
         >
-          Pruebe con otras palabras o con otro oficio. Tambien puede publicar su
-          necesidad y dejar que los oferentes le propongan.
+          Pruebe con otras palabras o con otro oficio. Tambien puede publicar su necesidad y dejar
+          que los oferentes le propongan.
         </Vacio>
       )}
 
@@ -137,9 +137,7 @@ export default function Servicios() {
                   )}
                   <p style={{ marginTop: 'var(--esp-2)' }}>
                     {/* Recortado: una descripcion larga rompe la rejilla. */}
-                    {s.descripcion.length > 140
-                      ? `${s.descripcion.slice(0, 140)}…`
-                      : s.descripcion}
+                    {s.descripcion.length > 140 ? `${s.descripcion.slice(0, 140)}…` : s.descripcion}
                   </p>
                   {s.reputacion !== undefined && (
                     <div className="pa-fila" style={{ marginTop: 'var(--esp-3)' }}>

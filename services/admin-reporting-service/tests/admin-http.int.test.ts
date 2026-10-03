@@ -39,7 +39,13 @@ const env = {
   RABBITMQ_PASSWORD: process.env['RABBITMQ_PASSWORD'] ?? 'local',
 };
 
-const como = (userId: number | null, roles: string[] = []) => {
+const como = (
+  userId: number | null,
+  roles: string[] = []
+): {
+  get: (ruta: string) => supertest.Test;
+  put: (ruta: string) => supertest.Test;
+} => {
   const agente = supertest(app);
   const preparar = (m: 'get' | 'put') => (ruta: string) => {
     let p = agente[m](ruta).set('x-internal-secret', SECRETO_INTERNO);
@@ -51,9 +57,9 @@ const como = (userId: number | null, roles: string[] = []) => {
   return { get: preparar('get'), put: preparar('put') };
 };
 
-const admin = () => como(ADMIN, ['ADMINISTRADOR']);
-const usuario = () => como(USUARIO, ['OFERENTE', 'SOLICITANTE']);
-const anonimo = () => como(null);
+const admin = (): ReturnType<typeof como> => como(ADMIN, ['ADMINISTRADOR']);
+const usuario = (): ReturnType<typeof como> => como(USUARIO, ['OFERENTE', 'SOLICITANTE']);
+const anonimo = (): ReturnType<typeof como> => como(null);
 
 beforeAll(async () => {
   if (env.DB_ADMIN_PASSWORD === '') {
@@ -100,7 +106,6 @@ const saltar = (): boolean => {
     if (process.env['REQUIRE_INTEGRATION'] === '1') {
       throw new Error(`Las pruebas de integracion no pudieron arrancar: ${motivoNoDisponible}`);
     }
-    // eslint-disable-next-line no-console
     console.warn(`pruebas de integracion omitidas: ${motivoNoDisponible}`);
     return true;
   }
@@ -209,7 +214,9 @@ describe('parametros del sistema (SRS RF105)', () => {
     if (saltar()) return;
     await admin().put('/api/v1/admin/parameters').send(nuevo);
 
-    const r = await admin().put('/api/v1/admin/parameters').send({ ...nuevo, valor: '0.30' });
+    const r = await admin()
+      .put('/api/v1/admin/parameters')
+      .send({ ...nuevo, valor: '0.30' });
     expect(r.body.valor).toBe('0.30');
 
     const asiento = await knex('audit_record')

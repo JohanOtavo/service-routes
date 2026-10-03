@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { ProveedorSesion } from './autenticacion/ContextoSesion';
+import { ProveedorModo } from './autenticacion/ContextoModo';
 import { App } from './App';
 import { ErrorApi } from './api/cliente';
 import './estilos/tokens.css';
@@ -54,8 +55,17 @@ createRoot(raiz).render(
   <StrictMode>
     <QueryClientProvider client={cliente}>
       <BrowserRouter>
+        {/*
+          El orden importa. `ProveedorModo` lee la sesion (`useSesion`) y la URL
+          (`useSearchParams`), asi que va dentro de los dos. Sin el, `Disposicion`
+          lanza "useModo se usa dentro de ProveedorModo" al montar y la aplicacion
+          se queda en blanco: las pruebas de las pantallas no lo detectaban porque
+          montaban cada pantalla sola y nunca montaban `App`.
+        */}
         <ProveedorSesion>
-          <App />
+          <ProveedorModo>
+            <App />
+          </ProveedorModo>
         </ProveedorSesion>
       </BrowserRouter>
     </QueryClientProvider>

@@ -21,7 +21,10 @@ import type {
   ISessionRepository,
   ITokenService,
   IUsuarioRepository,
+  IssuedTokens,
   LockoutState,
+  SesionRefresco,
+  TokenClaims,
 } from '../src/domain/ports/out';
 
 const AHORA = new Date('2026-09-30T12:00:00.000Z');
@@ -90,7 +93,7 @@ class RepositorioEnMemoria implements IUsuarioRepository {
 }
 
 class TokensFalsos implements ITokenService {
-  async issue(usuario: Usuario) {
+  async issue(usuario: Usuario): Promise<IssuedTokens> {
     return {
       accessToken: `access:${usuario.id}`,
       refreshToken: `refresh:${usuario.id}`,
@@ -99,7 +102,7 @@ class TokensFalsos implements ITokenService {
       jti: `jti:${usuario.id}`,
     };
   }
-  async verifyAccess() {
+  async verifyAccess(): Promise<TokenClaims> {
     return { sub: '1', roles: ['SOLICITANTE'], jti: 'jti:1' };
   }
   hashRefreshToken(token: string): string {
@@ -113,7 +116,7 @@ class SesionesFalsas implements ISessionRepository {
     this.creadas.push({ idUsuario: input.idUsuario, tokenHash: input.tokenHash });
     return this.creadas.length;
   }
-  async buscarPorHash() {
+  async buscarPorHash(): Promise<SesionRefresco | null> {
     return null;
   }
   async revocar(): Promise<void> {}
@@ -129,12 +132,20 @@ class BloqueoFalso implements ILockoutPolicy {
   private bloqueado = false;
 
   async check(): Promise<LockoutState> {
-    return { bloqueado: this.bloqueado, segundosRestantes: this.bloqueado ? 30 : 0, fallosConsecutivos: this.fallos };
+    return {
+      bloqueado: this.bloqueado,
+      segundosRestantes: this.bloqueado ? 30 : 0,
+      fallosConsecutivos: this.fallos,
+    };
   }
   async registrarFallo(_correo: string, _ctx: AttemptContext): Promise<LockoutState> {
     this.fallos += 1;
     this.bloqueado = this.fallos >= 5;
-    return { bloqueado: this.bloqueado, segundosRestantes: this.bloqueado ? 30 : 0, fallosConsecutivos: this.fallos };
+    return {
+      bloqueado: this.bloqueado,
+      segundosRestantes: this.bloqueado ? 30 : 0,
+      fallosConsecutivos: this.fallos,
+    };
   }
   async registrarExito(): Promise<void> {
     this.exitos += 1;
@@ -153,7 +164,18 @@ class EventosFalsos implements IEventPublisher {
   }
 }
 
-function montar() {
+interface Montaje {
+  usuarios: RepositorioEnMemoria;
+  hasher: HasherFalso;
+  tokens: TokensFalsos;
+  sesiones: SesionesFalsas;
+  bloqueo: BloqueoFalso;
+  eventos: EventosFalsos;
+  registrar: RegisterUserUseCase;
+  autenticar: AuthenticateUserUseCase;
+}
+
+function montar(): Montaje {
   const usuarios = new RepositorioEnMemoria();
   const hasher = new HasherFalso();
   const tokens = new TokensFalsos();
@@ -310,7 +332,9 @@ describe('autenticacion', () => {
   it('reinicia el contador de fallos tras un acceso correcto', async () => {
     const s = montar();
     await s.registrar.execute(ALTA);
-    await s.autenticar.execute({ ...CREDENCIALES, contrasena: 'MalaContrasena2026' }).catch(() => undefined);
+    await s.autenticar
+      .execute({ ...CREDENCIALES, contrasena: 'MalaContrasena2026' })
+      .catch(() => undefined);
     expect(s.bloqueo.fallos).toBe(1);
 
     await s.autenticar.execute(CREDENCIALES);

@@ -71,15 +71,16 @@ describe('inicio y cierre de sesion', () => {
   it('el inicio guarda el token que devuelve el servidor', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
-            accessToken: 'token-nuevo',
-            expiresAt: new Date(Date.now() + 900_000).toISOString(),
-            usuario: { id: 7, nombre: 'Prueba', roles: ['SOLICITANTE'] },
-          }),
-          { status: 200, headers: { 'content-type': 'application/json' } }
-        )
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              accessToken: 'token-nuevo',
+              expiresAt: new Date(Date.now() + 900_000).toISOString(),
+              usuario: { id: 7, nombre: 'Prueba', roles: ['SOLICITANTE'] },
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          )
       )
     );
 
@@ -97,7 +98,12 @@ describe('inicio y cierre de sesion', () => {
    */
   it('el cierre borra el token aunque la peticion falle', async () => {
     guardarSesion(sesionDePrueba);
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('red caida'); }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('red caida');
+      })
+    );
 
     await cerrarSesion();
     expect(obtenerToken()).toBeNull();

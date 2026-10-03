@@ -6,17 +6,8 @@ import { AppError, ErrorCode, toErrorResponse } from '@punto-amigo/shared';
 import { esPublica, resolverRuta } from '../config/routes';
 import { limpiarCabecerasDeCliente, reenviar } from '../proxy/forward';
 import type { CircuitBreaker } from '../proxy/CircuitBreaker';
-import type { IdentidadVerificada, TokenVerifier } from '../security/TokenVerifier';
-
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      correlationId: string;
-      identidad?: IdentidadVerificada;
-    }
-  }
-}
+import type { TokenVerifier } from '../security/TokenVerifier';
+import type {} from './expresion';
 
 export interface Logger {
   info(mensaje: string, contexto?: Record<string, unknown>): void;
@@ -38,8 +29,7 @@ export interface GatewayDeps {
   };
 }
 
-const UUID_V4 =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 export function createGateway(deps: GatewayDeps): Express {
   const app = express();
@@ -96,7 +86,10 @@ export function createGateway(deps: GatewayDeps): Express {
     if (origen === deps.config.corsOrigin) {
       res.setHeader('Access-Control-Allow-Origin', origen);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Correlation-Id, Idempotency-Key');
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, X-Correlation-Id, Idempotency-Key'
+      );
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
       res.setHeader('Vary', 'Origin');
     }
@@ -196,9 +189,7 @@ export function createGateway(deps: GatewayDeps): Express {
       // Denegacion por defecto: solo pasa sin token lo que la tabla declara
       // publico de forma explicita (SRS-GW-03).
       const publica = esPublica(ruta, req.method, req.path);
-      const identidad = publica
-        ? null
-        : await deps.verifier.verificar(req.header('authorization'));
+      const identidad = publica ? null : await deps.verifier.verificar(req.header('authorization'));
 
       if (identidad !== null) req.identidad = identidad;
 
@@ -217,17 +208,11 @@ export function createGateway(deps: GatewayDeps): Express {
 
       await aplicarLimites();
 
-      await reenviar(
-        req,
-        res,
-        { servicio: ruta.servicio, baseUrl },
-        identidad,
-        {
-          breaker: deps.breaker,
-          secretoInterno: deps.config.secretoInterno,
-          timeoutMs: deps.config.timeoutMs,
-        }
-      );
+      await reenviar(req, res, { servicio: ruta.servicio, baseUrl }, identidad, {
+        breaker: deps.breaker,
+        secretoInterno: deps.config.secretoInterno,
+        timeoutMs: deps.config.timeoutMs,
+      });
     } catch (error) {
       next(error);
     }

@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import type { Express } from 'express';
 import { z } from 'zod';
 import { baseEnvSchema, loadEnv, assertProductionSafety } from '@punto-amigo/shared';
 import { createGateway } from './http/app';
@@ -26,7 +27,6 @@ const envSchema = baseEnvSchema.extend({
 
 const logger = {
   info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    // eslint-disable-next-line no-console
     console.warn(JSON.stringify({ level: 'info', service: 'api-gateway', mensaje, ...contexto }));
   },
   error(mensaje: string, contexto: Record<string, unknown> = {}): void {
@@ -34,7 +34,7 @@ const logger = {
   },
 };
 
-export function buildGateway(env: z.infer<typeof envSchema>) {
+export function buildGateway(env: z.infer<typeof envSchema>): { app: Express; redis: Redis } {
   const redis = new Redis({
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,

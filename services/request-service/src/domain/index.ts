@@ -1,4 +1,4 @@
-import { AppError } from '@punto-amigo/shared';
+import { AppError, esVacio } from '@punto-amigo/shared';
 
 /**
  * Dominio del servicio nucleo: necesidades, propuestas y contrataciones.
@@ -13,13 +13,31 @@ import { AppError } from '@punto-amigo/shared';
 
 // ─── Estados ────────────────────────────────────────────────────────────────
 
-export const ESTADOS_NECESIDAD = ['ABIERTA', 'ADJUDICADA', 'VENCIDA', 'CERRADA', 'CANCELADA'] as const;
+export const ESTADOS_NECESIDAD = [
+  'ABIERTA',
+  'ADJUDICADA',
+  'VENCIDA',
+  'CERRADA',
+  'CANCELADA',
+] as const;
 export type EstadoNecesidad = (typeof ESTADOS_NECESIDAD)[number];
 
-export const ESTADOS_PROPUESTA = ['ENVIADA', 'ACEPTADA', 'RECHAZADA', 'RETIRADA', 'DESCARTADA'] as const;
+export const ESTADOS_PROPUESTA = [
+  'ENVIADA',
+  'ACEPTADA',
+  'RECHAZADA',
+  'RETIRADA',
+  'DESCARTADA',
+] as const;
 export type EstadoPropuesta = (typeof ESTADOS_PROPUESTA)[number];
 
-export const ESTADOS_SOLICITUD = ['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'COMPLETADA', 'CANCELADA'] as const;
+export const ESTADOS_SOLICITUD = [
+  'PENDIENTE',
+  'ACEPTADA',
+  'RECHAZADA',
+  'COMPLETADA',
+  'CANCELADA',
+] as const;
 export type EstadoSolicitud = (typeof ESTADOS_SOLICITUD)[number];
 
 export const ORIGENES = ['DIRECTA', 'ADJUDICACION'] as const;
@@ -113,12 +131,15 @@ export class Necesidad {
       errores.push({ field: 'titulo', message: 'Debe tener entre 5 y 150 caracteres.' });
     }
     if (descripcion.length < 20) {
-      errores.push({ field: 'descripcion', message: 'Describa el trabajo con al menos 20 caracteres.' });
+      errores.push({
+        field: 'descripcion',
+        message: 'Describa el trabajo con al menos 20 caracteres.',
+      });
     }
-    if (input.presupuestoEstimado != null && Number(input.presupuestoEstimado) <= 0) {
+    if (!esVacio(input.presupuestoEstimado) && Number(input.presupuestoEstimado) <= 0) {
       errores.push({ field: 'presupuestoEstimado', message: 'Debe ser mayor que cero.' });
     }
-    if (input.fechaDeseada != null && input.fechaDeseada.getTime() < input.ahora.getTime()) {
+    if (!esVacio(input.fechaDeseada) && input.fechaDeseada.getTime() < input.ahora.getTime()) {
       errores.push({ field: 'fechaDeseada', message: 'No puede estar en el pasado.' });
     }
     if (errores.length > 0) {
@@ -197,7 +218,7 @@ export class Necesidad {
       this.props.descripcion = descripcion;
     }
     if (cambios.presupuestoEstimado !== undefined) {
-      if (cambios.presupuestoEstimado != null && Number(cambios.presupuestoEstimado) <= 0) {
+      if (!esVacio(cambios.presupuestoEstimado) && Number(cambios.presupuestoEstimado) <= 0) {
         throw AppError.validation('El presupuesto debe ser mayor que cero.');
       }
       this.props.presupuestoEstimado = cambios.presupuestoEstimado;
@@ -336,7 +357,10 @@ export class Propuesta {
       errores.push({ field: 'precio', message: 'Debe ser mayor que cero.' });
     }
     if (!Number.isInteger(input.tiempoEstimado) || input.tiempoEstimado <= 0) {
-      errores.push({ field: 'tiempoEstimado', message: 'Debe ser un numero de dias mayor que cero.' });
+      errores.push({
+        field: 'tiempoEstimado',
+        message: 'Debe ser un numero de dias mayor que cero.',
+      });
     }
     if (mensaje.length < 10) {
       errores.push({ field: 'mensaje', message: 'Escriba al menos 10 caracteres.' });
@@ -393,7 +417,8 @@ export class Propuesta {
     this.exigirVigente();
 
     if (cambios.precio !== undefined) {
-      if (Number(cambios.precio) <= 0) throw AppError.validation('El precio debe ser mayor que cero.');
+      if (Number(cambios.precio) <= 0)
+        throw AppError.validation('El precio debe ser mayor que cero.');
       this.props.precio = cambios.precio;
     }
     if (cambios.tiempoEstimado !== undefined) {
@@ -805,7 +830,11 @@ export interface INecesidadRepository {
   update(necesidad: Necesidad, motivoCierre?: string | null): Promise<void>;
   /** Cuantas tiene abiertas: alimenta el limite anti-abuso (SRS RF125, RNF86). */
   contarAbiertasDe(idUsuario: number, ahora: Date): Promise<number>;
-  listarAbiertas(filtros: FiltrosNecesidad, pagina: number, tamano: number): Promise<Pagina<Necesidad>>;
+  listarAbiertas(
+    filtros: FiltrosNecesidad,
+    pagina: number,
+    tamano: number
+  ): Promise<Pagina<Necesidad>>;
   listarDeAutor(idUsuario: number, pagina: number, tamano: number): Promise<Pagina<Necesidad>>;
 }
 
@@ -816,17 +845,29 @@ export interface IPropuestaRepository {
   save(propuesta: Propuesta, creadoPor: number): Promise<Propuesta>;
   update(propuesta: Propuesta): Promise<void>;
   tieneVigente(idNecesidad: number, idPrestador: number): Promise<boolean>;
-  listarDePrestador(idPrestador: number, pagina: number, tamano: number): Promise<Pagina<Propuesta>>;
+  listarDePrestador(
+    idPrestador: number,
+    pagina: number,
+    tamano: number
+  ): Promise<Pagina<Propuesta>>;
 }
 
 export interface ISolicitudRepository {
   findById(id: number): Promise<Solicitud | null>;
   save(solicitud: Solicitud, creadoPor: number): Promise<Solicitud>;
-  update(solicitud: Solicitud, motivoEstado: string | null, completadaAt: Date | null): Promise<void>;
+  update(
+    solicitud: Solicitud,
+    motivoEstado: string | null,
+    completadaAt: Date | null
+  ): Promise<void>;
   /** Fecha en que se acepto: la politica de cancelacion mide la gracia desde ahi. */
   aceptadaAt(idSolicitud: number): Promise<Date | null>;
   listarDeUsuario(idUsuario: number, pagina: number, tamano: number): Promise<Pagina<Solicitud>>;
-  listarDePrestador(idPrestador: number, pagina: number, tamano: number): Promise<Pagina<Solicitud>>;
+  listarDePrestador(
+    idPrestador: number,
+    pagina: number,
+    tamano: number
+  ): Promise<Pagina<Solicitud>>;
 }
 
 /** Asiento del historial de una solicitud: append-only (SRS RF70). */
@@ -940,5 +981,9 @@ export interface IReplicaRepository {
   categoriaActiva(idCategoria: number): Promise<boolean>;
   upsertPrestador(ref: PrestadorRef): Promise<void>;
   upsertServicio(ref: ServicioRef): Promise<void>;
-  upsertCategoria(ref: { idCategoria: number; nombreCategoria: string; activa: boolean }): Promise<void>;
+  upsertCategoria(ref: {
+    idCategoria: number;
+    nombreCategoria: string;
+    activa: boolean;
+  }): Promise<void>;
 }

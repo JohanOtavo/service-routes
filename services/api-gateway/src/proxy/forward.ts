@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { AppError } from '@punto-amigo/shared';
+import type {} from '../http/expresion';
 import type { CircuitBreaker } from './CircuitBreaker';
 import type { IdentidadVerificada } from '../security/TokenVerifier';
 
@@ -101,9 +102,7 @@ export async function reenviar(
 
   try {
     const cuerpo =
-      req.method === 'GET' || req.method === 'HEAD'
-        ? undefined
-        : (req.body as Buffer | undefined);
+      req.method === 'GET' || req.method === 'HEAD' ? undefined : (req.body as Buffer | undefined);
 
     const respuesta = await fetch(url, {
       method: req.method,
@@ -137,7 +136,7 @@ export async function reenviar(
 
     const datos = Buffer.from(await respuesta.arrayBuffer());
     res.send(datos);
-  } catch (error) {
+  } catch {
     deps.breaker.registrarFallo(destino.servicio);
 
     // El mensaje al cliente no distingue "no responde" de "no existe": revelar

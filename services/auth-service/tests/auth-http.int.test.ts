@@ -20,7 +20,15 @@ const SECRETO_INTERNO = 'solo-para-pruebas-de-integracion';
  * repetir la cabecera en cada llamada y, sobre todo, evita la tentacion de
  * desactivar la comprobacion durante las pruebas.
  */
-const request = (app: Express) => {
+const request = (
+  app: Express
+): {
+  get: (ruta: string) => supertest.Test;
+  post: (ruta: string) => supertest.Test;
+  put: (ruta: string) => supertest.Test;
+  patch: (ruta: string) => supertest.Test;
+  delete: (ruta: string) => supertest.Test;
+} => {
   const agente = supertest(app);
   const conSecreto = (m: 'get' | 'post' | 'put' | 'patch' | 'delete') => (ruta: string) =>
     agente[m](ruta).set('x-internal-secret', SECRETO_INTERNO);
@@ -37,6 +45,16 @@ import { buildContainer, envSchema } from '../src/main';
 
 const CORREO = 'integracion@puntoamigo.local';
 const CONTRASENA = 'ContrasenaDePrueba2026';
+
+/**
+ * Correos contra los que esta suite intenta un login fallido a proposito.
+ *
+ * El bloqueo progresivo lleva la cuenta por correo, asi que esos correos se
+ * tienen que limpiar igual que `CORREO`. Sin esto, cada ejecucion de la suite
+ * deja un fallo mas acumulado y, al llegar al umbral, el correo queda
+ * bloqueado 24 horas: la suite deja de ser idempotente y falla sola.
+ */
+const CORREOS_CON_FALLO = [CORREO, 'nadie@puntoamigo.local'];
 
 let app: Express;
 let knex: Knex;
@@ -100,8 +118,8 @@ afterAll(async () => {
 async function limpiar(): Promise<void> {
   const limpio = knexLib;
   void limpio;
-  await knex('login_attempt').where('correo_intentado', CORREO).delete();
-  await knex('login_lockout').where('correo', CORREO).delete();
+  await knex('login_attempt').whereIn('correo_intentado', CORREOS_CON_FALLO).delete();
+  await knex('login_lockout').whereIn('correo', CORREOS_CON_FALLO).delete();
   const usuario = await knex('usuario').where('correo', CORREO).first();
   if (usuario !== undefined) {
     await knex('refresh_session').where('id_usuario', usuario.id_usuario).delete();
@@ -131,7 +149,6 @@ const saltarSiNoHayBase = (): boolean => {
     if (process.env['REQUIRE_INTEGRATION'] === '1') {
       throw new Error(`Las pruebas de integracion no pudieron arrancar: ${motivoNoDisponible}`);
     }
-    // eslint-disable-next-line no-console
     console.warn(`pruebas de integracion omitidas: ${motivoNoDisponible}`);
   }
   return !disponible;
@@ -282,7 +299,6 @@ describe('bloqueo progresivo', () => {
     expect(fila.bloqueado_hasta).toBeNull();
   });
 });
-
 
 describe('recuperacion de contrasena', () => {
   /**
@@ -438,11 +454,16 @@ describe('endurecimiento', () => {
       .send({ correo: CORREO, contrasena: CONTRASENA });
 
     const token = login.body.accessToken;
-    await request(app).post('/api/v1/auth/logout').set('Authorization', `Bearer ${token}`).expect(204);
+    await request(app)
+      .post('/api/v1/auth/logout')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
 
     // El JWT sigue siendo criptograficamente valido; lo rechaza la lista de
     // denegacion, que es justo el motivo por el que existe.
-    const despues = await request(app).get('/api/v1/auth/me').set('Authorization', `Bearer ${token}`);
+    const despues = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${token}`);
     expect(despues.status).toBe(401);
   });
 

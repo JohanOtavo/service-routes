@@ -41,18 +41,14 @@ export class JwtTokenService implements ITokenService {
     // aunque el usuario cerrara sesion (SRS RF10).
     const jti = randomUUID();
 
-    const accessToken = jwt.sign(
-      { roles: usuario.roles.toArray() },
-      this.config.privateKey,
-      {
-        algorithm: 'RS256',
-        subject: String(usuario.id),
-        jwtid: jti,
-        expiresIn: this.config.accessTtlSeconds,
-        issuer: this.config.issuer,
-        audience: this.config.audience,
-      }
-    );
+    const accessToken = jwt.sign({ roles: usuario.roles.toArray() }, this.config.privateKey, {
+      algorithm: 'RS256',
+      subject: String(usuario.id),
+      jwtid: jti,
+      expiresIn: this.config.accessTtlSeconds,
+      issuer: this.config.issuer,
+      audience: this.config.audience,
+    });
 
     // 32 bytes de aleatoriedad criptografica. No se deriva de nada del usuario:
     // un token predecible a partir del identificador seria adivinable.

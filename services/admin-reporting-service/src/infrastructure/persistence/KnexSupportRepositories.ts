@@ -122,7 +122,8 @@ export class KnexStatisticsRepository implements IStatisticsRepository {
 
     return {
       elementos: filas.map((f) => ({
-        fecha: f['fecha'] instanceof Date ? f['fecha'].toISOString().slice(0, 10) : String(f['fecha']),
+        fecha:
+          f['fecha'] instanceof Date ? f['fecha'].toISOString().slice(0, 10) : String(f['fecha']),
         metrica: String(f['metrica']),
         dimension: String(f['dimension']),
         valor: Number(f['valor']),

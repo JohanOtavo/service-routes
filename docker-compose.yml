@@ -278,6 +278,27 @@ services:
         condition: service_completed_successfully
     networks: [punto-amigo]
 
+  admin-reporting-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: services/admin-reporting-service/Dockerfile
+    image: punto-amigo/admin-reporting-service:local
+    container_name: pa-admin
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      NODE_ENV: ${NODE_ENV:-development}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks: [punto-amigo]
+
   api-gateway:
     profiles: [apps]
     build:
@@ -296,6 +317,7 @@ services:
       UPSTREAM_CATALOG_URL: http://catalog-service:3003
       UPSTREAM_RATING_URL: http://rating-service:3005
       UPSTREAM_NOTIFICATION_URL: http://notification-service:3006
+      UPSTREAM_ADMIN_URL: http://admin-reporting-service:3007
     ports:
       - '127.0.0.1:${GATEWAY_PORT:-8080}:8080'
     depends_on:

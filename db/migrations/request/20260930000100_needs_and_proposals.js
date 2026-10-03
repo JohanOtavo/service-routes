@@ -10,12 +10,7 @@
  */
 'use strict';
 
-const {
-  primaryId,
-  auditFields,
-  checkIn,
-  createUsuarioRef,
-} = require('../../helpers');
+const { primaryId, auditFields, checkIn, createUsuarioRef } = require('../../helpers');
 
 const ESTADOS_NECESIDAD = ['ABIERTA', 'ADJUDICADA', 'VENCIDA', 'CERRADA', 'CANCELADA'];
 const ESTADOS_PROPUESTA = ['ENVIADA', 'ACEPTADA', 'RECHAZADA', 'RETIRADA', 'DESCARTADA'];
@@ -186,8 +181,8 @@ exports.up = async function up(knex) {
    * esperando decision a la vez.
    */
   await knex.raw(
-    "ALTER TABLE `propuesta` " +
-      "ADD COLUMN `vigente` TINYINT(1) " +
+    'ALTER TABLE `propuesta` ' +
+      'ADD COLUMN `vigente` TINYINT(1) ' +
       "AS (CASE WHEN `estado` = 'ENVIADA' THEN 1 ELSE NULL END) STORED, " +
       'ADD CONSTRAINT `uq_propuesta_vigente` UNIQUE (`id_necesidad`, `id_prestador`, `vigente`)'
   );
@@ -206,8 +201,8 @@ exports.up = async function up(knex) {
    * aceptada y NULL para las demas, y MySQL trata los NULL como distintos.
    */
   await knex.raw(
-    "ALTER TABLE `propuesta` " +
-      "ADD COLUMN `adjudicada` TINYINT(1) " +
+    'ALTER TABLE `propuesta` ' +
+      'ADD COLUMN `adjudicada` TINYINT(1) ' +
       "AS (CASE WHEN `estado` = 'ACEPTADA' THEN 1 ELSE NULL END) STORED, " +
       'ADD CONSTRAINT `uq_propuesta_adjudicada` UNIQUE (`id_necesidad`, `adjudicada`)'
   );

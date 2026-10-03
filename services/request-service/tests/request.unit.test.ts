@@ -245,7 +245,13 @@ describe('adjudicacion', () => {
     const { n, propuestas } = escenario();
     adjudicar({ necesidad: n, propuestas, idPropuestaElegida: 2, idUsuarioAutor: 1, ahora: AHORA });
     expect(() =>
-      adjudicar({ necesidad: n, propuestas, idPropuestaElegida: 1, idUsuarioAutor: 1, ahora: AHORA })
+      adjudicar({
+        necesidad: n,
+        propuestas,
+        idPropuestaElegida: 1,
+        idUsuarioAutor: 1,
+        ahora: AHORA,
+      })
     ).toThrow(AppError);
   });
 

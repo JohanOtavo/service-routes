@@ -125,7 +125,6 @@ export function buildEnvelope(input: BuildEnvelopeInput): EventEnvelope {
  * evento, y que uno nuevo no obligue a reconfigurar las colas existentes.
  */
 export function routingKey(context: string, aggregate: string, event: string): string {
-  const snake = (s: string): string =>
-    s.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+  const snake = (s: string): string => s.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
   return `${snake(context)}.${snake(aggregate)}.${snake(event)}`;
 }

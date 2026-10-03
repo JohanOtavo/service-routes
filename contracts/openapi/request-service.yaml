@@ -53,7 +53,11 @@ paths:
       responses:
         '201': { description: Necesidad publicada }
         '403': { $ref: '_shared.yaml#/components/responses/SinPermiso' }
-        '409': { description: Supero el limite de necesidades abiertas, o la categoria no esta disponible }
+        '409':
+          {
+            description: Supero el limite de necesidades abiertas,
+            o la categoria no esta disponible,
+          }
         '422': { $ref: '_shared.yaml#/components/responses/NoValido' }
     get:
       tags: [Necesidades]

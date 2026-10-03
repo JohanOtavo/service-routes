@@ -1,7 +1,11 @@
 import type { Knex } from 'knex';
 import { currentDb } from '@punto-amigo/service-kit';
 import type { EstadoPrestador } from '../../domain';
-import type { IPrestadorRefRepository, PrestadorRef, RefrescoPrestador } from '../../application/ports';
+import type {
+  IPrestadorRefRepository,
+  PrestadorRef,
+  RefrescoPrestador,
+} from '../../application/ports';
 
 /** Fila de `pa_catalog.prestador_ref`, tal como la devuelve el motor. */
 interface FilaPrestadorRef {
@@ -70,10 +74,7 @@ export class KnexPrestadorRefRepository implements IPrestadorRefRepository {
     // insertar. La comparacion se hace columna a columna porque MySQL no
     // permite condicionar el UPDATE entero.
     const condicional = (columna: string): Knex.Raw =>
-      this.knex.raw(
-        `IF(synced_at <= VALUES(synced_at), VALUES(??), ??)`,
-        [columna, columna]
-      );
+      this.knex.raw(`IF(synced_at <= VALUES(synced_at), VALUES(??), ??)`, [columna, columna]);
 
     await this.db('prestador_ref')
       .insert({

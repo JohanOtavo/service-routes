@@ -5,6 +5,7 @@ import {
   useEffect,
   useState,
   useSyncExternalStore,
+  type ReactElement,
   type ReactNode,
 } from 'react';
 import { cerrarSesion, iniciarSesion, recuperarSesion } from '../api/cliente';
@@ -30,7 +31,7 @@ interface Contexto {
 
 const ContextoSesion = createContext<Contexto | null>(null);
 
-export function ProveedorSesion({ children }: { children: ReactNode }) {
+export function ProveedorSesion({ children }: { children: ReactNode }): ReactElement {
   const sesion = useSyncExternalStore(suscribirse, obtenerSesion, () => null);
   const [comprobando, setComprobando] = useState(true);
 
@@ -71,7 +72,8 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
    * comodidad, no un control de acceso (SRS RNF23).
    */
   const tieneRol = useCallback(
-    (...roles: readonly string[]) => roles.some((rol) => sesion?.usuario.roles.includes(rol) === true),
+    (...roles: readonly string[]) =>
+      roles.some((rol) => sesion?.usuario.roles.includes(rol) === true),
     [sesion]
   );
 

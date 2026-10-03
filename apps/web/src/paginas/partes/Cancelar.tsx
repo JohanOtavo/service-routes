@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { ErrorApi } from '../../api/cliente';
 import { useCancelar, useMotivosCancelacion } from '../../api/hooks';
 import { Aviso, AreaTexto, Boton, Campo, Selector } from '../../ui';
@@ -13,7 +13,7 @@ import { Aviso, AreaTexto, Boton, Campo, Selector } from '../../ui';
  * son el unico instrumento disuasorio, y un instrumento que no se ve no
  * disuade: lo que no se sabe no corrige el comportamiento.
  */
-export function Cancelar({ idSolicitud }: { idSolicitud: number }) {
+export function Cancelar({ idSolicitud }: { idSolicitud: number }): ReactElement {
   const motivos = useMotivosCancelacion();
   const cancelar = useCancelar();
 
@@ -41,9 +41,7 @@ export function Cancelar({ idSolicitud }: { idSolicitud: number }) {
     } catch (fallo) {
       if (fallo instanceof ErrorApi) {
         setError(
-          fallo.detalles.length > 0
-            ? fallo.detalles.map((d) => d.message).join(' ')
-            : fallo.message
+          fallo.detalles.length > 0 ? fallo.detalles.map((d) => d.message).join(' ') : fallo.message
         );
       } else {
         setError('No se pudo cancelar. Intentelo de nuevo.');
@@ -61,14 +59,14 @@ export function Cancelar({ idSolicitud }: { idSolicitud: number }) {
       >
         {r.enRevision ? (
           <>
-            El motivo que eligio abre una revision. Hasta que se resuelva, esta
-            cancelacion <strong>no cuenta</strong> en su tasa.
+            El motivo que eligio abre una revision. Hasta que se resuelva, esta cancelacion{' '}
+            <strong>no cuenta</strong> en su tasa.
           </>
         ) : r.computa ? (
           <>
             Cuenta en su tasa de cancelacion con un peso de{' '}
-            <strong>{r.peso.toString().replace('.', ',')}</strong> ({textoFranja(r.franja)}).
-            Las contrataciones que complete la haran bajar.
+            <strong>{r.peso.toString().replace('.', ',')}</strong> ({textoFranja(r.franja)}). Las
+            contrataciones que complete la haran bajar.
           </>
         ) : (
           <>
@@ -93,8 +91,8 @@ export function Cancelar({ idSolicitud }: { idSolicitud: number }) {
   return (
     <form onSubmit={(ev) => void enviar(ev)} noValidate>
       <Aviso tono="aviso" titulo="Cancelar tiene efecto en su reputacion">
-        Cuanto mas tarde avise, mas pesa la cancelacion. Si todavia no ha pasado
-        mucho desde que se acepto, no cuenta.
+        Cuanto mas tarde avise, mas pesa la cancelacion. Si todavia no ha pasado mucho desde que se
+        acepto, no cuenta.
       </Aviso>
 
       {error !== null && <Aviso tono="error">{error}</Aviso>}
@@ -116,8 +114,8 @@ export function Cancelar({ idSolicitud }: { idSolicitud: number }) {
           presento" no es un atajo para no cargar con la cancelacion. */}
       {elegido?.abreRevision === true && (
         <Aviso tono="info">
-          Este motivo abre una revision. Alguien de la plataforma lo mirara antes
-          de que surta efecto, y la otra parte podra responder.
+          Este motivo abre una revision. Alguien de la plataforma lo mirara antes de que surta
+          efecto, y la otra parte podra responder.
         </Aviso>
       )}
 

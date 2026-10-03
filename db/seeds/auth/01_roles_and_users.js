@@ -44,7 +44,10 @@ const ARGON_OPTS = {
 };
 
 const ROLES = [
-  { nombre_rol: 'ADMINISTRADOR', descripcion: 'Supervision, moderacion y configuracion de la plataforma' },
+  {
+    nombre_rol: 'ADMINISTRADOR',
+    descripcion: 'Supervision, moderacion y configuracion de la plataforma',
+  },
   { nombre_rol: 'OFERENTE', descripcion: 'Publica servicios y envia propuestas' },
   { nombre_rol: 'SOLICITANTE', descripcion: 'Busca servicios, publica necesidades y contrata' },
 ];
@@ -145,6 +148,5 @@ exports.seed = async function seed(knex) {
     });
   }
 
-  // eslint-disable-next-line no-console
   console.log(`    ${USUARIOS.length} usuarios de prueba (contrasena: la de SEED_DEV_PASSWORD)`);
 };

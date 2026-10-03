@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach, type VitestUtils } from 'vitest';
+import { render, screen, type RenderResult } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { RutaProtegida } from '../autenticacion/RutaProtegida';
 import { ProveedorSesion } from '../autenticacion/ContextoSesion';
@@ -14,14 +14,16 @@ import { borrarSesion } from '../api/sesion';
  * momento se redirige, se echa fuera a quien SI tiene sesion, en cada recarga.
  */
 
-function montar(hijo: React.ReactNode, roles?: readonly string[]) {
+function montar(hijo: React.ReactNode, roles?: readonly string[]): RenderResult {
   return render(
     <MemoryRouter initialEntries={['/privado']}>
       <ProveedorSesion>
         <Routes>
           <Route
             path="/privado"
-            element={<RutaProtegida {...(roles === undefined ? {} : { roles })}>{hijo}</RutaProtegida>}
+            element={
+              <RutaProtegida {...(roles === undefined ? {} : { roles })}>{hijo}</RutaProtegida>
+            }
           />
           <Route path="/entrar" element={<p>Pantalla de inicio de sesion</p>} />
         </Routes>
@@ -37,7 +39,10 @@ beforeEach(() => {
 describe('mientras se comprueba la sesion', () => {
   it('NO redirige: muestra que esta cargando', () => {
     // El refresco nunca responde: se queda en el estado de comprobacion.
-    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => undefined)));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => undefined))
+    );
 
     montar(<p>Contenido privado</p>);
 
@@ -66,7 +71,7 @@ describe('con sesion', () => {
    * dejar que el refresco falle no modela nada que pueda ocurrir, porque un
    * refresco fallido borra la sesion, que es justo lo que debe hacer.
    */
-  const refrescoBueno = (roles: readonly string[]) =>
+  const refrescoBueno = (roles: readonly string[]): VitestUtils =>
     vi.stubGlobal(
       'fetch',
       vi.fn(

@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type ReactElement } from 'react';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
@@ -24,7 +24,13 @@ const ACERO = '#b8bcc0';
 const MADERA = '#9c6b45';
 
 /** Una llave inglesa simplificada: mango, cabeza y boca. */
-function Llave({ posicion, rotacion }: { posicion: [number, number, number]; rotacion: number }) {
+function Llave({
+  posicion,
+  rotacion,
+}: {
+  posicion: [number, number, number];
+  rotacion: number;
+}): ReactElement {
   return (
     <group position={posicion} rotation={[0.3, rotacion, 0.6]}>
       <mesh castShadow receiveShadow>
@@ -52,7 +58,7 @@ function Destornillador({
 }: {
   posicion: [number, number, number];
   rotacion: number;
-}) {
+}): ReactElement {
   return (
     <group position={posicion} rotation={[0.5, rotacion, -0.4]}>
       <mesh castShadow>
@@ -72,7 +78,13 @@ function Destornillador({
 }
 
 /** Una brocha: mango de madera, virola y cerdas. */
-function Brocha({ posicion, rotacion }: { posicion: [number, number, number]; rotacion: number }) {
+function Brocha({
+  posicion,
+  rotacion,
+}: {
+  posicion: [number, number, number];
+  rotacion: number;
+}): ReactElement {
   return (
     <group position={posicion} rotation={[-0.35, rotacion, 0.45]}>
       <mesh castShadow>
@@ -100,7 +112,7 @@ function Brocha({ posicion, rotacion }: { posicion: [number, number, number]; ro
  * movimiento, no gira: la rotacion continua es de lo que peor sienta a quien
  * tiene sensibilidad al movimiento.
  */
-function Conjunto({ animar }: { animar: boolean }) {
+function Conjunto({ animar }: { animar: boolean }): ReactElement {
   const grupo = useRef<THREE.Group>(null);
 
   useFrame((_estado, delta) => {
@@ -130,7 +142,7 @@ function Conjunto({ animar }: { animar: boolean }) {
  * Se genera una vez y se libera al desmontar: una textura PMREM ocupa memoria
  * de video, y dejarla colgando la fuga en cada visita a la portada.
  */
-function Entorno() {
+function Entorno(): null {
   const { scene, gl } = useThree();
 
   useEffect(() => {
@@ -148,7 +160,7 @@ function Entorno() {
   return null;
 }
 
-export default function HeroeTaller({ animar }: { animar: boolean }) {
+export default function HeroeTaller({ animar }: { animar: boolean }): ReactElement {
   /** Luz calida arriba a la izquierda, como una ventana. Es lo que da el oficio. */
   const luzClave = useMemo(() => new THREE.Color('#fff2e0'), []);
 

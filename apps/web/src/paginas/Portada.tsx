@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useSesion } from '../autenticacion/ContextoSesion';
 import { useCategorias } from '../api/hooks';
@@ -15,7 +15,7 @@ import './portada.css';
  */
 const HeroeTaller = lazy(() => import('../escenas/HeroeTaller'));
 
-export default function Portada() {
+export default function Portada(): ReactElement {
   const { sesion } = useSesion();
   const categorias = useCategorias();
   const [animar, setAnimar] = useState(false);
@@ -41,13 +41,11 @@ export default function Portada() {
         <div className="pa-heroe__texto">
           <h1 className="pa-heroe__titulo">
             Encuentre quien le ayude.
-            <br />
-            U ofrezca lo que sabe hacer.
+            <br />U ofrezca lo que sabe hacer.
           </h1>
           <p className="pa-heroe__entrada">
-            Punto Amigo conecta a quien necesita un servicio con quien sabe hacerlo.
-            Publique lo que necesita y reciba propuestas, o busque entre los oficios
-            que ya hay cerca.
+            Punto Amigo conecta a quien necesita un servicio con quien sabe hacerlo. Publique lo que
+            necesita y reciba propuestas, o busque entre los oficios que ya hay cerca.
           </p>
 
           <div className="pa-fila" style={{ marginTop: 'var(--esp-6)' }}>
@@ -66,8 +64,7 @@ export default function Portada() {
           </div>
 
           <p className="pa-heroe__nota">
-            Los datos de contacto se comparten solo cuando las dos partes han
-            acordado un trabajo.
+            Los datos de contacto se comparten solo cuando las dos partes han acordado un trabajo.
           </p>
         </div>
 
@@ -89,22 +86,22 @@ export default function Portada() {
           <article className="pa-tarjeta">
             <h3 className="pa-tarjeta__titulo">1. Diga que necesita</h3>
             <p className="pa-tarjeta__meta">
-              Busque un servicio publicado, o publique su necesidad y deje que los
-              oferentes le propongan precio y plazo.
+              Busque un servicio publicado, o publique su necesidad y deje que los oferentes le
+              propongan precio y plazo.
             </p>
           </article>
           <article className="pa-tarjeta">
             <h3 className="pa-tarjeta__titulo">2. Elija con informacion</h3>
             <p className="pa-tarjeta__meta">
-              Cada oferente tiene su perfil validado y sus calificaciones, en dos
-              facetas separadas: como quien atiende y como quien contrata.
+              Cada oferente tiene su perfil validado y sus calificaciones, en dos facetas separadas:
+              como quien atiende y como quien contrata.
             </p>
           </article>
           <article className="pa-tarjeta">
             <h3 className="pa-tarjeta__titulo">3. Acuerden y califiquen</h3>
             <p className="pa-tarjeta__meta">
-              Al aceptar, las dos partes ven como contactarse. Al terminar, las dos
-              califican, y ninguna ve la del otro hasta que ambas esten escritas.
+              Al aceptar, las dos partes ven como contactarse. Al terminar, las dos califican, y
+              ninguna ve la del otro hasta que ambas esten escritas.
             </p>
           </article>
         </div>

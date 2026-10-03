@@ -64,8 +64,7 @@ export class CancelRequestUseCase {
     if (prestador === null) throw AppError.notFound('La solicitud no existe.');
 
     const actor: Actor = solicitud.actorDe(entrada.idUsuario, prestador.idUsuario);
-    const idUsuarioAfectado =
-      actor === 'SOLICITANTE' ? prestador.idUsuario : solicitud.idUsuario;
+    const idUsuarioAfectado = actor === 'SOLICITANTE' ? prestador.idUsuario : solicitud.idUsuario;
 
     const motivo = await this.cancelaciones.buscarMotivo(entrada.codigoMotivo);
     if (motivo === null) {
@@ -100,8 +99,7 @@ export class CancelRequestUseCase {
      * clasificacion cae en la franja mas benigna, que es lo correcto —nadie se
      * comprometio a nada todavia—.
      */
-    const aceptadaAt =
-      (await this.solicitudes.aceptadaAt(solicitud.id)) ?? this.clock.now();
+    const aceptadaAt = (await this.solicitudes.aceptadaAt(solicitud.id)) ?? this.clock.now();
 
     const clasificacion = clasificarCancelacion({
       aceptadaAt,

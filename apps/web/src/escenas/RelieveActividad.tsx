@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber';
-import { useMemo } from 'react';
+import { useMemo, type ReactElement } from 'react';
 import * as THREE from 'three';
 
 /**
@@ -24,17 +24,14 @@ const ALTO_MAXIMO = 2.6;
 const ANCHO_BARRA = 0.42;
 const SEPARACION = 0.56;
 
-function Barras({ puntos }: { puntos: readonly Punto[] }) {
+function Barras({ puntos }: { puntos: readonly Punto[] }): ReactElement {
   /**
    * La escala se calcula del maximo de ESTE conjunto, no de un tope fijo.
    *
    * Con un tope fijo, un dia flojo daria barras invisibles y un dia intenso las
    * sacaria del encuadre. Relativo, el relieve siempre llena el espacio.
    */
-  const maximo = useMemo(
-    () => Math.max(1, ...puntos.map((p) => p.total)),
-    [puntos]
-  );
+  const maximo = useMemo(() => Math.max(1, ...puntos.map((p) => p.total)), [puntos]);
 
   const centro = ((puntos.length - 1) * SEPARACION) / 2;
 
@@ -44,10 +41,7 @@ function Barras({ puntos }: { puntos: readonly Punto[] }) {
         const alto = Math.max(0.06, (p.total / maximo) * ALTO_MAXIMO);
         // Del verde de marca al terracota segun la intensidad: el mismo par de
         // colores que el resto de la aplicacion, no una paleta nueva.
-        const color = new THREE.Color('#1f6f5c').lerp(
-          new THREE.Color('#c2571f'),
-          p.total / maximo
-        );
+        const color = new THREE.Color('#1f6f5c').lerp(new THREE.Color('#c2571f'), p.total / maximo);
 
         return (
           <mesh
@@ -65,7 +59,11 @@ function Barras({ puntos }: { puntos: readonly Punto[] }) {
   );
 }
 
-export default function RelieveActividad({ puntos }: { puntos: readonly Punto[] }) {
+export default function RelieveActividad({
+  puntos,
+}: {
+  puntos: readonly Punto[];
+}): ReactElement | null {
   /**
    * Se dibujan como maximo 30 dias, los mas recientes.
    *

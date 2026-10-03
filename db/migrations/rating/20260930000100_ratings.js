@@ -75,11 +75,7 @@ exports.up = async function up(knex) {
       .datetime('visible_at')
       .nullable()
       .comment('NULL mientras este en periodo ciego; con valor, ya es publica (SRS RF166)');
-    table
-      .boolean('oculta_por_moderacion')
-      .notNullable()
-      .defaultTo(false)
-      .comment('SRS RF85');
+    table.boolean('oculta_por_moderacion').notNullable().defaultTo(false).comment('SRS RF85');
     table.datetime('fecha').notNullable().defaultTo(knex.fn.now());
     auditFields(knex, table, { softDelete: true });
 

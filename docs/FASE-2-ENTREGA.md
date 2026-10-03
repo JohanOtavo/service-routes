@@ -1,8 +1,19 @@
 # Fase 2 — Backend seguro. Entrega
 
-Estado: **completa**. Ocho microservicios construidos, probados y corriendo
-detrás del gateway. 187 pruebas unitarias y 131 de integración contra MySQL
-real, todas en verde. `npm audit` sin vulnerabilidades altas ni críticas.
+Estado: **construida, con la puerta de calidad del repositorio pendiente de cerrar**.
+Ocho microservicios detrás del gateway, 63 endpoints documentados, 187 pruebas
+unitarias y 131 de integración contra MySQL real. `npm audit` sin vulnerabilidades
+altas ni críticas.
+
+> **Qué significa «construida» y qué significa «verificada».** Las 187 unitarias se
+> reejecutaron el 2/10/2026: 9 suites, 187 pruebas, 0 fallos. Las 131 de integración
+> **no** se han vuelto a ejecutar: requieren MySQL 8 vía Docker, y Docker Desktop
+> estaba detenido ese día. Son el registro de lo que pasó en su momento, no una
+> comprobación reproducible hoy.
+>
+> No hay ningún servicio corriendo en este momento. El resto del estado medido de las
+> puertas de calidad está en [00-FLUJO-DEL-PROYECTO.md](00-FLUJO-DEL-PROYECTO.md) §1,
+> y la deuda heredada de esta fase en [01-BACKLOG.md](01-BACKLOG.md) grupo B.
 
 ---
 
@@ -65,6 +76,11 @@ reputación y la visibilidad.
 ---
 
 ## 2. Trazabilidad con el SRS
+
+Columna «Verificado por»: **int.** = prueba de integración contra MySQL real, registrada
+en la entrega y **no reejecutada desde entonces**; **unit.** = prueba unitaria,
+reejecutada el 2/10/2026 y en verde. Ninguna de estas cifras proviene de
+`npm run verify`, que nunca se ha ejecutado completo.
 
 | Requisitos | Dónde | Verificado por |
 |---|---|---|

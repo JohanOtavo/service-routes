@@ -55,7 +55,15 @@ const env = {
 };
 
 /** Cliente que imita al gateway: secreto interno mas identidad en cabeceras. */
-const como = (userId: number | null, roles: string[] = []) => {
+const como = (
+  userId: number | null,
+  roles: string[] = []
+): {
+  get: (ruta: string) => supertest.Test;
+  post: (ruta: string) => supertest.Test;
+  patch: (ruta: string) => supertest.Test;
+  delete: (ruta: string) => supertest.Test;
+} => {
   const agente = supertest(app);
   const preparar = (m: 'get' | 'post' | 'patch' | 'delete') => (ruta: string) => {
     let p = agente[m](ruta).set('x-internal-secret', SECRETO_INTERNO);
@@ -64,17 +72,26 @@ const como = (userId: number | null, roles: string[] = []) => {
     }
     return p;
   };
-  return { get: preparar('get'), post: preparar('post'), patch: preparar('patch'), delete: preparar('delete') };
+  return {
+    get: preparar('get'),
+    post: preparar('post'),
+    patch: preparar('patch'),
+    delete: preparar('delete'),
+  };
 };
 
-const oferente = () => como(OFERENTE, ['OFERENTE']);
-const otroOferente = () => como(OTRO_OFERENTE, ['OFERENTE']);
-const solicitante = () => como(SOLICITANTE, ['SOLICITANTE']);
-const admin = () => como(ADMIN, ['ADMINISTRADOR']);
+const oferente = (): ReturnType<typeof como> => como(OFERENTE, ['OFERENTE']);
+const otroOferente = (): ReturnType<typeof como> => como(OTRO_OFERENTE, ['OFERENTE']);
+const solicitante = (): ReturnType<typeof como> => como(SOLICITANTE, ['SOLICITANTE']);
+const admin = (): ReturnType<typeof como> => como(ADMIN, ['ADMINISTRADOR']);
 /** Sin identidad: asi llega una ruta publica desde el gateway. */
-const anonimo = () => como(null);
+const anonimo = (): ReturnType<typeof como> => como(null);
 
-const servicioNuevo = () => ({
+const servicioNuevo = (): {
+  nombre: string;
+  descripcion: string;
+  idCategoria: number;
+} => ({
   nombre: 'Reparacion de fugas de agua',
   descripcion: 'Detecto y reparo fugas en cocina, bano y lavadero. Incluye materiales.',
   idCategoria: CATEGORIA,
@@ -166,7 +183,6 @@ const saltar = (): boolean => {
     if (process.env['REQUIRE_INTEGRATION'] === '1') {
       throw new Error(`Las pruebas de integracion no pudieron arrancar: ${motivoNoDisponible}`);
     }
-    // eslint-disable-next-line no-console
     console.warn(`pruebas de integracion omitidas: ${motivoNoDisponible}`);
     return true;
   }
@@ -378,7 +394,9 @@ describe('categorias (SRS RF41 a RF44)', () => {
       401
     );
 
-    const creada = await admin().post('/api/v1/categories').send({ nombre: 'Jardineria de prueba' });
+    const creada = await admin()
+      .post('/api/v1/categories')
+      .send({ nombre: 'Jardineria de prueba' });
     expect(creada.status).toBe(201);
 
     await knex('categoria_servicio').where('id_categoria', creada.body.id).delete();

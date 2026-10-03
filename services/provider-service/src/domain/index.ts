@@ -11,12 +11,7 @@ import { AppError } from '@punto-amigo/shared';
  * anadir claridad.
  */
 
-export const ESTADOS_PRESTADOR = [
-  'PENDING_VALIDATION',
-  'ACTIVE',
-  'SUSPENDED',
-  'INACTIVE',
-] as const;
+export const ESTADOS_PRESTADOR = ['PENDING_VALIDATION', 'ACTIVE', 'SUSPENDED', 'INACTIVE'] as const;
 export type EstadoPrestador = (typeof ESTADOS_PRESTADOR)[number];
 
 /**

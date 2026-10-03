@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ErrorApi } from '../api/cliente';
 import { useContratarServicio, usePerfilPublico, useServicio } from '../api/hooks';
@@ -14,7 +14,7 @@ const MINIMO_DESCRIPCION = 10;
  * backend no los envia. El contacto aparece en el detalle de la contratacion y
  * solo cuando el oferente ha aceptado.
  */
-export default function Servicio() {
+export default function Servicio(): ReactElement {
   const { id } = useParams();
   const idServicio = Number(id);
   const navegar = useNavigate();
@@ -48,9 +48,7 @@ export default function Servicio() {
     } catch (fallo) {
       if (fallo instanceof ErrorApi) {
         setError(
-          fallo.estado === 409
-            ? 'Ese servicio ya no esta disponible, o es suyo.'
-            : fallo.message
+          fallo.estado === 409 ? 'Ese servicio ya no esta disponible, o es suyo.' : fallo.message
         );
       } else {
         setError('No se pudo enviar la solicitud. Intentelo de nuevo.');
@@ -93,8 +91,7 @@ export default function Servicio() {
             <Sello tono="neutro">Sin calificaciones todavia</Sello>
           ) : (
             <Sello tono="exito">
-              {s.reputacion.puntuacionMedia.toFixed(1)} de 5 ·{' '}
-              {s.reputacion.totalCalificaciones}{' '}
+              {s.reputacion.puntuacionMedia.toFixed(1)} de 5 · {s.reputacion.totalCalificaciones}{' '}
               {s.reputacion.totalCalificaciones === 1 ? 'opinion' : 'opiniones'}
             </Sello>
           ))}

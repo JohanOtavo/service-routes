@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { ErrorApi } from '../api/cliente';
 import {
   useCategorias,
@@ -24,13 +24,11 @@ const vacioANulo = (valor: string): string | null => (valor.trim() === '' ? null
 
 function mensaje(fallo: unknown, porDefecto: string): string {
   if (!(fallo instanceof ErrorApi)) return porDefecto;
-  return fallo.detalles.length > 0
-    ? fallo.detalles.map((d) => d.message).join(' ')
-    : fallo.message;
+  return fallo.detalles.length > 0 ? fallo.detalles.map((d) => d.message).join(' ') : fallo.message;
 }
 
 /** Perfil de prestador y catalogo propio (SRS RF22 a RF28, RF50 a RF52). */
-export default function MiPerfilPrestador() {
+export default function MiPerfilPrestador(): ReactElement {
   const perfil = useMiPerfil();
   const servicios = useMisServicios();
   const categorias = useCategorias();
@@ -55,8 +53,7 @@ export default function MiPerfilPrestador() {
   });
 
   /** Un 404 aqui es el estado normal de quien acaba de registrarse. */
-  const sinPerfil =
-    perfil.isError && perfil.error instanceof ErrorApi && perfil.error.noEncontrado;
+  const sinPerfil = perfil.isError && perfil.error instanceof ErrorApi && perfil.error.noEncontrado;
 
   const crearPerfil = async (evento: React.FormEvent): Promise<void> => {
     evento.preventDefault();
@@ -102,11 +99,15 @@ export default function MiPerfilPrestador() {
         <Tarjeta>
           <h2 className="pa-tarjeta__titulo">Cree su perfil</h2>
           <p className="pa-tarjeta__meta">
-            Un administrador lo revisara antes de que aparezca en el catalogo.
-            Mientras tanto nadie lo ve.
+            Un administrador lo revisara antes de que aparezca en el catalogo. Mientras tanto nadie
+            lo ve.
           </p>
 
-          <form onSubmit={(ev) => void crearPerfil(ev)} noValidate style={{ marginTop: 'var(--esp-4)' }}>
+          <form
+            onSubmit={(ev) => void crearPerfil(ev)}
+            noValidate
+            style={{ marginTop: 'var(--esp-4)' }}
+          >
             <Campo
               etiqueta="Nombre con el que trabaja"
               name="nombre"
@@ -182,8 +183,8 @@ export default function MiPerfilPrestador() {
 
             {!perfil.data.validado && (
               <Aviso tono="aviso" titulo="Su perfil esta en revision">
-                Mientras un administrador no lo valide, no aparece en el catalogo
-                y no puede publicar servicios ni enviar propuestas.
+                Mientras un administrador no lo valide, no aparece en el catalogo y no puede
+                publicar servicios ni enviar propuestas.
               </Aviso>
             )}
           </Tarjeta>

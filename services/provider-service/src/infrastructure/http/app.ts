@@ -56,10 +56,10 @@ const perfilSchema = z
 
 // En la edicion todo es opcional, pero un cuerpo vacio no es una edicion: sin
 // este minimo, un PATCH sin campos emitiria un evento sin que nada cambiara.
-const cambiosSchema = perfilSchema.partial().strict().refine(
-  (v) => Object.keys(v).length > 0,
-  { message: 'Indique al menos un campo a modificar.' }
-);
+const cambiosSchema = perfilSchema
+  .partial()
+  .strict()
+  .refine((v) => Object.keys(v).length > 0, { message: 'Indique al menos un campo a modificar.' });
 
 const rechazoSchema = z.object({ motivo: z.string().min(10).max(500) }).strict();
 
@@ -111,7 +111,10 @@ export function createApp(deps: AppDeps): Express {
     if (origen === deps.config.corsOrigin) {
       res.setHeader('Access-Control-Allow-Origin', origen);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Correlation-Id');
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, X-Correlation-Id'
+      );
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
       res.setHeader('Vary', 'Origin');
     }

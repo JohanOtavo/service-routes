@@ -16,6 +16,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Cache de Vite (pre-ajustes y dependencias optimizadas)
+.vite/
+
 # Pruebas y cobertura
 coverage/
 .nyc_output/

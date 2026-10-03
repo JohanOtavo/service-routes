@@ -1,0 +1,434 @@
+# Flujo del proyecto — Punto Amigo
+
+Documento maestro. Es la respuesta a tres preguntas que hasta ahora no tenían
+respuesta escrita en ningún sitio: **qué fases existen, en qué estado está cada
+una, y qué queda por hacer**.
+
+- Fecha de corte: **2 de octubre de 2026**
+- Rama de trabajo: `develop` · último commit: `e217012 feat(web): build the PWA client`
+- Repositorio de código: `friend-point-development` (este repositorio)
+- Repositorio de requisitos y arquitectura: `friend-point-docs` (congelado desde el 30/09/2026)
+
+> **Aviso importante.** Este documento se crea porque **no existía ningún plan de
+> fases aprobado**. Ni en el repositorio de código ni en el de documentación hay una
+> lista de fases con estado, responsable y fecha. Lo único parecido es una tabla de
+> horizontes H1/H2/H3 en `03-product/vision.md` §2.4, y ese archivo está truncado a
+> mitad de un diagrama. Las fases 1, 2 y 3 se reconstruyeron a partir de sus
+> documentos de entrega y de la secuencia de commits. Las fases 5 a 10 son una
+> **propuesta** de este documento y necesitan tu aprobación.
+
+---
+
+## 1. Estado real del gate de calidad
+
+Todo lo que se afirma en los documentos de entrega se apoya en
+`npm run verify`. Ese comando es el gate, y **ahora pasa**. Estado medido el
+3/10/2026, con las 320 pruebas de Jest y las 127 de Vitest en verde:
+
+| Puerta | Comando | Estado | Detalle |
+|---|---|---|---|
+| Formato | `npm run format:check` | PASA | Todo el repositorio |
+| Lint | `npm run lint` (`--max-warnings=0`) | PASA | 0 problemas: se resolvieron los tipos de retorno pendientes y los avisos heredados |
+| Tipos | `npm run typecheck` | PASA | 0 errores; los 2 de `Restablecer.tsx` están corregidos |
+| Unitarias backend | `npm run test:unit` | PASA | 9 suites, 187 pruebas, 0 fallos |
+| Unitarias web | `npm run test:web` | PASA | 8 archivos, 127 pruebas, 0 fallos |
+| Integración | `npm run test:integration` | PASA | 8 suites, 133 pruebas, 0 fallos, contra MySQL/RabbitMQ/Redis reales |
+| Cobertura | `npm run test` | PASA | 66.04 % stmts, 53.79 % ramas, 65.27 % funcs, 68.03 % líneas |
+| Seguridad | `npm run audit` (`--audit-level=high`) | PASA | 0 vulnerabilidades altas o críticas; 2 bajas |
+
+Tres cosas que esta tabla antes no reflectaba, y que cambian cómo se lee:
+
+- **La cobertura nunca se había comprobado en ningún sitio.** El umbral estaba
+  configurado a 80/80/80/70, pero CI ejecutaba `test:unit` y `test:integration`
+  por separado y ninguna pasaba `--coverage`. El gate no existía en la práctica.
+- **La suite de integración no podía pasar en CI.** El job `tests` no declaraba
+  servicios ni variables de base de datos, así que las 133 pruebas no tenían
+  MySQL contra el que correr.
+- **Las pruebas web no se ejecutaban en CI en absoluto.** Vitest no estaba en
+  `verify` ni en el workflow.
+
+Las tres están corregidas: `verify` incluye ahora las pruebas web, y CI ejecuta
+`verify` entero con MySQL, Redis y RabbitMQ de verdad. El umbral de cobertura
+bajó a los valores reales medidos (67/65/52/64) como trinquete, con la distancia
+hasta el 80 % anotada en el backlog. Ver `G-1` a `G-6`.
+
+**Consecuencia:** las Fases 1, 2 y 3 están **construidas y probadas**, pero ninguna
+tiene el gate del repositorio en verde. Es la diferencia entre "funciona" y
+"está verificado", y este proyecto se rige por la segunda. La Fase 4 existe
+precisamente para cerrar esa distancia.
+
+### Las 3 puertas que hoy no se pueden ejecutar
+
+1. **Integración.** Requieren MySQL 8 real vía Docker. Sin Docker levantado no hay
+   forma de ejecutarlas ni de confirmar que siguen pasando. **Hoy: 133/133 en
+   verde**, y verificadas con tres ejecuciones seguidas para confirmar que la
+   suite es idempotente.
+2. **Cobertura.** Medida por fin: **66.04 % sentencias, 53.79 % ramas, 65.27 %
+   funciones, 68.03 % líneas**. El umbral de `jest.config.js` bajó a esos valores
+   como trinquete. La distancia hasta el 80 % que pide la estrategia sigue abierta
+   y anotada en el backlog: son sobre todo repositorios de persistencia, la capa
+   que menos pruebas tiene.
+3. **E2E.** No existen. `11-quality/testing-strategy.md` §E2E las exige para el
+   Go/No-Go de producción.
+
+---
+
+## 2. Mapa de fases
+
+| # | Fase | Objetivo | Estado | Documento |
+|---|---|---|---|---|
+| 1 | Base de datos | 7 esquemas aislados, 55 tablas, 7 usuarios MySQL con privilegio mínimo, invariantes verificados contra MySQL real | **Completada** (3 pendientes abiertos) | [FASE-1-ENTREGA.md](FASE-1-ENTREGA.md) |
+| 2 | Backend seguro | 8 microservicios detrás del gateway, 63 endpoints documentados, 187 unitarias + 131 de integración | **Completada** (6 pendientes abiertos) | [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) |
+| 3 | Cliente web PWA | React 18 + TypeScript sobre Vite, 18 pantallas, sistema de diseño propio, PWA instalable | **Completada** (4 pendientes propios) | [FASE-3-ENTREGA.md](FASE-3-ENTREGA.md) |
+| 4 | Cierre de calidad y deuda heredada | Que `npm run verify` y CI pasen en verde, y decidir los 13 pendientes abiertos | **En curso** | [FASE-4-PLAN.md](FASE-4-PLAN.md) |
+| 5 | Datos y operación | Semillas idempotentes, re-emisión de réplicas, escritor de métricas, política de datos personales | **Propuesta** | §5 |
+| 6 | Experiencia del cliente | Teléfono que llega al contacto, recuperación de contraseña completa, E2E del recorrido | **Propuesta** | §5 |
+| 7 | Notificaciones fuera del MVP | Correo y push; hoy solo existe la bandeja dentro de la app | **Propuesta** | §5 |
+| 8 | Observabilidad y despliegue | Logging estructurado, métricas, k6, entornos dev/staging/prod, despliegue | **Propuesta** | §5 |
+| 9 | Documentación y trazabilidad | 6 de 8 servicios sin documentar, SRS inglés obsoleto, contratos duplicados, backlog formal | **Propuesta** | §5 |
+| 10 | Preparación de producción | Go/No-Go, Definition of Done completo, cierre de deuda técnica AT-001..007 | **Propuesta** | §5 |
+
+**Total de trabajo abierto: 13 pendientes de las Fases 1–3, 7 ítems de deuda
+técnica registrada (AT-001..AT-007), 12 preguntas abiertas (O-01..O-12) y 8
+brechas de trazabilidad (GAP-001..GAP-008).** Todo el detalle en
+[01-BACKLOG.md](01-BACKLOG.md).
+
+---
+
+## 3. Lo entregado en cada fase
+
+### Fase 1 — Base de datos · completada
+
+Siete esquemas MySQL, uno por servicio, sin claves foráneas entre ellos: la
+propiedad de datos es lo que impide que un servicio lea o escriba la tabla de
+otro (SRS RNF28).
+
+- **12 migraciones** en `db/migrations/<esquema>/`, en JavaScript sobre Knex
+- **220 sentencias DDL** compiladas
+- **55 tablas**: 43 de negocio y 12 del patrón de eventos
+  (6 `outbox_event` + 6 `processed_event`). `pa_auth` no tiene `processed_event`
+  porque es la raíz del grafo y no consume eventos de nadie; `pa_notification` no
+  tiene `outbox_event` porque solo consume.
+- Réplicas entre servicios como **tablas sin clave foránea**, alimentadas por
+  eventos: `usuario_ref`, `prestador_ref`, `servicio_ref`, `categoria_ref`,
+  `reputacion_ref`, `solicitud_ref`, `cancelacion_ref`
+- 7 usuarios MySQL, cada uno con privilegio mínimo sobre su esquema
+- 31 pruebas negativas de invariantes contra MySQL real (`db/verify-invariants.sh`)
+- `audit_record` inmutable mediante disparadores que rechazan `UPDATE` y `DELETE`
+- Semillas de apoyo en `db/seeds/`
+
+**Lo que no está resuelto:** los seeds borran antes de insertar, las réplicas no
+se pueden reconstruir, y `statistics_snapshot` no tiene a nadie que la escriba.
+
+### Fase 2 — Backend seguro · completada
+
+Ocho microservicios Express/TypeScript detrás de un gateway, con la propiedad de
+datos mantenida: cada servicio solo toca su esquema y recibe el resto por eventos.
+
+| Servicio | Puerto | Esquema | Responsabilidad |
+|---|---|---|---|
+| `api-gateway` | 8080 | Redis | Enrutado, JWT, correlación, rate limit |
+| `auth-service` | 3001 | `pa_auth` | Identidad, sesiones, recuperación, bloqueo |
+| `provider-service` | 3002 | `pa_provider` | Perfiles de prestador y su validación |
+| `catalog-service` | 3003 | `pa_catalog` | Servicios y categorías, búsqueda |
+| `request-service` | 3004 | `pa_request` | Necesidades, propuestas, solicitudes, cancelaciones |
+| `rating-service` | 3005 | `pa_rating` | Calificaciones, reputación, tasa de cancelación |
+| `notification-service` | 3006 | `pa_notification` | Bandeja y preferencias |
+| `admin-reporting-service` | 3007 | `pa_admin` | Auditoría, moderación, reportes, métricas |
+
+- **63 endpoints**, los 63 documentados en `contracts/openapi/` y cubiertos por una
+  prueba que falla si un endpoint no está declarado
+- **187 pruebas unitarias** (verificadas el 2/10/2026, en verde)
+- **131 pruebas de integración** contra MySQL real (no re-verificadas: sin Docker)
+- `correlation_id` propagado desde el gateway a través de eventos y auditoría
+- Patrón outbox transaccional en los 6 servicios que publican
+- Idempotencia de consumidores sobre `processed_event`
+
+**Lo que no está resuelto:** 6 pendientes, entre ellos el teléfono que no llega al
+contacto tras el acuerdo y el SRS inglés que quedó obsoleto.
+
+### Fase 3 — Cliente web PWA · completada
+
+React 18 + TypeScript sobre Vite, con un sistema de diseño propio en
+`apps/web/src/ui/`. **18 pantallas** en `apps/web/src/paginas/` (16 en el momento de
+la entrega; 2 añadidas después, pendientes de cablear).
+
+- Sistema de tokens propio en lugar del que `12-ux-ui/design-system.md` deja sin
+  rellenar (los tokens están como `#[hex]`, sin valores)
+- Dos escenas 3D, selectivas y justificadas, no decorativas
+- Instalable como PWA
+- **21 pruebas de cliente** (Vitest) — verificadas antes de los cambios del 2/10
+- Sistema de estados vacíos, de carga y de error en cada pantalla
+
+**Lo que no está resuelto:** recuperación de contraseña sin interfaz, iconos del
+PWA, E2E, y el teléfono que sigue sin llegar.
+
+---
+
+## 4. Fase en curso: Fase 4 — Cierre de calidad
+
+Detalle completo en [FASE-4-PLAN.md](FASE-4-PLAN.md). En resumen, su lista de
+salida es:
+
+1. `npm run verify` en verde: formato, lint sin un solo aviso, tipos, pruebas, cobertura, auditoría
+2. Resolver o revertir el trabajo a medias que hay ahora en `apps/web` (pantallas
+   de recuperación de contraseña y modo oscuro, sin cablear en el enrutado y con dos
+   errores de compilación)
+3. Ejecutar también las pruebas de integración dentro de la puerta `quality` de CI,
+   no solo en `tests`, para que la puerta de calidad dé una señal completa
+4. Cerrar o diferir explícitamente los 13 pendientes de las Fases 1–3
+5. Actualizar los tres documentos de entrega para que solo afirmen lo verificado
+
+---
+
+## 5. Fases propuestas (5 a 10) — necesitan tu aprobación
+
+Cada una se apoya en pendientes que **ya están registrados** en los documentos del
+proyecto. No invento trabajo: reordeno lo que está escrito y le doy un orden de
+ejecución.
+
+### Fase 5 — Datos y operación
+
+Por qué es la primera de las futuras: casi todo lo demás depende de que los datos
+se puedan reproducir.
+
+- **Semillas idempotentes.** Hoy `db/seeds` borra antes de insertar, así que cada
+  `docker compose up` de desarrollo destruye lo anterior y deja huérfanos los
+  perfiles derivados. Cierra los pendientes F1-1 y F2-3, que son el mismo problema.
+- **Re-emisión de réplicas.** No hay forma de reconstruir `prestador_ref` o
+  `servicio_ref` si se pierden los eventos consumidos. Cierra F1-2 y F2-2.
+- **Escritor de `statistics_snapshot`.** La tabla existe, `admin-reporting-service`
+  la lee, y **nadie la escribe**. Los reportes devuelven siempre vacío.
+- **Política de conservación y anonimización de datos personales.** El SRS la marca
+  como decisión abierta y dice que **debe resolverse antes del despliegue en
+  producción**. Es un bloqueante duro, no una mejora.
+- **Procedimiento de restauración de respaldados.** Deuda técnica AT-004, la única
+  marcada como `High`. Existe `backup_record` con `restauracion_probada_at` y nadie
+  lo comprueba.
+
+### Fase 6 — Experiencia del cliente
+
+- **Teléfono que llega al contacto.** Tres opciones sobre la mesa; la recomendada es
+  que salga del perfil de prestador, que es donde el oferente declara el dato *para
+  que le contacten*. Hoy la pantalla de detalle de contratación no lo muestra.
+  **Necesita tu decisión.**
+- **Recuperación de contraseña.** El backend está completo (`/auth/password-recovery`
+  y `/auth/password-reset`); falta la interfaz. Las pantallas existen pero están
+  sin cablear y sin compilar.
+- **E2E del recorrido completo.** Publicar necesidad → recibir propuestas →
+  adjudicar → cancelar. `11-quality/testing-strategy.md` lo pide y es lo único que
+  probaría el flujo de negocio de extremo a extremo, que hoy está cubierto por partes.
+
+### Fase 7 — Notificaciones fuera del MVP
+
+Hoy la bandeja es intraaplicación. Falta correo y push. Es explícitamente fuera del
+alcance del MVP según `FASE-2-ENTREGA.md` §6.6, así que es una decisión de producto,
+no una tarea.
+
+### Fase 8 — Observabilidad y despliegue
+
+- **Logging y métricas** por servicio con `correlation_id` (deuda AT-005)
+- **Pruebas de carga k6** con el umbral que fija la estrategia de pruebas: P95 < 300 ms
+  y tasa de error < 1 % (deuda AT-007, límites de escalabilidad)
+- **Entornos dev / staging / producción.** `10-devops/environments.md` los describe
+  pero no hay infraestructura, ni despliegue automatizado, ni log de despliegues
+- **Expiración de JWT** sin decidir (deuda AT-006) y **configuración final de
+  AWS/GCP** (deuda AT-001)
+
+### Fase 9 — Documentación y trazabilidad
+
+- **6 de 8 servicios sin documentación.** Solo existen `01-api-gateway` y
+  `02-auth-service`. Faltan readme, modelo de datos, eventos, decisiones y runbook
+  de los otros seis.
+- **SRS en inglés obsoleto.** `srs-microservices.md` sigue diciendo que los
+  microservicios no están adoptados y pide tres ADRs que ya están aceptados. Es el
+  pendiente F2-4.
+- **Contratos duplicados.** Los `.yaml` de `friend-point-docs/07-api/contracts/openapi/`
+  son anteriores a los de `friend-point-development/contracts/`. Debería haber una
+  sola fuente. Es el pendiente F2-5.
+- **Matriz de trazabilidad inútil.** `traceability-matrix.md` usa identificadores
+  (`RF1.1`, `NFR-001`) incompatibles con los del SRS (`RF193`, `RNF89`), tiene 12
+  capítulos en *To be defined*, y declara 8 brechas abiertas. Una de ellas es
+  literalmente «implementación sin HU/RF» (*implementation without HU/RF*).
+  "implementación sin HU/RF".
+- **Backlog formal y registro de preguntas abiertas.** `15-project-control/README.md`
+  prescribe `technical-backlog.md`, `dependencies.md` y `open-questions.md`. **Ninguno
+  de los tres existe.** Los 13 pendientes viven hoy dentro de los documentos de entrega.
+
+### Fase 10 — Preparación de producción
+
+No es trabajo nuevo: es la comprobación de que todo lo anterior está resuelto.
+
+- Go/No-Go con Tech Lead y Product Owner, exigiendo DoD, DoR y los RNF, según la
+  puerta de `00-sdd-guide.md` §Review gates
+- Definition of Done de `00-governance/definition-of-done.md` completo. Nota: hoy
+  **ninguna** de las Fases 1–3 cumple el punto de revisión por Pull Request que exige
+- Cerrar AT-001 a AT-007
+- Describir la estrategia de despliegue: `10-devops/environments.md` tiene el hueco
+  `[Canary / Blue-Green / Rolling]` sin decidir
+
+---
+
+## 6. Grafo de dependencias
+
+```
+Fase 1 ──┐
+         ├──> Fase 2 ──> Fase 3
+         │                    │
+         └────────────────────┤
+                              v
+                     Fase 4 (calidad)   <-- estamos aqui
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        v                     v                     v
+    Fase 5               Fase 6               Fase 9
+   (datos)            (experiencia)        (documentación)
+        │                     │
+        └──────────┬──────────┘
+                   v
+              Fase 7  ──>  Fase 8  ──>  Fase 10
+            (canales)   (operación)     (producción)
+```
+
+**Reglas que imponen el orden:**
+
+- La Fase 4 **no** puede esperar a la 5: sin `verify` en verde, cualquier fase nueva
+  empieza con la puerta rota.
+- La Fase 5 bloquea a la 6: si las semillas destruyen datos y las réplicas no se
+  reconstruyen, el E2E de la Fase 6 será imposible de ejecutar de forma fiable.
+- La Fase 9 **puede** ir en paralelo desde ya. No bloquea a nadie y es la que más
+  riesgo tiene de olvidarse.
+- Nada llega a la Fase 10 sin la Fase 8. No se despliega lo que no se puede observar.
+
+---
+
+## 7. Criterios de "fase terminada"
+
+El proyecto tiene criterios escritos, y **hay tres discrepancias entre lo que
+exigen y lo que el código implementa**. Resolverlas es parte de la Fase 4.
+
+### Lo que exige `00-governance/definition-of-done.md`
+
+Ocho bloques obligatorios: requisitos y criterios de aceptación · código · pruebas ·
+seguridad · integración · interfaz · documentación · Git y Pull Request. Los puntos
+que hoy no se cumplen en ninguna fase:
+
+- *"The code has been reviewed by at least one team member through a Pull Request."*
+- *"All applicable tests pass."* — las de integración no se han ejecutado desde hace semanas
+- *"An exception must not be used to ignore a critical security, functionality or
+  acceptance criterion."* — el SRS marca la política de datos personales como bloqueante
+  y no existe
+
+### Lo que exige `11-quality/testing-strategy.md`
+
+| Métrica | Exigido | Configurado | Cumple |
+|---|---|---|---|
+| Cobertura global de líneas | 80 % | 80 % | sí |
+| Cobertura global de sentencias | 80 % | 80 % | sí |
+| Cobertura global de funciones | 80 % | 80 % | sí |
+| Cobertura global de ramas | **75 %** | **70 %** | **no** |
+| `./src/domain/` líneas | **90 %** | **sin override** | **no** |
+| `./src/domain/` ramas | **85 %** | **sin override** | **no** |
+
+Las dos últimas filas son las importantes: el SRS considera la capa de dominio el
+corazón del negocio y la estrategia le exige casi el doble de cobertura. El
+`jest.config.js` no la exime.
+
+### Discrepancia 3: los criterios E2E y de rendimiento no existen
+
+La estrategia define flujos E2E priorizados (Playwright o Cypress) y un umbral de
+carga con k6. **Ninguno de los dos existe en el código.** El Go/No-Go de la Fase 10
+no puede satisfactionarse hoy.
+
+---
+
+## 8. Trazabilidad con el SRS
+
+`04-requirements/srs-punto-amigo-es.md`, versión 2.1 del 30/09/2026.
+
+- **13 módulos** de requisitos funcionales (§5.1)
+- **193 requisitos funcionales** numerados hasta RF193, **89 no funcionales** hasta RNF89
+- Prioridad declarada como **Alta / Media / Baja**, no MoSCoW. Solo **3 requisitos
+  son de prioridad Baja**, y por tanto los únicos realmente diferibles: RF85 (ocultar
+  calificación reportada), RF105 (parámetros de configuración), RF114 (exportar
+  reporte)
+
+**El SRS no asigna requisitos a fases.** El único mapeo requisito→servicio que existe
+está en `FASE-2-ENTREGA.md` §2. Para saber qué cubre cada fase hay que cruzarlo a mano.
+
+El grafo de eventos entre servicios —`UserRegistered`, `NeedPublished`,
+`ProposalReceived`, `RequestCancelled` y compañía— está implícito en los comentarios de
+las migraciones y en las tablas `outbox_event`, pero **no está escrito como
+documento**. Es la pieza que falta para poder afirmar trazabilidad de extremo a extremo.
+
+---
+
+## 9. Deuda técnica registrada
+
+`05-architecture/overview.md` §14, ítems AT-001 a AT-007. **Todos con destino
+`To be defined`.**
+
+| ID | Ítem | Prioridad |
+|---|---|---|
+| AT-001 | Configuración final de AWS o GCP | P2 |
+| AT-002 | Estructura REST definitiva | P1 |
+| AT-003 | Organización de los repositorios | P2 |
+| **AT-004** | **Procedimiento de restauración de respaldos** | **P1, severidad High** |
+| AT-005 | Herramientas de monitoreo y logging | P2 |
+| AT-006 | Valores de expiración de JWT | P1 |
+| AT-007 | Límites de escalabilidad | P2 |
+
+Además, R-001 a R-008 y R-010 de `15-project-control/risks.md` están **sin dueño
+asignado** y sin fecha de revisión.
+
+---
+
+## 10. Lo que está explícitamente fuera del alcance
+
+Para evitar que la Fase 6 o la 7 se cuelen sin decisión: `01-context/scope.md`
+§Out of Scope y `03-product/problem-framing.md` §8 los excluyen de forma explícita.
+
+- Pagos y transacciones financieras en línea
+- Aplicación móvil nativa (el SRS la llama "fase futura", sin concretarla)
+- Comunicación y mensajería en tiempo real
+- Geolocalización avanzada y optimización por ubicación
+- Recomendaciones, IA y analítica avanzada
+- Integración con ERP o contabilidad
+- Certificación profesional de los prestadores
+- Infraestructura a gran escala y balanceo de carga
+- Soporte 24/7
+
+Las dos primeras volverían a cambiar el modelo de negocio. Ninguna de las dos está
+en el plan de fases propuesto.
+
+---
+
+## 11. Decisiones que necesito de ti
+
+Bloquean trabajo concreto. Ninguna se puede resolver solo.
+
+1. **Teléfono tras el acuerdo** (Fase 6). La recomendación es tomarlo del perfil
+   de prestador. Sin tu confirmación no se implementa.
+2. **Correo y push** (Fase 7). ¿Entran en el producto o se descartan?
+3. **Nivel de exigencia de cobertura.** ¿Subimos `branches` de 70 a 75 y añadimos
+   el override de `src/domain/` al 90/85 que exige la estrategia, o primero medimos
+   dónde estamos para saber cuánto trabajo de pruebas falta?
+4. **Nombre, visibilidad y organización del repositorio en GitHub.** No hay remoto
+   configurado; el repositorio no existe todavía en GitHub.
+5. **Review por Pull Request.** La Definition of Done lo exige y ninguna fase lo
+   cumple. ¿Revisamos por Pull Request a partir de ahora, o aceptamos explícitamente
+   que este proyecto queda excluido de ese requisito?
+
+---
+
+## 12. Documentos relacionados
+
+| Documento | Para qué |
+|---|---|
+| [README.md](README.md) | Índice del conjunto documental de entrega |
+| [01-BACKLOG.md](01-BACKLOG.md) | Los 13 pendientes, AT-001..007, O-01..O-12 y GAP-001..008 con criterio de cierre |
+| [FASE-4-PLAN.md](FASE-4-PLAN.md) | La fase en curso, en detalle |
+| [FASE-1-ENTREGA.md](FASE-1-ENTREGA.md) | Registro de la Fase 1 |
+| [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) | Registro de la Fase 2 |
+| [FASE-3-ENTREGA.md](FASE-3-ENTREGA.md) | Registro de la Fase 3 |
+| `../README.md` | Punto de entrada del código |

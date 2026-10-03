@@ -117,7 +117,10 @@ export function createApp(deps: AppDeps): Express {
     if (origen === deps.config.corsOrigin) {
       res.setHeader('Access-Control-Allow-Origin', origen);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Correlation-Id');
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, X-Correlation-Id'
+      );
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
       res.setHeader('Vary', 'Origin');
     }
@@ -240,9 +243,7 @@ export function createApp(deps: AppDeps): Express {
           const cookie = req.cookies?.[deps.config.refreshCookie.name] as string | undefined;
 
           if (cookie !== undefined) {
-            const sesion = await deps.sesiones.buscarPorHash(
-              deps.tokens.hashRefreshToken(cookie)
-            );
+            const sesion = await deps.sesiones.buscarPorHash(deps.tokens.hashRefreshToken(cookie));
             if (sesion !== null) await deps.sesiones.revocar(sesion.id, 'LOGOUT');
           }
 

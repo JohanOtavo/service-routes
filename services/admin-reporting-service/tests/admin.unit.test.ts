@@ -164,7 +164,9 @@ describe('parametros del sistema (SRS RF105)', () => {
    */
   it('rechaza claves con espacios, guiones o inicio invalido', () => {
     for (const clave of ['UMBRAL CANCELACION', 'UMBRAL-UNO', '1UMBRAL', 'U', 'umbral.uno']) {
-      expect(() => normalizarParametro({ clave, valor: '1', tipoDato: 'number' })).toThrow(AppError);
+      expect(() => normalizarParametro({ clave, valor: '1', tipoDato: 'number' })).toThrow(
+        AppError
+      );
     }
   });
 

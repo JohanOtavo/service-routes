@@ -1,4 +1,6 @@
 import knexLib from 'knex';
+import type { Express } from 'express';
+import type { Knex } from 'knex';
 import { z } from 'zod';
 import { baseEnvSchema, loadEnv, assertProductionSafety } from '@punto-amigo/shared';
 import { RegisterUserUseCase } from './application/use-cases/RegisterUser';
@@ -61,15 +63,16 @@ const envSchema = baseEnvSchema.extend({
 /** Registro estructurado en JSON, con el identificador de correlacion (RNF77). */
 const logger = {
   info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    // eslint-disable-next-line no-console
     console.warn(JSON.stringify({ level: 'info', service: 'auth-service', mensaje, ...contexto }));
   },
   error(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.error(JSON.stringify({ level: 'error', service: 'auth-service', mensaje, ...contexto }));
+    console.error(
+      JSON.stringify({ level: 'error', service: 'auth-service', mensaje, ...contexto })
+    );
   },
 };
 
-export function buildContainer(env: z.infer<typeof envSchema>) {
+export function buildContainer(env: z.infer<typeof envSchema>): { app: Express; knex: Knex } {
   const knex = knexLib({
     client: 'mysql2',
     connection: {

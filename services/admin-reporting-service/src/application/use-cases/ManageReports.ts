@@ -143,8 +143,16 @@ export class ManageReportsUseCase {
          * tiene que demostrar; lo que se pierde es el valor, no el hecho.
          */
         detalle: nombreSensible(normalizado.clave)
-          ? { clave: normalizado.clave, valores: '[omitido]', cambio: anterior === null ? 'ALTA' : 'CAMBIO' }
-          : { clave: normalizado.clave, anterior: anterior?.valor ?? null, nuevo: normalizado.valor },
+          ? {
+              clave: normalizado.clave,
+              valores: '[omitido]',
+              cambio: anterior === null ? 'ALTA' : 'CAMBIO',
+            }
+          : {
+              clave: normalizado.clave,
+              anterior: anterior?.valor ?? null,
+              nuevo: normalizado.valor,
+            },
         ipOrigen: entrada.ipOrigen,
       })
     );

@@ -79,7 +79,11 @@ exports.up = async function up(knex) {
       descripcion: codigo,
       computa,
       traslada_falta: codigo === 'CONTRAPARTE_NO_SE_PRESENTO',
-      exige_validacion: ['FUERZA_MAYOR', 'ALCANCE_DISTINTO_AL_PACTADO', 'RIESGO_PARA_LA_INTEGRIDAD'].includes(codigo),
+      exige_validacion: [
+        'FUERZA_MAYOR',
+        'ALCANCE_DISTINTO_AL_PACTADO',
+        'RIESGO_PARA_LA_INTEGRIDAD',
+      ].includes(codigo),
       exige_detalle: codigo === 'OTRO',
       activo: true,
     }))
@@ -252,10 +256,7 @@ exports.up = async function up(knex) {
   await knex.schema.createTable('restriccion_usuario', (table) => {
     primaryId(table, 'id_restriccion');
     table.bigInteger('id_usuario').unsigned().notNullable();
-    table
-      .string('tipo', 40)
-      .notNullable()
-      .comment('PROPUESTAS_BLOQUEADAS o NECESIDADES_LIMITADAS');
+    table.string('tipo', 40).notNullable().comment('PROPUESTAS_BLOQUEADAS o NECESIDADES_LIMITADAS');
     table.integer('valor').unsigned().nullable().comment('Limite, cuando el tipo lo tiene');
     table.string('origen', 40).notNullable().defaultTo('TASA_CANCELACION');
     table.datetime('vigente_desde').notNullable().defaultTo(knex.fn.now());

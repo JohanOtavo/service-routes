@@ -1,16 +1,10 @@
+import type { ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useMisPropuestas, useRetirarPropuesta } from '../api/hooks';
-import {
-  Boton,
-  Cargando,
-  SelloEstado,
-  Tarjeta,
-  Vacio,
-  formatearDinero,
-} from '../ui';
+import { Boton, Cargando, SelloEstado, Tarjeta, Vacio, formatearDinero } from '../ui';
 
 /** Las propuestas que envio el oferente (SRS RF145). */
-export default function MisPropuestas() {
+export default function MisPropuestas(): ReactElement {
   const propuestas = useMisPropuestas();
   const retirar = useRetirarPropuesta();
 

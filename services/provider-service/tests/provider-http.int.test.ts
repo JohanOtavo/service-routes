@@ -49,7 +49,15 @@ const env = {
  * evita repetir las cabeceras y, sobre todo, evita la tentacion de desactivar
  * la comprobacion durante las pruebas (SRS RNF24).
  */
-const como = (userId: number | null, roles: string[] = []) => {
+const como = (
+  userId: number | null,
+  roles: string[] = []
+): {
+  get: (ruta: string) => supertest.Test;
+  post: (ruta: string) => supertest.Test;
+  patch: (ruta: string) => supertest.Test;
+  delete: (ruta: string) => supertest.Test;
+} => {
   const agente = supertest(app);
   const preparar = (m: 'get' | 'post' | 'patch' | 'delete') => (ruta: string) => {
     let p = agente[m](ruta).set('x-internal-secret', SECRETO_INTERNO);
@@ -66,10 +74,10 @@ const como = (userId: number | null, roles: string[] = []) => {
   };
 };
 
-const oferente = () => como(OFERENTE, ['OFERENTE']);
-const otroOferente = () => como(OTRO_OFERENTE, ['OFERENTE']);
-const admin = () => como(ADMIN, ['ADMINISTRADOR']);
-const anonimo = () => como(null);
+const oferente = (): ReturnType<typeof como> => como(OFERENTE, ['OFERENTE']);
+const otroOferente = (): ReturnType<typeof como> => como(OTRO_OFERENTE, ['OFERENTE']);
+const admin = (): ReturnType<typeof como> => como(ADMIN, ['ADMINISTRADOR']);
+const anonimo = (): ReturnType<typeof como> => como(null);
 
 const PERFIL = {
   nombre: 'Pedro Plomero',
@@ -126,7 +134,6 @@ const saltar = (): boolean => {
     if (process.env['REQUIRE_INTEGRATION'] === '1') {
       throw new Error(`Las pruebas de integracion no pudieron arrancar: ${motivoNoDisponible}`);
     }
-    // eslint-disable-next-line no-console
     console.warn(`pruebas de integracion omitidas: ${motivoNoDisponible}`);
     return true;
   }
@@ -317,9 +324,9 @@ describe('revision administrativa (SRS RF26, RF27, RF29, RF30)', () => {
     if (saltar()) return;
     const id = await crearPerfil();
 
-    expect((await admin().post(`/api/v1/providers/${id}/reject`).send({ motivo: 'no' })).status).toBe(
-      422
-    );
+    expect(
+      (await admin().post(`/api/v1/providers/${id}/reject`).send({ motivo: 'no' })).status
+    ).toBe(422);
 
     const r = await admin()
       .post(`/api/v1/providers/${id}/reject`)

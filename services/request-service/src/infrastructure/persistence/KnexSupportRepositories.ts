@@ -57,9 +57,7 @@ export class KnexCancelacionRepository implements ICancelacionRepository {
    * cancelaciones que ya lo usaron lo conservan.
    */
   async buscarMotivo(codigo: string): Promise<MotivoCancelacion | null> {
-    const fila = await this.db('motivo_cancelacion')
-      .where({ codigo, activo: true })
-      .first();
+    const fila = await this.db('motivo_cancelacion').where({ codigo, activo: true }).first();
 
     if (fila === undefined) return null;
 

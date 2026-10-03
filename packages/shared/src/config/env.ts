@@ -8,8 +8,12 @@
 import { z } from 'zod';
 
 /** Entero que llega como cadena desde el entorno. */
-const intFromEnv = (min: number, max?: number) =>
-  z.coerce.number().int().min(min).pipe(max === undefined ? z.number() : z.number().max(max));
+const intFromEnv = (min: number, max?: number): z.ZodType<number> =>
+  z.coerce
+    .number()
+    .int()
+    .min(min)
+    .pipe(max === undefined ? z.number() : z.number().max(max));
 
 export const baseEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
@@ -36,7 +40,10 @@ export const baseEnvSchema = z.object({
  * No imprime el valor de ninguna variable: un mensaje de error que incluya la
  * cadena que fallo puede acabar filtrando un secreto al registro.
  */
-export function loadEnv<T extends z.ZodTypeAny>(schema: T, source: NodeJS.ProcessEnv = process.env): z.infer<T> {
+export function loadEnv<T extends z.ZodTypeAny>(
+  schema: T,
+  source: NodeJS.ProcessEnv = process.env
+): z.infer<T> {
   const result = schema.safeParse(source);
 
   if (!result.success) {

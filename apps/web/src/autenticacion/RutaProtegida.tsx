@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { useSesion } from './ContextoSesion';
 import { Aviso, Cargando } from '../ui';
 
@@ -17,7 +17,7 @@ export function RutaProtegida({
 }: {
   children: ReactNode;
   roles?: readonly string[];
-}) {
+}): ReactElement {
   const { sesion, comprobando, tieneRol } = useSesion();
   const ubicacion = useLocation();
 
@@ -46,8 +46,8 @@ export function RutaProtegida({
      */
     return (
       <Aviso tono="aviso" titulo="Esta pantalla no es para su perfil">
-        Necesita el rol {roles.join(' o ')} para entrar aqui. Si cree que deberia tenerlo,
-        escriba a quien administra la plataforma.
+        Necesita el rol {roles.join(' o ')} para entrar aqui. Si cree que deberia tenerlo, escriba a
+        quien administra la plataforma.
       </Aviso>
     );
   }

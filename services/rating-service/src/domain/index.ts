@@ -612,7 +612,12 @@ export class TasaCancelacion {
     return new TasaCancelacion(props);
   }
 
-  static inicial(idUsuario: number, faceta: Faceta, ventanaDesde: Date, ahora: Date): TasaCancelacion {
+  static inicial(
+    idUsuario: number,
+    faceta: Faceta,
+    ventanaDesde: Date,
+    ahora: Date
+  ): TasaCancelacion {
     return new TasaCancelacion({
       idUsuario,
       faceta,
@@ -643,7 +648,9 @@ export class TasaCancelacion {
     // sea evaluable, para que nada aguas abajo muestre un porcentaje calculado
     // sobre dos contrataciones.
     const tasa =
-      evaluable && contrataciones > 0 ? Math.round((ponderadas / contrataciones) * 10_000) / 10_000 : 0;
+      evaluable && contrataciones > 0
+        ? Math.round((ponderadas / contrataciones) * 10_000) / 10_000
+        : 0;
 
     const nivelAnterior = this.props.umbralAlcanzado;
     const nivel = nivelDeUmbral(tasa, evaluable);

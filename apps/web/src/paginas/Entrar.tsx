@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSesion } from '../autenticacion/ContextoSesion';
 import { ErrorApi } from '../api/cliente';
@@ -12,7 +12,7 @@ import { Aviso, Boton, Campo, Tarjeta } from '../ui';
  * interfaz no debe deshacer eso: distinguirlos convertiria la pantalla en un
  * verificador de que correos estan registrados.
  */
-export default function Entrar() {
+export default function Entrar(): ReactElement {
   const { entrar } = useSesion();
   const navegar = useNavigate();
   const ubicacion = useLocation();
@@ -92,6 +92,15 @@ export default function Entrar() {
             Entrar
           </Boton>
         </form>
+
+        {/*
+          Va DENTRO de la tarjeta y no junto al enlace de crear cuenta porque
+          responde a este formulario, no a la navegacion: quien acaba de fallar
+          la contrasena lo necesita a mano, no despues de leer un renglon mas.
+        */}
+        <p style={{ marginTop: 'var(--esp-4)', textAlign: 'center' }}>
+          <Link to="/recuperar">Olvide mi contrasena</Link>
+        </p>
       </Tarjeta>
 
       <p style={{ marginTop: 'var(--esp-4)', textAlign: 'center' }}>

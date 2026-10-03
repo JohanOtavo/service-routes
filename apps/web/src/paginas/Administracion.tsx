@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactElement } from 'react';
 import { ErrorApi } from '../api/cliente';
 import {
   useActividad,
@@ -35,14 +35,19 @@ type Pestana = 'pendientes' | 'actividad' | 'parametros' | 'auditoria';
  * entre ellas continuamente: validar un perfil y mirar la bitacora de lo que
  * acaba de hacer es un mismo gesto.
  */
-export default function Administracion() {
+export default function Administracion(): ReactElement {
   const [pestana, setPestana] = useState<Pestana>('pendientes');
 
   return (
     <>
       <h1>Administracion</h1>
 
-      <div className="pa-fila" role="tablist" aria-label="Secciones" style={{ margin: 'var(--esp-4) 0 var(--esp-6)' }}>
+      <div
+        className="pa-fila"
+        role="tablist"
+        aria-label="Secciones"
+        style={{ margin: 'var(--esp-4) 0 var(--esp-6)' }}
+      >
         {(
           [
             ['pendientes', 'Perfiles por revisar'],
@@ -72,7 +77,7 @@ export default function Administracion() {
 }
 
 /** Cola de revision de perfiles (SRS RF26, RF27). */
-function Pendientes() {
+function Pendientes(): ReactElement {
   const pendientes = usePrestadoresPendientes();
   const validar = useValidarPrestador();
   const rechazar = useRechazarPrestador();
@@ -120,9 +125,7 @@ function Pendientes() {
                     setMotivo('');
                   })
                   .catch((fallo: unknown) => {
-                    setError(
-                      fallo instanceof ErrorApi ? fallo.message : 'No se pudo rechazar.'
-                    );
+                    setError(fallo instanceof ErrorApi ? fallo.message : 'No se pudo rechazar.');
                   });
               }}
             >
@@ -170,7 +173,7 @@ function Pendientes() {
  * golpe que dias hubo mas movimiento, y la tabla da la cifra exacta y es lo que
  * lee un lector de pantalla.
  */
-function Actividad() {
+function Actividad(): ReactElement {
   const actividad = useActividad();
   const [dibujar3d, setDibujar3d] = useState(false);
 
@@ -290,7 +293,7 @@ function Actividad() {
  * de una cancelacion, el periodo ciego, los umbrales de la tasa. Estan aqui y
  * no en el codigo para que se puedan recalibrar con datos reales sin desplegar.
  */
-function Parametros() {
+function Parametros(): ReactElement {
   const parametros = useParametros();
   const guardar = useGuardarParametro();
 
@@ -331,9 +334,8 @@ function Parametros() {
         {error !== null && <Aviso tono="error">{error}</Aviso>}
 
         <Aviso tono="info">
-          Cada cambio queda en la bitacora con quien lo hizo. Si el nombre del
-          parametro suena a secreto, el asiento guarda que hubo un cambio pero no
-          los valores.
+          Cada cambio queda en la bitacora con quien lo hizo. Si el nombre del parametro suena a
+          secreto, el asiento guarda que hubo un cambio pero no los valores.
         </Aviso>
 
         <form onSubmit={(ev) => void enviar(ev)} noValidate>
@@ -424,7 +426,7 @@ function Parametros() {
  * Solo se lee. No hay forma de modificar ni de borrar un asiento, ni aqui ni en
  * el servidor: una bitacora corregible no prueba nada.
  */
-function Bitacora() {
+function Bitacora(): ReactElement {
   const [resultado, setResultado] = useState('');
   const asientos = useAuditoria(resultado === '' ? {} : { resultado });
 

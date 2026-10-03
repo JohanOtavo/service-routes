@@ -41,10 +41,7 @@ export class KnexRecoveryTokenRepository implements IRecoveryTokenRepository {
       // Sin usar y sin vencer: las dos condiciones que lo hacen valido.
       .whereNull('usado_at')
       .where('expira_at', '>', ahora)
-      .first<{ id_token: number; id_usuario: number } | undefined>(
-        'id_token',
-        'id_usuario'
-      );
+      .first<{ id_token: number; id_usuario: number } | undefined>('id_token', 'id_usuario');
 
     return fila === undefined ? null : { id: fila.id_token, idUsuario: fila.id_usuario };
   }

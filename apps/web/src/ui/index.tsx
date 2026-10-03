@@ -3,6 +3,7 @@ import {
   useId,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
+  type ReactElement,
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
@@ -28,27 +29,31 @@ interface PropsBoton extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Boton = forwardRef<HTMLButtonElement, PropsBoton>(function Boton(
-  { variante = 'primario', completo = false, cargando = false, children, ...resto },
+  { variante = 'primario', completo = false, cargando = false, className, children, ...resto },
   ref
 ) {
   return (
     <button
+      // `resto` va PRIMERO a proposito. Si fuera despues, un `className` o un
+      // `disabled` que pase quien lo usa pisaria lo de aqui: el `disabled` de
+      // `cargando` —que evita el doble clic que manda la operacion dos veces— y
+      // las clases de la variante. Un componente del sistema de diseno que no
+      // se puede ampliar con una clase deja de ser un componente.
+      {...resto}
       ref={ref}
       type={resto.type ?? 'button'}
       className={[
         'pa-boton',
         `pa-boton--${variante}`,
         completo ? 'pa-boton--completo' : '',
+        className,
       ]
         .filter(Boolean)
         .join(' ')}
-      // Deshabilitado mientras carga: sin esto, un doble clic manda la
-      // operacion dos veces. En "aceptar contratacion" eso importa.
       disabled={resto.disabled === true || cargando}
       // `aria-busy` es lo que le dice a un lector de pantalla que espere, ya
       // que el cambio de texto solo no se anuncia.
       aria-busy={cargando}
-      {...resto}
     >
       {cargando ? 'Un momento…' : children}
     </button>
@@ -76,7 +81,7 @@ function Envoltura({
   ayuda,
   requerido,
   children,
-}: PropsCampoBase & { id: string; children: ReactNode }) {
+}: PropsCampoBase & { id: string; children: ReactNode }): ReactElement {
   return (
     <div className="pa-campo">
       <label className="pa-campo__etiqueta" htmlFor={id}>
@@ -106,7 +111,10 @@ function Envoltura({
 }
 
 function describe(id: string, error?: string, ayuda?: string): string | undefined {
-  const partes = [ayuda !== undefined ? `${id}-ayuda` : '', error !== undefined ? `${id}-error` : '']
+  const partes = [
+    ayuda !== undefined ? `${id}-ayuda` : '',
+    error !== undefined ? `${id}-error` : '',
+  ]
     .filter(Boolean)
     .join(' ');
   return partes === '' ? undefined : partes;
@@ -201,12 +209,12 @@ export function Tarjeta({
   children,
   pulsable = false,
   ...resto
-}: { children: ReactNode; pulsable?: boolean } & React.HTMLAttributes<HTMLDivElement>) {
+}: {
+  children: ReactNode;
+  pulsable?: boolean;
+} & React.HTMLAttributes<HTMLDivElement>): ReactElement {
   return (
-    <div
-      className={`pa-tarjeta${pulsable ? ' pa-tarjeta--pulsable' : ''}`}
-      {...resto}
-    >
+    <div className={`pa-tarjeta${pulsable ? ' pa-tarjeta--pulsable' : ''}`} {...resto}>
       {children}
     </div>
   );
@@ -214,7 +222,13 @@ export function Tarjeta({
 
 type TonoSello = 'neutro' | 'exito' | 'aviso' | 'error' | 'info' | 'validado';
 
-export function Sello({ tono = 'neutro', children }: { tono?: TonoSello; children: ReactNode }) {
+export function Sello({
+  tono = 'neutro',
+  children,
+}: {
+  tono?: TonoSello;
+  children: ReactNode;
+}): ReactElement {
   return <span className={`pa-sello pa-sello--${tono}`}>{children}</span>;
 }
 
@@ -252,7 +266,7 @@ const TEXTO_POR_ESTADO: Record<string, string> = {
   INACTIVE: 'Retirado',
 };
 
-export function SelloEstado({ estado }: { estado: string }) {
+export function SelloEstado({ estado }: { estado: string }): ReactElement {
   return (
     <Sello tono={TONO_POR_ESTADO[estado] ?? 'neutro'}>
       {TEXTO_POR_ESTADO[estado] ?? estado.toLowerCase()}
@@ -270,7 +284,7 @@ export function Aviso({
   tono?: TonoAviso;
   titulo?: string;
   children: ReactNode;
-}) {
+}): ReactElement {
   return (
     <div
       className={`pa-aviso pa-aviso--${tono}`}
@@ -287,7 +301,13 @@ export function Aviso({
 }
 
 /** Esqueleto con la forma del contenido, para que la pagina no salte al cargar. */
-export function Esqueleto({ lineas = 3, ancho = '100%' }: { lineas?: number; ancho?: string }) {
+export function Esqueleto({
+  lineas = 3,
+  ancho = '100%',
+}: {
+  lineas?: number;
+  ancho?: string;
+}): ReactElement {
   return (
     <div className="pa-pila pa-pila--2" aria-hidden="true">
       {Array.from({ length: lineas }, (_, i) => (
@@ -302,7 +322,7 @@ export function Esqueleto({ lineas = 3, ancho = '100%' }: { lineas?: number; anc
   );
 }
 
-export function Cargando({ que }: { que: string }) {
+export function Cargando({ que }: { que: string }): ReactElement {
   return (
     <div className="pa-pila pa-pila--4">
       <span className="solo-lectores" role="status">
@@ -327,11 +347,15 @@ export function Vacio({
   titulo: string;
   children?: ReactNode;
   accion?: ReactNode;
-}) {
+}): ReactElement {
   return (
     <div className="pa-vacio">
       <div className="pa-vacio__titulo">{titulo}</div>
-      {children !== undefined && <p className="pa-texto-medida" style={{ margin: '0 auto' }}>{children}</p>}
+      {children !== undefined && (
+        <p className="pa-texto-medida" style={{ margin: '0 auto' }}>
+          {children}
+        </p>
+      )}
       {accion !== undefined && <div style={{ marginTop: 'var(--esp-4)' }}>{accion}</div>}
     </div>
   );
@@ -354,6 +378,12 @@ export function formatearFecha(valor: string | Date | null): string {
   if (valor === null) return '—';
   const fecha = typeof valor === 'string' ? new Date(valor) : valor;
   if (Number.isNaN(fecha.getTime())) return '—';
-
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(fecha);
 }
+
+/**
+ * Vive en su propio archivo porque arrastra la justificacion de sus decisiones
+ * de accesibilidad, y mezclarla aqui la enterraria. Se reexporta para que quien
+ * importa del sistema de diseno lo haga siempre por aqui.
+ */
+export { ConmutadorModo, MODOS, type Modo } from './ConmutadorModo';

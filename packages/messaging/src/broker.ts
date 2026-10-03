@@ -1,4 +1,4 @@
-import amqp, { type Channel, type ConfirmChannel, type Connection } from 'amqplib';
+import amqp, { type ConfirmChannel, type Connection } from 'amqplib';
 
 export interface BrokerConfig {
   host: string;

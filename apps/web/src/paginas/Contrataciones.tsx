@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useMisContrataciones } from '../api/hooks';
 import { useSesion } from '../autenticacion/ContextoSesion';
@@ -20,7 +20,7 @@ import {
  * puede ser las dos cosas (SRS RF165): deducirlo del rol dejaria a quien tiene
  * ambos viendo solo una de sus dos bandejas sin saber que falta la otra.
  */
-export default function Contrataciones() {
+export default function Contrataciones(): ReactElement {
   const { tieneRol } = useSesion();
   const [como, setComo] = useState<'SOLICITANTE' | 'OFERENTE'>('SOLICITANTE');
   const contrataciones = useMisContrataciones(como);

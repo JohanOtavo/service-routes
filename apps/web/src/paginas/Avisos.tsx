@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useAvisos, useMarcarLeida, useMarcarTodasLeidas } from '../api/hooks';
 import { Boton, Cargando, Sello, Tarjeta, Vacio, formatearFecha } from '../ui';
@@ -23,7 +24,7 @@ function enlaceDe(recursoTipo: string | null, recursoId: number | null): string 
  * Cada aviso lleva a su recurso. Un aviso que cuenta que algo paso y no deja ir
  * a verlo obliga a buscarlo a mano, y entonces no ha ahorrado nada.
  */
-export default function Avisos() {
+export default function Avisos(): ReactElement {
   const avisos = useAvisos();
   const marcar = useMarcarLeida();
   const marcarTodas = useMarcarTodasLeidas();
@@ -49,8 +50,8 @@ export default function Avisos() {
 
       {avisos.data !== undefined && avisos.data.elementos.length === 0 && (
         <Vacio titulo="No tiene avisos">
-          Aqui le avisaremos cuando reciba una propuesta, cuando alguien acepte
-          un trabajo o cuando pueda calificar.
+          Aqui le avisaremos cuando reciba una propuesta, cuando alguien acepte un trabajo o cuando
+          pueda calificar.
         </Vacio>
       )}
 

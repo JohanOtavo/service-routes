@@ -1,4 +1,6 @@
 import knexLib from 'knex';
+import type { Express } from 'express';
+import type { Knex } from 'knex';
 import { z } from 'zod';
 import { EventName, assertProductionSafety, baseEnvSchema, loadEnv } from '@punto-amigo/shared';
 import { Broker, EventConsumer } from '@punto-amigo/messaging';
@@ -30,7 +32,6 @@ const envSchema = baseEnvSchema.extend({
 
 const logger = {
   info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    // eslint-disable-next-line no-console
     console.warn(
       JSON.stringify({ level: 'info', service: 'admin-reporting-service', mensaje, ...contexto })
     );
@@ -42,7 +43,11 @@ const logger = {
   },
 };
 
-export function buildContainer(env: z.infer<typeof envSchema>) {
+export function buildContainer(env: z.infer<typeof envSchema>): {
+  app: Express;
+  knex: Knex;
+  registrar: RecordAuditTrailUseCase;
+} {
   const knex = knexLib({
     client: 'mysql2',
     connection: {

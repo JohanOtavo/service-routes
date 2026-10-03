@@ -63,7 +63,6 @@ export function validateBody(schema: ZodTypeAny) {
   };
 }
 
-
 /**
  * Exige que la peticion venga del gateway (SRS RNF24, RNF25).
  *
@@ -94,10 +93,7 @@ export function requireInternalCaller(secreto: string) {
     }
 
     const candidato = Buffer.from(recibido);
-    if (
-      candidato.length !== esperado.length ||
-      !timingSafeEqual(candidato, esperado)
-    ) {
+    if (candidato.length !== esperado.length || !timingSafeEqual(candidato, esperado)) {
       next(AppError.forbidden('Esta ruta solo es accesible a traves del gateway.'));
       return;
     }

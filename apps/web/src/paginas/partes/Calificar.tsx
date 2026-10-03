@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { ErrorApi } from '../../api/cliente';
 import { useCalificar } from '../../api/hooks';
 import { Aviso, AreaTexto, Boton, Tarjeta } from '../../ui';
@@ -12,7 +12,7 @@ import { Aviso, AreaTexto, Boton, Tarjeta } from '../../ui';
  * puede moderar lo que escribe por miedo a una represalia que esta regla existe
  * precisamente para impedir.
  */
-export function Calificar({ idSolicitud }: { idSolicitud: number }) {
+export function Calificar({ idSolicitud }: { idSolicitud: number }): ReactElement {
   const calificar = useCalificar();
   const [puntuacion, setPuntuacion] = useState(0);
   const [comentario, setComentario] = useState('');
@@ -46,9 +46,8 @@ export function Calificar({ idSolicitud }: { idSolicitud: number }) {
       <Tarjeta>
         <h2 className="pa-tarjeta__titulo">Gracias por calificar</h2>
         <Aviso tono="info" titulo="Su calificacion esta guardada y todavia oculta">
-          Se publicara cuando la otra parte tambien califique, o cuando venza el
-          plazo. Las dos se revelan a la vez para que nadie pueda responder en
-          represalia.
+          Se publicara cuando la otra parte tambien califique, o cuando venza el plazo. Las dos se
+          revelan a la vez para que nadie pueda responder en represalia.
         </Aviso>
       </Tarjeta>
     );
@@ -58,8 +57,8 @@ export function Calificar({ idSolicitud }: { idSolicitud: number }) {
     <Tarjeta>
       <h2 className="pa-tarjeta__titulo">Califique esta contratacion</h2>
       <p className="pa-tarjeta__meta">
-        Lo que escriba queda oculto hasta que la otra parte califique tambien.
-        Puede ser sincero: nadie va a leer su nota y responder a ella.
+        Lo que escriba queda oculto hasta que la otra parte califique tambien. Puede ser sincero:
+        nadie va a leer su nota y responder a ella.
       </p>
 
       {error !== null && <Aviso tono="error">{error}</Aviso>}
@@ -71,9 +70,7 @@ export function Calificar({ idSolicitud }: { idSolicitud: number }) {
          * Hechas con iconos y un `onClick` en un `div` quedarian invisibles para
          * un lector de pantalla y no se podrian recorrer con el tabulador.
          */}
-        <fieldset
-          style={{ border: 0, padding: 0, margin: '0 0 var(--esp-4)' }}
-        >
+        <fieldset style={{ border: 0, padding: 0, margin: '0 0 var(--esp-4)' }}>
           <legend className="pa-campo__etiqueta" style={{ marginBottom: 'var(--esp-2)' }}>
             Como estuvo, de 1 a 5
           </legend>

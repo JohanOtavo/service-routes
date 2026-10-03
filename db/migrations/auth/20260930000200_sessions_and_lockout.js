@@ -165,7 +165,10 @@ exports.up = async function up(knex) {
       .nullable()
       .comment('NULL = sin bloqueo. El retardo crece con cada fallo sucesivo');
     table.datetime('ultimo_fallo_at').nullable();
-    table.datetime('updated_at').notNullable().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+    table
+      .datetime('updated_at')
+      .notNullable()
+      .defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
   });
 };
 

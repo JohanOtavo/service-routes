@@ -46,10 +46,9 @@ export class KnexLockoutPolicy implements ILockoutPolicy {
   async check(correo: string): Promise<LockoutState> {
     const fila = await this.db('login_lockout')
       .where({ correo })
-      .select<{ fallos_consecutivos: number; bloqueado_hasta: Date | null }[]>(
-        'fallos_consecutivos',
-        'bloqueado_hasta'
-      )
+      .select<
+        { fallos_consecutivos: number; bloqueado_hasta: Date | null }[]
+      >('fallos_consecutivos', 'bloqueado_hasta')
       .first();
 
     if (fila === undefined) {
@@ -117,10 +116,7 @@ export class KnexLockoutPolicy implements ILockoutPolicy {
     if (fallos < this.config.maxAttempts) return null;
 
     const exceso = fallos - this.config.maxAttempts;
-    const segundos = Math.min(
-      this.config.baseSeconds * 2 ** exceso,
-      this.config.maxSeconds
-    );
+    const segundos = Math.min(this.config.baseSeconds * 2 ** exceso, this.config.maxSeconds);
 
     return new Date(Date.now() + segundos * 1000);
   }

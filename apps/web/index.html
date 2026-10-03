@@ -12,6 +12,11 @@
     <meta name="referrer" content="no-referrer" />
     <title>Punto Amigo</title>
     <link rel="icon" href="/icono.svg" type="image/svg+xml" />
+    <!-- Sin esto el sitio se puede ver pero no instalar: el manifiesto es lo que
+         declara los iconos y el modo standalone. El icono de 192 tambien va
+         como apple-touch-icon, que iOS lee y no lee del manifiesto. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icono-192.png" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
