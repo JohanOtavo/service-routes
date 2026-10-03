@@ -36,6 +36,21 @@ GRANTS="SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES, TRIGGE
 
 echo "[init] creando esquemas y usuarios de Punto Amigo"
 
+# Como se llega a MySQL depende de quien ejecuta esto.
+#
+# Dentro del contenedor, root entra por socket unix y no hay nada mas simple. En
+# CI, en cambio, MySQL es un service container al que solo se llega por TCP: con
+# `--protocol=socket` el cliente busca /var/run/mysqld/mysqld.sock, que ahi no
+# existe, y falla con "Can't connect ... through socket" o "Wrong or unknown
+# protocol". Por eso el modo se deduce de MYSQL_HOST en vez de fijarse.
+if [ -n "${MYSQL_HOST:-}" ]; then
+  CONEXION=(--protocol=tcp -h "${MYSQL_HOST}" -P "${MYSQL_PORT:-3306}")
+  echo "[init] conectando a ${MYSQL_HOST}:${MYSQL_PORT:-3306} por TCP"
+else
+  CONEXION=(--protocol=socket)
+  echo "[init] conectando por socket unix"
+fi
+
 # Un identificador que llegue con comillas o barras invertidas romperia el
 # literal SQL y ejecutaria lo que venga detras, en una sesion abierta como root.
 # Se rechaza antes de construir ninguna sentencia.
@@ -85,7 +100,7 @@ for entry in "${SERVICES[@]}"; do
   # alcanza a GRANT OPTION, que ALL PRIVILEGES excluye explicitamente.
   #
   # Recrear la cuenta es la unica forma de partir de cero con certeza.
-  mysql --protocol=socket -uroot -p"${MYSQL_ROOT_PASSWORD}" <<SQL
+  mysql "${CONEXION[@]}" -uroot -p"${MYSQL_ROOT_PASSWORD}" <<SQL
 CREATE DATABASE IF NOT EXISTS \`${schema}\`
   CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
@@ -101,7 +116,7 @@ SQL
   echo "[init]   ${schema} <- ${user}"
 done
 
-mysql --protocol=socket -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "FLUSH PRIVILEGES;"
+mysql "${CONEXION[@]}" -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "FLUSH PRIVILEGES;"
 
 # Comprobacion: ningun usuario de servicio debe tener privilegios fuera de su
 # esquema. Si el bucle anterior se equivocara, esto lo detecta ahora y no en
@@ -113,11 +128,11 @@ for entry in "${SERVICES[@]}"; do
   user_var="${rest%%:*}"
   user="${!user_var:-${schema}_svc}"
 
-  fugas=$(mysql --protocol=socket -uroot -p"${MYSQL_ROOT_PASSWORD}" -N -B -e \
+  fugas=$(mysql "${CONEXION[@]}" -uroot -p"${MYSQL_ROOT_PASSWORD}" -N -B -e \
     "SELECT COUNT(*) FROM information_schema.SCHEMA_PRIVILEGES
      WHERE GRANTEE = \"'${user}'@'%'\" AND TABLE_SCHEMA <> '${schema}';")
 
-  globales=$(mysql --protocol=socket -uroot -p"${MYSQL_ROOT_PASSWORD}" -N -B -e \
+  globales=$(mysql "${CONEXION[@]}" -uroot -p"${MYSQL_ROOT_PASSWORD}" -N -B -e \
     "SELECT COUNT(*) FROM information_schema.USER_PRIVILEGES
      WHERE GRANTEE = \"'${user}'@'%'\" AND PRIVILEGE_TYPE <> 'USAGE';")
 

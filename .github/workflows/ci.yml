@@ -36,6 +36,7 @@ jobs:
 
       - name: Crear esquemas y usuarios
         env:
+          MYSQL_HOST: 127.0.0.1
           MYSQL_ROOT_PASSWORD: ci-root
           DB_AUTH_PASSWORD: ci-auth
           DB_PROVIDER_PASSWORD: ci-provider
