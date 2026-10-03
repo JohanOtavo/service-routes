@@ -22,21 +22,36 @@ const CATEGORIAS = [
   ['Clases particulares', 'Refuerzo academico y ensenanza personalizada'],
 ];
 
+/**
+ * Siembra idempotente del catalogo inicial (A-1, B-3).
+ *
+ * Antes vaciaba seis tablas para insertar doce categorias. El coste real no
+ * eran las categorias: eran `servicio`, `prestador_ref` y `processed_event`,
+ * que no son datos de ejemplo. Arrancar el entorno dos veces borraba los
+ * servicios publicados, la replica de prestadores que solo se puede
+ * reconstruir con eventos, y el registro de que esos eventos ya se habian
+ * procesado —asi que tampoco volvian a llegar—.
+ *
+ * Ahora solo toca su propia tabla, y por clave natural.
+ */
 exports.seed = async function seed(knex) {
-  await knex('service_rating_summary').del();
-  await knex('servicio').del();
-  await knex('outbox_event').del();
-  await knex('processed_event').del();
-  await knex('prestador_ref').del();
-  await knex('categoria_servicio').del();
-
-  await knex('categoria_servicio').insert(
-    CATEGORIAS.map(([nombre_categoria, descripcion]) => ({
-      nombre_categoria,
-      descripcion,
-      activa: true,
-    }))
-  );
+  await knex('categoria_servicio')
+    .insert(
+      CATEGORIAS.map(([nombre_categoria, descripcion]) => ({
+        nombre_categoria,
+        descripcion,
+        activa: true,
+      }))
+    )
+    .onConflict('nombre_categoria')
+    /**
+     * `activa` se queda como este; solo se refresca la descripcion.
+     *
+     * Incluirla aqui reactivaria en cada arranque una categoria que un
+     * administrador hubiera desactivado a proposito. Para las filas nuevas el
+     * valor del INSERT —true— si se aplica.
+     */
+    .merge(['descripcion']);
 
   console.log(`    ${CATEGORIAS.length} categorias de servicio`);
 };

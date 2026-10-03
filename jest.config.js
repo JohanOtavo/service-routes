@@ -40,6 +40,10 @@ module.exports = {
       testMatch: [
         '<rootDir>/services/*/tests/**/*.int.test.ts',
         '<rootDir>/packages/*/tests/**/*.int.test.ts',
+        // Y la capa de base de datos: las semillas solo se pueden probar
+        // ejecutandolas, y lo que hay que demostrar de ellas —que repetirlas
+        // conserva los identificadores— no se puede simular.
+        '<rootDir>/db/tests/**/*.int.test.ts',
       ],
     },
   ],
