@@ -133,6 +133,16 @@ export class ManageServiceCatalogUseCase {
           idServicio: guardado.id,
           idPrestador: guardado.idPrestador,
           idCategoria: guardado.idCategoria,
+          /**
+           * El nombre viaja en el evento, y antes no.
+           *
+           * `servicio_ref.nombre_servicio` existe en pa_request para que una
+           * solicitud pueda mostrar de que servicio es sin preguntar a este
+           * servicio. Su consumidor siempre ha leido `nombreServicio`, pero
+           * este payload no la incluia: con el `?? ''` del consumidor, cada
+           * alta dejaba la columna vacia y nadie se enteraba.
+           */
+          nombreServicio: guardado.nombre,
           estado: guardado.estado,
         },
       },

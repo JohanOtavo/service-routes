@@ -313,7 +313,19 @@ async function main(): Promise<void> {
       await useTransaction(trx, () =>
         sincronizacion.alCambiarCategoria({
           idCategoria: Number(p['idCategoria']),
-          nombreCategoria: String(p['nombreCategoria'] ?? ''),
+          /**
+           * La clave es `nombre`, que es lo que el emisor manda.
+           *
+           * Esto leia `nombreCategoria`, una clave que catalog-service nunca
+           * ha enviado: `ManageCategories` emite `nombre`. El `?? ''` hacia
+           * que el desajuste no fallara nunca, asi que `categoria_ref` se
+           * poblaba con el nombre vacio en TODAS las filas y la unica senal
+           * era una lista de categorias sin texto.
+           *
+           * Se acepta tambien el nombre viejo por si queda algun evento sin
+           * consumir en una cola con el contrato anterior.
+           */
+          nombreCategoria: String(p['nombre'] ?? p['nombreCategoria'] ?? ''),
           activa: p['activa'] !== false,
         })
       );

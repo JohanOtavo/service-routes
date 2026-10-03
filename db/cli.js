@@ -9,6 +9,9 @@
  *   node db/cli.js seed               seeds de desarrollo
  *   node db/cli.js status             que migraciones faltan
  *   node db/cli.js reset              revierte todo y vuelve a migrar (solo dev)
+ *   node db/cli.js reemit            re-encola los eventos de alta del estado
+ *                                    actual, para reconstruir las replicas
+ *   node db/cli.js reemit provider   solo las de un servicio
  *
  * Sustituye al SQL suelto: toda evolucion del esquema queda versionada en
  * db/migrations/<servicio>/ y es reversible.
@@ -17,11 +20,12 @@
 
 const knexLib = require('knex');
 const configs = require('./knexfile');
+const { reemitir } = require('./reemit');
 
 const { SERVICES } = configs;
 const ALL_KEYS = SERVICES.map((s) => s.key);
 
-const COMMANDS = new Set(['migrate', 'rollback', 'seed', 'status', 'reset']);
+const COMMANDS = new Set(['migrate', 'rollback', 'seed', 'status', 'reset', 'reemit']);
 
 async function withConnection(key, fn) {
   const db = knexLib(configs[key]);
@@ -105,7 +109,29 @@ async function reset(key) {
   });
 }
 
-const HANDLERS = { migrate, rollback, seed, status, reset };
+/**
+ * Vuelve a encolar los eventos de alta del estado actual (A-2, B-2).
+ *
+ * Reconstruye las replicas `*_ref` de los demas esquemas cuando se han perdido.
+ * No borra nada y no publica: escribe en el outbox del propio servicio, y el
+ * relevo lo envia por el camino de siempre.
+ *
+ * Se permite en produccion a proposito, al contrario que `seed` y `reset`. Es
+ * una herramienta de recuperacion ante desastres, y exigir development ahi
+ * seria dejarla inservible justo cuando hace falta. Lo que escribe son los
+ * datos que ya estan en la base, no datos de prueba.
+ */
+async function reemit(key) {
+  return withConnection(key, async (db) => {
+    const r = await reemitir(db, key);
+    if (r.escritos === 0) return `${key}: ${r.detalle.join('; ')}`;
+    return `${key}: ${r.escritos} evento(s) encolados [correlation ${r.correlationId}]\n${r.detalle
+      .map((d) => `    + ${d}`)
+      .join('\n')}`;
+  });
+}
+
+const HANDLERS = { migrate, rollback, seed, status, reset, reemit };
 
 async function main() {
   const [command, only] = process.argv.slice(2);

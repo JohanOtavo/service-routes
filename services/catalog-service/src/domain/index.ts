@@ -160,6 +160,9 @@ export class Servicio {
   get id(): number {
     return this.props.id;
   }
+  get nombre(): string {
+    return this.props.nombre;
+  }
   get idPrestador(): number {
     return this.props.idPrestador;
   }

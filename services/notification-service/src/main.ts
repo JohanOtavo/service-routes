@@ -6,6 +6,7 @@ import {
   EventName,
   assertProductionSafety,
   baseEnvSchema,
+  esReemision,
   esVacio,
   loadEnv,
 } from '@punto-amigo/shared';
@@ -145,6 +146,18 @@ async function main(): Promise<void> {
         syncedAt: clock.now(),
       });
 
+      /**
+       * El aviso NO se crea si el evento es una re-emision.
+       *
+       * La replica de arriba si se refresca —es justo para lo que se re-emite—,
+       * pero el saludo de bienvenida es un hecho que ya ocurrio una vez.
+       * Reconstruir `usuario_ref` con `db/cli.js reemit` mandaria una
+       * bienvenida duplicada a cada usuario que ya existe, y la idempotencia
+       * por `event_id` no puede evitarlo: la re-emision usa identificadores
+       * nuevos a proposito, porque si no, nada se reconstruiria.
+       */
+      if (esReemision(p)) return;
+
       await desdeEvento.crear({
         idUsuario: Number(p['userId']),
         tipo: 'BIENVENIDA',
@@ -250,6 +263,9 @@ async function main(): Promise<void> {
 
   consumidor.on(EventName.ServiceRequestCreated, async (sobre, trx) => {
     const p = sobre.payload;
+    // Una re-emision reconstruye `solicitud_ref` en rating; aqui no hay replica
+    // que refrescar, solo el aviso, y ese hecho ya se anuncio en su dia.
+    if (esReemision(p)) return;
     // La adjudicacion ya avisa por su propio camino; avisar otra vez aqui
     // mandaria dos notificaciones por el mismo hecho.
     if (p['origen'] === 'ADJUDICACION') return;
