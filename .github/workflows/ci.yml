@@ -247,6 +247,13 @@ jobs:
     # El recorrido atraviesa cinco servicios y un broker; mas de media hora
     # significa que algo se quedo colgado.
     timeout-minutes: 35
+    env:
+      # El mismo valor que `claves MYSQL_ROOT_PASSWORD` escribe en el .env.
+      # Sin esto, los pasos que consultan la base con `docker exec` llamaban a
+      # mysql SIN contrasena: el cliente pedia "Enter password", fallaba con
+      # "ERROR 1045 Access denied" y el paso de espera leia esa salida vacia
+      # como "cero categorias replicadas". Treinta intentos midiendo nada.
+      MYSQL_ROOT_PASSWORD: ci-root
 
     steps:
       - uses: actions/checkout@v4
@@ -346,17 +353,31 @@ jobs:
       - name: Esperar a que las replicas esten al dia
         run: |
           consulta='select count(*) from pa_request.categoria_ref where activa = 1;'
+          # MYSQL_PWD y no -p: con -p el cliente pide la contrasena por consola
+          # y el paso se cuelga o falla con un 1045 que se confunde con "no hay
+          # filas".
           for i in $(seq 1 30); do
-            filas=$(docker exec pa-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N -e "$consulta" 2>/dev/null | tr -d "[:space:]")
-            echo "intento $i: categorias activas replicadas = ${filas:-0}"
-            if [ "${filas:-0}" -ge 1 ]; then exit 0; fi
+            # Una consulta que no se puede ejecutar NO es un cero: se corta aqui
+            # en vez de agotar los 60 s midiendo un error.
+            if ! filas=$(docker exec -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" pa-mysql mysql -uroot -N -e "$consulta" 2>&1 | tr -d "[:space:]"); then
+              echo "No se pudo consultar la base: $filas"
+              exit 1
+            fi
+            case "$filas" in
+              "" | *[!0-9]*)
+                echo "La consulta no devolvio un numero: $filas"
+                exit 1
+                ;;
+            esac
+            echo "intento $i: categorias activas replicadas = $filas"
+            if [ "$filas" -ge 1 ]; then exit 0; fi
             sleep 2
           done
           echo 'Las replicas no se llenaron en 60 s'
-          # Sin esto, el fallo solo dice "0" y hay que adivinar en que eslabon
-          # se corto: el relevo que no publica, el broker que no entrega, o el
+          # Sin esto, el fallo solo dice "0" y hay que adivinar en que eslabon se
+          # corto: el relevo que no publica, el broker que no entrega, o el
           # consumidor que deriva a la cola de fallidos.
-          docker exec pa-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -t -e "select count(*) as pendientes, max(attempts) as intentos, max(left(ifnull(last_error, '-'), 200)) as ultimo_error from pa_catalog.outbox_event where published_at is null;"
+          docker exec -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" pa-mysql mysql -uroot -t -e "select count(*) as pendientes, max(attempts) as intentos, max(left(ifnull(last_error, '-'), 200)) as ultimo_error from pa_catalog.outbox_event where published_at is null;"
           docker exec pa-rabbitmq rabbitmqctl list_queues name messages_ready || true
           docker compose --profile apps logs --tail 80 catalog-service request-service
           exit 1
