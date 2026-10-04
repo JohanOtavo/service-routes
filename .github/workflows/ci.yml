@@ -329,6 +329,33 @@ jobs:
           NODE_ENV: development
         run: npm run db:seed
 
+      # Las semillas NO escriben en el outbox: insertan filas y nada mas. Las
+      # replicas de solo lectura se llenan con eventos, asi que en un entorno
+      # recien creado `pa_request.categoria_ref` queda vacio y publicar una
+      # necesidad se rechaza porque su categoria "no esta activa". Esto es
+      # exactamente para lo que se construyo `db:reemit` en la Fase 5.
+      - name: Reconstruir las replicas
+        env:
+          MYSQL_HOST: 127.0.0.1
+          NODE_ENV: development
+        run: npm run db:reemit
+
+      # El relevo barre cada segundo y el consumidor tarda lo que tarde el
+      # broker: sin esperar, el recorrido empieza contra una replica a medio
+      # llenar y falla una vez cada tantas ejecuciones.
+      - name: Esperar a que las replicas esten al dia
+        run: |
+          consulta='select count(*) from pa_request.categoria_ref where activa = 1;'
+          for i in $(seq 1 30); do
+            filas=$(docker exec pa-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N -e "$consulta" 2>/dev/null | tr -d "[:space:]")
+            echo "intento $i: categorias activas replicadas = ${filas:-0}"
+            if [ "${filas:-0}" -ge 1 ]; then exit 0; fi
+            sleep 2
+          done
+          echo 'Las replicas no se llenaron en 60 s'
+          docker compose --profile apps logs --tail 50 catalog-service request-service
+          exit 1
+
       - name: Instalar el navegador
         run: npx playwright install --with-deps chromium
 
