@@ -19,6 +19,14 @@ import {
   KnexUsuarioRefRepository,
 } from './infrastructure/persistence/KnexNotificationRepositories';
 import { createApp } from './infrastructure/http/app';
+import {
+  SendRecoveryEmailUseCase,
+  registrarCorreoDeRecuperacion,
+} from './application/use-cases/SendRecoveryEmail';
+import {
+  EnviadorCorreoRegistrado,
+  EnviadorCorreoSmtp,
+} from './infrastructure/correo/EnviadorCorreo';
 
 const envSchema = baseEnvSchema.extend({
   NOTIFICATION_PORT: z.coerce.number().int().min(1).max(65535).default(3006),
@@ -32,6 +40,34 @@ const envSchema = baseEnvSchema.extend({
   RABBITMQ_EXCHANGE: z.string().min(1).default('punto-amigo.events'),
   BROKER_MAX_RETRIES: z.coerce.number().int().min(1).default(5),
   CONSUMER_PREFETCH: z.coerce.number().int().min(1).max(100).default(10),
+
+  /**
+   * Correo transaccional (C-1). Solo la recuperacion de contrasena.
+   *
+   * Todo opcional: sin SMTP el servicio arranca igual y deja el enlace en el
+   * registro, que es lo que permite probar la recuperacion en una maquina de
+   * desarrollo. `exigirCorreoEnProduccion` impide que eso llegue a produccion.
+   */
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  // 465 es SMTPS (TLS desde el primer byte); 587 negocia con STARTTLS.
+  SMTP_SECURE: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().min(1).default('Punto Amigo <no-responder@puntoamigo.local>'),
+
+  /**
+   * URL publica del cliente, para construir el enlace del correo.
+   *
+   * Cae a `CORS_ORIGIN` porque es la unica URL del cliente que este servicio ya
+   * conocia, y en desarrollo es la correcta. En produccion conviene declararla
+   * aparte: `CORS_ORIGIN` puede llevar varios origenes y de ahi no se puede
+   * sacar uno solo con el que construir un enlace.
+   */
+  WEB_PUBLIC_URL: z.string().url().optional(),
 });
 
 const logger = {
@@ -52,6 +88,7 @@ export function buildContainer(env: z.infer<typeof envSchema>): {
   knex: Knex;
   desdeEvento: CreateFromEventUseCase;
   clock: SystemClock;
+  recuperacion: SendRecoveryEmailUseCase;
 } {
   const knex = knexLib({
     client: 'mysql2',
@@ -73,6 +110,31 @@ export function buildContainer(env: z.infer<typeof envSchema>): {
 
   const desdeEvento = new CreateFromEventUseCase(notificaciones, usuarios);
 
+  /**
+   * SMTP si esta configurado; si no, el que deja el enlace en el registro.
+   *
+   * La condicion es `SMTP_HOST`: sin servidor no hay nada que intentar, y el
+   * resto de claves tienen valor por omision.
+   */
+  const enviadorCorreo =
+    env.SMTP_HOST === undefined
+      ? new EnviadorCorreoRegistrado(logger)
+      : new EnviadorCorreoSmtp(
+          {
+            host: env.SMTP_HOST,
+            puerto: env.SMTP_PORT,
+            seguro: env.SMTP_SECURE,
+            usuario: env.SMTP_USER ?? '',
+            contrasena: env.SMTP_PASSWORD ?? '',
+            remitente: env.SMTP_FROM,
+          },
+          logger
+        );
+
+  const recuperacion = new SendRecoveryEmailUseCase(enviadorCorreo, logger, {
+    urlBaseCliente: env.WEB_PUBLIC_URL ?? env.CORS_ORIGIN,
+  });
+
   const app = createApp({
     knex,
     bandeja: new ManageInboxUseCase(notificaciones, clock),
@@ -86,14 +148,37 @@ export function buildContainer(env: z.infer<typeof envSchema>): {
     },
   });
 
-  return { app, knex, desdeEvento, clock };
+  return { app, knex, desdeEvento, clock, recuperacion };
+}
+
+/**
+ * En produccion, SMTP no es opcional (C-1).
+ *
+ * Sin el, `EnviadorCorreoRegistrado` escribiria el enlace de recuperacion
+ * —token incluido— en el registro del servidor, y la recuperacion de
+ * contrasena no funcionaria para nadie. Las dos cosas son graves y ninguna
+ * falla de forma visible, asi que el arranque se niega en lugar de descubrirse
+ * cuando alguien no pueda entrar.
+ *
+ * `assertProductionSafety` de `@punto-amigo/shared` no cubre esto: no conoce la
+ * configuracion de correo, que es propia de este servicio.
+ */
+function exigirCorreoEnProduccion(env: z.infer<typeof envSchema>): void {
+  if (env.NODE_ENV !== 'production') return;
+  if (env.SMTP_HOST !== undefined) return;
+
+  throw new Error(
+    'Falta SMTP_HOST. En produccion el correo de recuperacion no se puede dejar sin enviar, ' +
+      'y el enviador de reserva escribiria el token en el registro.'
+  );
 }
 
 async function main(): Promise<void> {
   const env = loadEnv(envSchema);
   assertProductionSafety(env);
+  exigirCorreoEnProduccion(env);
 
-  const { app, knex, desdeEvento, clock } = buildContainer(env);
+  const { app, knex, desdeEvento, clock, recuperacion } = buildContainer(env);
 
   const broker = new Broker(
     {
@@ -168,6 +253,22 @@ async function main(): Promise<void> {
       });
     });
   });
+
+  /**
+   * El evento que hasta ahora se descartaba (C-1).
+   *
+   * `auth-service` lo emite con el token de recuperacion dentro. Llegaba a esta
+   * cola —`iam.usuario.user_profile_updated` encaja con el patron `iam.#`— y al
+   * no haber manejador el consumidor hacia `ack` y lo tiraba. El token se
+   * generaba, se guardaba, se publicaba y no llegaba a ningun sitio.
+   *
+   * No se crea ningun aviso en la bandeja: quien olvido su contrasena no puede
+   * iniciar sesion para leerla. Por eso este canal tiene que ser el correo.
+   *
+   * Sin `useTransaction`: no escribe en la base. Envolverlo mantendria abierta
+   * una transaccion durante una llamada de red a un servidor SMTP.
+   */
+  registrarCorreoDeRecuperacion(consumidor, recuperacion, EventName.UserProfileUpdated);
 
   consumidor.on(EventName.UserAccountSuspended, async (sobre, trx) => {
     const p = sobre.payload;
