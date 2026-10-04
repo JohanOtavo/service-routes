@@ -17,6 +17,7 @@ import {
   type CorreoAEnviar,
   type IEnviadorCorreo,
 } from '../src/application/use-cases/SendRecoveryEmail';
+import { envSchema } from '../src/main';
 
 const TOKEN = 'xU9-_abcDEF1234567890xyzABCDEFGH';
 const BASE = 'https://puntoamigo.example';
@@ -254,5 +255,56 @@ describe('registro del manejador de recuperacion', () => {
       manejador!({ payload: payload({ accion: 'CUENTA_REACTIVADA' }) })
     ).resolves.toBeUndefined();
     expect(enviador.enviados).toEqual([]);
+  });
+});
+
+/**
+ * El entorno acepta las claves de correo vacias.
+ *
+ * `.env.example` las trae vacias, que es como un fichero de entorno dice "sin
+ * valor". Sin tratarlo, `z.string().min(1).optional()` las rechazaba —la clave
+ * esta, aunque no tenga valor— y notification-service no arrancaba. En la
+ * maquina de desarrollo no se veia porque alli las claves no existian; lo
+ * encontro CI al levantar la pila desde un `.env` copiado del ejemplo.
+ */
+describe('entorno de correo', () => {
+  const base = {
+    NODE_ENV: 'test',
+    LOG_LEVEL: 'error',
+    CORS_ORIGIN: 'http://localhost:5173',
+    MYSQL_HOST: 'localhost',
+    REDIS_HOST: 'localhost',
+    DB_NOTIFICATION_USER: 'u',
+    DB_NOTIFICATION_PASSWORD: 'p',
+    RABBITMQ_HOST: 'localhost',
+    RABBITMQ_USER: 'u',
+    RABBITMQ_PASSWORD: 'p',
+    INTERNAL_SERVICE_SECRET: 'secreto-de-al-menos-16',
+  };
+
+  it('acepta SMTP_HOST, SMTP_USER, SMTP_PASSWORD y WEB_PUBLIC_URL vacios', () => {
+    const r = envSchema.safeParse({
+      ...base,
+      SMTP_HOST: '',
+      SMTP_USER: '',
+      SMTP_PASSWORD: '',
+      WEB_PUBLIC_URL: '',
+    });
+
+    expect(r.success).toBe(true);
+    if (r.success) {
+      // Vacio se lee como ausente, que es lo que elige el enviador de reserva.
+      expect(r.data.SMTP_HOST).toBeUndefined();
+      expect(r.data.WEB_PUBLIC_URL).toBeUndefined();
+    }
+  });
+
+  it('sigue aceptando que no esten', () => {
+    expect(envSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('y sigue rechazando una URL que no es una URL', () => {
+    const r = envSchema.safeParse({ ...base, WEB_PUBLIC_URL: 'no-es-una-url' });
+    expect(r.success).toBe(false);
   });
 });

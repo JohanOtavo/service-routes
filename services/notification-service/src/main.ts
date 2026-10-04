@@ -28,6 +28,22 @@ import {
   EnviadorCorreoSmtp,
 } from './infrastructure/correo/EnviadorCorreo';
 
+/**
+ * En un `.env`, una clave vacia significa "sin valor".
+ *
+ * `SMTP_HOST=` no es una cadena vacia que haya que validar: es la forma que
+ * tiene un fichero de entorno de decir que no hay servidor de correo. Sin esto,
+ * `z.string().min(1).optional()` la rechazaba —la clave ESTA, aunque no tenga
+ * valor— y el servicio no arrancaba.
+ *
+ * Se descubrio porque `.env.example` trae esas claves vacias, asi que cualquiera
+ * que copiara el ejemplo se encontraba notification-service sin levantar. En la
+ * maquina de desarrollo no se veia: alli las claves no existian y `optional`
+ * hacia su trabajo.
+ */
+const vacioEsAusente = <T extends z.ZodTypeAny>(esquema: T): z.ZodEffects<T> =>
+  z.preprocess((v) => (v === '' ? undefined : v), esquema) as unknown as z.ZodEffects<T>;
+
 const envSchema = baseEnvSchema.extend({
   NOTIFICATION_PORT: z.coerce.number().int().min(1).max(65535).default(3006),
   DB_NOTIFICATION_USER: z.string().min(1),
@@ -48,15 +64,15 @@ const envSchema = baseEnvSchema.extend({
    * registro, que es lo que permite probar la recuperacion en una maquina de
    * desarrollo. `exigirCorreoEnProduccion` impide que eso llegue a produccion.
    */
-  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_HOST: vacioEsAusente(z.string().min(1).optional()),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   // 465 es SMTPS (TLS desde el primer byte); 587 negocia con STARTTLS.
   SMTP_SECURE: z
     .string()
     .optional()
     .transform((v) => v === 'true'),
-  SMTP_USER: z.string().optional(),
-  SMTP_PASSWORD: z.string().optional(),
+  SMTP_USER: vacioEsAusente(z.string().optional()),
+  SMTP_PASSWORD: vacioEsAusente(z.string().optional()),
   SMTP_FROM: z.string().min(1).default('Punto Amigo <no-responder@puntoamigo.local>'),
 
   /**
@@ -67,7 +83,7 @@ const envSchema = baseEnvSchema.extend({
    * aparte: `CORS_ORIGIN` puede llevar varios origenes y de ahi no se puede
    * sacar uno solo con el que construir un enlace.
    */
-  WEB_PUBLIC_URL: z.string().url().optional(),
+  WEB_PUBLIC_URL: vacioEsAusente(z.string().url().optional()),
 });
 
 const logger = {
