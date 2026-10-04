@@ -1,0 +1,29 @@
+{
+  "//": [
+    "Las E2E no estaban comprobadas por nadie.",
+    "",
+    "El tsconfig de la raiz es una solution con `files: []` y solo referencias a",
+    "los paquetes y servicios, asi que ni `e2e/` ni `playwright.config.ts`",
+    "entraban en `tsc --build`. Un error de tipos aqui solo habria aparecido al",
+    "ejecutar Playwright, y Playwright NO esta en `npm run verify` porque",
+    "necesita los ocho servicios levantados: habria viajado hasta CI sin que",
+    "ninguna puerta lo viera.",
+    "",
+    "No es un proyecto referenciado (`composite`) a proposito: no lo consume",
+    "nadie, solo hay que comprobarlo. El script `typecheck` lo hace aparte, igual",
+    "que con apps/web."
+  ],
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    // La base los enciende para los proyectos referenciados; aqui no hay nada
+    // que emitir y TypeScript rechaza un mapa de declaraciones sin declaracion.
+    "declarationMap": false,
+    "types": ["node"],
+    "module": "ESNext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["**/*.ts", "../playwright.config.ts"]
+}

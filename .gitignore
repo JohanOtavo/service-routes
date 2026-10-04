@@ -42,3 +42,8 @@ dumps/
 
 # Claude Code — ajustes personales de esta copia de trabajo
 .claude/settings.local.json
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
