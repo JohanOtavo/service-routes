@@ -9,7 +9,10 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 | Saber qué fases existen y en qué estado | [00-FLUJO-DEL-PROYECTO.md](00-FLUJO-DEL-PROYECTO.md) |
 | Saber exactamente qué falta y qué hay que cumplir para cerrarlo | [01-BACKLOG.md](01-BACKLOG.md) |
 | Saber qué se decidió, y por qué | [02-DECISIONES.md](02-DECISIONES.md) |
-| Ver qué se hizo en la última fase cerrada | [FASE-8-ENTREGA.md](FASE-8-ENTREGA.md) |
+| Ver qué se hizo en la última fase cerrada | [FASE-9-ENTREGA.md](FASE-9-ENTREGA.md) |
+| Entender un servicio concreto: qué hace, qué guarda, qué eventos mueve | [servicios/](servicios/README.md) |
+| Seguir un dato de un servicio a otro, o averiguar por qué no llegó | [07-GRAFO-DE-EVENTOS.md](07-GRAFO-DE-EVENTOS.md) |
+| Saber qué requisito del SRS toca qué código | [10-TRAZABILIDAD.md](10-TRAZABILIDAD.md) |
 | Saber qué registra y qué mide el sistema, y qué carga aguanta | [05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.md) |
 | Saber qué entornos existen y qué falta para desplegar | [06-ENTORNOS-Y-DESPLIEGUE.md](06-ENTORNOS-Y-DESPLIEGUE.md) |
 | Restaurar un respaldo | [03-RUNBOOK-RESPALDOS.md](03-RUNBOOK-RESPALDOS.md) |
@@ -27,6 +30,11 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 | **[04-POLITICA-DATOS-PERSONALES.md](04-POLITICA-DATOS-PERSONALES.md)** | Dónde vive cada dato personal, qué hace ya bien el código, y las 6 decisiones que siguen bloqueando producción |
 | **[05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.md)** | El registro con `correlation_id`, las métricas, los paneles, la prueba de carga con su resultado, y la caducidad de los cuatro tipos de token |
 | **[06-ENTORNOS-Y-DESPLIEGUE.md](06-ENTORNOS-Y-DESPLIEGUE.md)** | Qué entornos existen de verdad, los guardias de producción, las tres contradicciones con el documento de DevOps, y qué hace falta decidir |
+| **[07-GRAFO-DE-EVENTOS.md](07-GRAFO-DE-EVENTOS.md)** | Los 29 eventos: quién publica cada uno, quién lo escucha, qué réplica alimenta, los seis que nadie consume, y el orden de comprobación cuando algo no llega |
+| **[08-BACKLOG-TECNICO.md](08-BACKLOG-TECNICO.md)** | La deuda técnica con el formato que pide la gobernanza: impacto si no se resuelve, esfuerzo y prioridad. Con lo ya cerrado, para no repetir el trabajo |
+| **[09-PREGUNTAS-ABIERTAS.md](09-PREGUNTAS-ABIERTAS.md)** | Las 12 preguntas del SRS §11. Siete llevaban meses contestadas por el código sin que nadie cerrara el registro; cinco siguen abiertas |
+| **[10-TRAZABILIDAD.md](10-TRAZABILIDAD.md)** | Qué requisito toca qué archivo, y cuál tiene una prueba que lo nombre. Generada desde el código, no a mano |
+| **[servicios/](servicios/README.md)** | Un documento por servicio: responsabilidad, API, modelo de datos, eventos, decisiones y runbook. Los nueve procesos, con los dos avisos sobre la documentación que ya existía |
 | **[FASE-4-PLAN.md](FASE-4-PLAN.md)** | La Fase 4, cerrada el 3/10/2026: lo que hizo falta para que `npm run verify` y CI pasasen, y las dos discrepancias de cobertura que quedaron diferidas con motivo |
 
 ### Fases entregadas
@@ -39,22 +47,25 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 | [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md) | Datos y operación | Completada · 4 de 5 cerrados; la política de datos personales en borrador |
 | [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) | Experiencia del cliente | Completada · los 3 elementos cerrados; el recorrido pasa en CI desde el 4/10/2026 |
 | [FASE-8-ENTREGA.md](FASE-8-ENTREGA.md) | Observabilidad y despliegue | Completada · AT-005, AT-006 y AT-007 cerrados; los entornos esperan AT-001 |
+| [FASE-9-ENTREGA.md](FASE-9-ENTREGA.md) | Documentación y trazabilidad | Completada · los 9 elementos del grupo H cerrados, matriz de trazabilidad regenerable |
 
 ## En una línea
 
-Siete fases cerradas: base de datos, backend, cliente web, la puerta de
-calidad, los datos, la experiencia del cliente y la observabilidad. El recorrido
-crítico pasa en un navegador real **en CI**, y llegar hasta ahí destapó siete
-defectos que solo se veían allí, entre ellos dos de producto: el broker no se
-reconectaba si fallaba su primer intento —y por eso el correo de recuperación no
-llegaba nunca— y la lista de denegación de tokens caducaba a los 900.000 ms
-escritos a mano en lugar de cuando caducaba el token. El sistema ya se puede
-observar: una línea JSON con `correlation_id` por petición, nueve `/metrics`,
-Prometheus y Grafana, y una prueba de carga que da **P95 de 6,98 ms** contra un
-umbral de 300 ms. **La siguiente es la Fase 9 —documentación y trazabilidad—**.
-Lo que sigue bloqueando producción es la política de datos personales, con seis
-decisiones pendientes, y desplegar en algún sitio necesita que elijas nube
-(AT-001).
+Ocho fases cerradas: base de datos, backend, cliente web, la puerta de calidad,
+los datos, la experiencia del cliente, la observabilidad y la documentación. El
+recorrido crítico pasa en un navegador real **en CI**. El sistema se puede
+observar —una línea JSON con `correlation_id` por petición, nueve `/metrics`,
+Prometheus y Grafana, y una carga medida con **P95 de 6,98 ms** contra un umbral
+de 300 ms— y ahora también se puede leer: los nueve procesos documentados, los 29
+eventos con quién los escucha, y **164 de 282 requisitos** trazados hasta el
+archivo que los implementa. Escribirlo destapó lo que no estaba anotado: seis
+eventos que nadie consume, semillas que no llenan las réplicas, y siete
+preguntas «abiertas» que el código llevaba meses contestando. **La siguiente es
+la Fase 10 —preparación de producción—**, que no es trabajo nuevo sino
+comprobar lo anterior. Lo que sigue bloqueando producción es la política de
+datos personales, con seis decisiones pendientes; desplegar necesita que elijas
+nube (AT-001), y cuatro pendientes de documentación esperan que decidas la
+organización de los repositorios (AT-003).
 
 ## Una nota sobre las fechas
 

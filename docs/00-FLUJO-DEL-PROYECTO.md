@@ -94,8 +94,8 @@ resolvieron el 3/10/2026 en [02-DECISIONES.md](02-DECISIONES.md), de modo que la
 | 6 | Experiencia del cliente | Teléfono desde el perfil de prestador, recuperación de contraseña con correo transaccional, E2E del recorrido | **Completada** el 3/10/2026; el recorrido pasa en CI desde el 4/10/2026, tras siete defectos que solo se veían allí | [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) · [FASE-8-ENTREGA.md](FASE-8-ENTREGA.md) §3 |
 | ~~7~~ | ~~Notificaciones fuera del MVP~~ | ~~Correo y push~~ | **Eliminada.** Push y correo de producto descartados; el correo transaccional pasa a la Fase 6 | [02-DECISIONES.md](02-DECISIONES.md) §2 |
 | 8 | Observabilidad y despliegue | Logging estructurado, métricas, k6, entornos dev/staging/prod, despliegue | **Completada** el 4/10/2026 en lo que depende del código; AT-005, AT-006 y AT-007 cerrados. Los entornos esperan AT-001, que es decisión tuya | [FASE-8-ENTREGA.md](FASE-8-ENTREGA.md) · [05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.md) · [06-ENTORNOS-Y-DESPLIEGUE.md](06-ENTORNOS-Y-DESPLIEGUE.md) |
-| 9 | Documentación y trazabilidad | 6 de 8 servicios sin documentar, SRS inglés obsoleto, contratos duplicados, backlog formal | **Siguiente** | §5 |
-| 10 | Preparación de producción | Go/No-Go, Definition of Done completo, cierre de deuda técnica AT-001..007 | Aprobada | §5 |
+| 9 | Documentación y trazabilidad | 6 de 8 servicios sin documentar, SRS inglés obsoleto, contratos duplicados, backlog formal | **Completada** el 4/10/2026 en lo que depende de este repositorio; 4 pendientes viven en el repositorio congelado y esperan AT-003 | [FASE-9-ENTREGA.md](FASE-9-ENTREGA.md) · [10-TRAZABILIDAD.md](10-TRAZABILIDAD.md) · [servicios/](servicios/README.md) |
+| 10 | Preparación de producción | Go/No-Go, Definition of Done completo, cierre de deuda técnica AT-001..007 | **Siguiente** | §5 |
 
 **Trabajo abierto, al 3/10/2026: los 13 pendientes de las Fases 1–3 ya tienen
 decisión registrada** —1 cerrado, 9 asignados a fase, 3 duplicados— **y quedan 7
@@ -308,7 +308,28 @@ Lo que decía este apartado antes de la entrega:
 - **Expiración de JWT** sin decidir (deuda AT-006) y **configuración final de
   AWS/GCP** (deuda AT-001)
 
-### Fase 9 — Documentación y trazabilidad
+### Fase 9 — Documentación y trazabilidad · completada el 4/10/2026
+
+Entregado, con su detalle en [FASE-9-ENTREGA.md](FASE-9-ENTREGA.md):
+
+- ~~**6 de 8 servicios sin documentación**~~. **Cerrado.** 31 documentos en
+  [servicios/](servicios/README.md): responsabilidad, API, modelo de datos,
+  eventos, decisiones y runbook de cada uno, extraídos del código
+- ~~**Grafo de eventos**~~. **Cerrado.**
+  [07-GRAFO-DE-EVENTOS.md](07-GRAFO-DE-EVENTOS.md), con los 29 eventos y los
+  **seis que ningún servicio consume**
+- ~~**Backlog formal y registro de preguntas abiertas**~~. **Cerrado.**
+  [08-BACKLOG-TECNICO.md](08-BACKLOG-TECNICO.md) y
+  [09-PREGUNTAS-ABIERTAS.md](09-PREGUNTAS-ABIERTAS.md): **siete de las doce
+  preguntas ya estaban contestadas por el código**, cuatro de ellas bloqueantes
+- ~~**Matriz de trazabilidad inútil**~~. **Cerrado.**
+  [10-TRAZABILIDAD.md](10-TRAZABILIDAD.md), generada desde el código: 164 de 282
+  requisitos trazados y **cero** citas a identificadores inexistentes
+- **SRS en inglés obsoleto y contratos duplicados: no cerrados.** Viven en
+  `friend-point-docs`, congelado, y su destino depende de **AT-003**. La
+  recomendación y la lista exacta de correcciones están en la entrega §5
+
+Lo que decía este apartado antes de la entrega:
 
 - **6 de 8 servicios sin documentación.** Solo existen `01-api-gateway` y
   `02-auth-service`. Faltan readme, modelo de datos, eventos, decisiones y runbook
@@ -356,13 +377,14 @@ Fase 1 ──┐
         ┌─────────────────────┼─────────────────────┐
         v                     v                     v
     Fase 5               Fase 6               Fase 9
-  COMPLETADA          COMPLETADA          (documentación)
-        │                     │              <-- aqui
+  COMPLETADA          COMPLETADA          COMPLETADA
+        │                     │
         │                     │
         └──────────┬──────────┘
                    v
               Fase 8  ──>  Fase 10
            COMPLETADA     (producción)
+                             <-- aqui
 ```
 
 La Fase 7 ya no está en el grafo: se eliminó el 3/10/2026 y el correo transaccional,

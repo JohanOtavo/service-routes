@@ -13,7 +13,13 @@ import { Aviso, AreaTexto, Boton, Campo, Selector } from '../../ui';
  * son el unico instrumento disuasorio, y un instrumento que no se ve no
  * disuade: lo que no se sabe no corrige el comportamiento.
  */
-export function Cancelar({ idSolicitud }: { idSolicitud: number }): ReactElement {
+export function Cancelar({
+  idSolicitud,
+  estado,
+}: {
+  idSolicitud: number;
+  estado: string;
+}): ReactElement | null {
   const motivos = useMotivosCancelacion();
   const cancelar = useCancelar();
 
@@ -79,6 +85,18 @@ export function Cancelar({ idSolicitud }: { idSolicitud: number }): ReactElement
       </Aviso>
     );
   }
+
+  /**
+   * Ya estaba cancelada al entrar: no hay nada que cancelar.
+   *
+   * Va DESPUES del bloque de exito a proposito. La pagina deja montado este
+   * componente cuando el estado es `CANCELADA` justamente para que el
+   * resultado de arriba sobreviva al cambio de estado; antes lo desmontaba, y
+   * el mensaje que explica si la cancelacion cuenta en la tasa y con que peso
+   * se iba de la pantalla antes de que nadie lo leyera. Era el unico momento
+   * en que se le dice a la persona.
+   */
+  if (estado === 'CANCELADA') return null;
 
   if (!abierto) {
     return (

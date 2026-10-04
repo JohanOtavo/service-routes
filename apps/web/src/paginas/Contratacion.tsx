@@ -184,9 +184,13 @@ export default function Contratacion(): ReactElement {
           )}
         </div>
 
-        {(s.estado === 'PENDIENTE' || s.estado === 'ACEPTADA') && (
+        {/* `CANCELADA` tambien monta el componente, y no es un descuido: al
+            cancelar, el estado cambia en el mismo instante y desmontarlo se
+            llevaba por delante el mensaje que explica el peso de la
+            cancelacion. `Cancelar` no pinta nada si entra ya cancelada. */}
+        {(s.estado === 'PENDIENTE' || s.estado === 'ACEPTADA' || s.estado === 'CANCELADA') && (
           <div style={{ marginTop: 'var(--esp-4)' }}>
-            <Cancelar idSolicitud={s.id} />
+            <Cancelar idSolicitud={s.id} estado={s.estado} />
           </div>
         )}
       </Tarjeta>

@@ -32,10 +32,10 @@ técnico: necesita una respuesta tuya.
 | E. Preguntas abiertas | `srs-microservices.md` §11 | 12 | 12 | 5 bloqueantes |
 | F. Brechas de trazabilidad | `traceability-matrix.md` §10 | 8 | 8 | 0 |
 | G. Calidad del repositorio | medido el 3/10/2026 | 8 | **1** | 0 · G-3 decidido |
-| H. Documentación ausente | §H, abajo | 9 | 9 | 0 |
-| I. Hallazgos de las Fases 5 y 6 | §I, abajo | 6 | **5** | 0 · I-5 cerrado |
-| J. Hallazgos de la Fase 8 | §J, abajo | 3 | **3** | 0 |
-| **Total** | | **66** | **44** | **7** |
+| H. Documentación ausente | §H, abajo | 9 | **0** | 0 · los 9 cerrados en Fase 9 |
+| I. Hallazgos de las Fases 5 y 6 | §I, abajo | 6 | **4** | 0 · I-5 e I-6 cerrados |
+| J. Hallazgos de la Fase 8 | §J, abajo | 3 | **2** | 0 · J-2 cerrado |
+| **Total** | | **66** | **33** | **7** |
 
 El recuento de G subió de 5 a 8 porque G-6, G-7 y G-8 se añadieron después de la
 primera versión de esta tabla y no se habían contado. Siete de los ocho están
@@ -417,21 +417,26 @@ Jest 30.5.2, ts-jest 29.4.14, @types/jest 30.0.0, typescript-eslint 8.71.0 y sha
 
 ## H. Documentación ausente
 
-| Falta | Dónde debería estar |
-|---|---|
-| Readme, modelo de datos, eventos, decisiones y runbook de `provider-service` | `09-microservices/services/03-provider-service/` |
-| Lo mismo para `catalog-service` | `04-catalog-service/` |
-| Lo mismo para `request-service` | `05-request-service/` |
-| Lo mismo para `rating-service` | `06-rating-service/` |
-| Lo mismo para `notification-service` | `07-notification-service/` |
-| Lo mismo para `admin-reporting-service` | `08-admin-reporting-service/` |
-| Grafo de eventos entre servicios | nuevo, nowhere |
-| `technical-backlog.md` | `15-project-control/` — lo prescribe su propio README |
-| `open-questions.md` | `15-project-control/` — lo prescribe su propio README |
+**Los nueve elementos quedan cerrados el 4/10/2026** (Fase 9). Se escribieron en
+el repositorio de código y no en `friend-point-docs`, que está congelado y cuya
+organización es la decisión pendiente AT-003.
 
-Solo 2 de 8 servicios tienen documentación. El **grafo de eventos** es la pieza más
-importante de esta lista: sin él no se puede trazar un dato desde que nace en un
-servicio hasta que aparece en la vista de otro.
+| Falta | Estado |
+|---|---|
+| ~~Readme, modelo de datos, eventos, decisiones y runbook de `provider-service`~~ | **CERRADO** · [docs/servicios/03-provider-service/](servicios/03-provider-service/README.md) |
+| ~~Lo mismo para `catalog-service`~~ | **CERRADO** · [04-catalog-service](servicios/04-catalog-service/README.md) |
+| ~~Lo mismo para `request-service`~~ | **CERRADO** · [05-request-service](servicios/05-request-service/README.md) |
+| ~~Lo mismo para `rating-service`~~ | **CERRADO** · [06-rating-service](servicios/06-rating-service/README.md) |
+| ~~Lo mismo para `notification-service`~~ | **CERRADO** · [07-notification-service](servicios/07-notification-service/README.md) |
+| ~~Lo mismo para `admin-reporting-service`~~ | **CERRADO** · [08-admin-reporting-service](servicios/08-admin-reporting-service/README.md) |
+| ~~Grafo de eventos entre servicios~~ | **CERRADO** · [07-GRAFO-DE-EVENTOS.md](07-GRAFO-DE-EVENTOS.md): los 29 eventos, sus consumidores, los 6 que nadie escucha y el orden de diagnóstico |
+| ~~`technical-backlog.md`~~ | **CERRADO** · [08-BACKLOG-TECNICO.md](08-BACKLOG-TECNICO.md), con el formato que prescribe la gobernanza |
+| ~~`open-questions.md`~~ | **CERRADO** · [09-PREGUNTAS-ABIERTAS.md](09-PREGUNTAS-ABIERTAS.md). **Siete de las doce preguntas ya estaban contestadas por el código**, cuatro de ellas bloqueantes |
+
+Lo que el grafo de eventos dejó a la vista, y que nadie había escrito: hay
+**seis eventos que ningún servicio consume**, y las semillas no escriben en el
+outbox, así que una base recién creada tiene todas las réplicas vacías. Eso
+último es exactamente lo que hacía fallar el recorrido E2E en CI.
 
 ### La ficha del catálogo de servicios está obsoleta
 `09-microservices/service-catalog.md` §Service registry marca los ocho servicios como
@@ -514,11 +519,12 @@ integración de regresión. Lo encontró la primera E2E del recorrido.
 formulario —con su mensaje de resultado— se desmonta antes de que nadie lo lea.
 **Por qué importa.** Ese mensaje explica si la cancelación cuenta en la tasa y
 con qué peso. Es la única vez que se le dice a la persona, y no se ve.
-**Cierra cuando.** El resultado sobrevive al cambio de estado, con una prueba
-que lo compruebe.
-**Fase destino.** Era «8 o antes». La Fase 8 se cerró el 4/10/2026 **sin
-tocarlo**: su trabajo fue observabilidad y carga, y esto es interfaz. Pasa a la
-Fase 9, donde no desentona, en lugar de quedarse con un destino ya vencido.
+**CERRADO** el 4/10/2026 (Fase 9). `Contratacion.tsx` deja montado el componente
+cuando el estado pasa a `CANCELADA` y `Cancelar` no pinta nada si entra ya
+cancelada, así que el mensaje con el peso sobrevive al cambio de estado. La
+prueba monta la **página** y no el componente, porque el defecto estaba en la
+condición de la página: una prueba sobre el componente suelto pasaba en verde con
+el defecto puesto. Verificado que falla al reintroducirlo.
 
 ## J. Hallazgos de la Fase 8 que no estaban registrados
 
@@ -552,12 +558,12 @@ cobertura de 42 % contra un umbral de 67 % sin que nada fallara.
 **Qué se hizo ya.** `jest.config.js` carga el `.env` y fija `MYSQL_HOST`, así
 que en una máquina de desarrollo normal ya no se omiten. Existe además
 `REQUIRE_INTEGRATION=1`, que convierte la omisión en fallo.
-**Lo que queda.** CI no pasa `REQUIRE_INTEGRATION=1`. Mientras no lo haga, un
-cambio que rompa la conexión en CI puede volver a leerse como una ejecución
-limpia.
-**Cierra cuando.** El workflow exige `REQUIRE_INTEGRATION=1` en los trabajos que
-tienen base de datos.
-**Fase destino.** 9.
+**Lo que queda: nada, y conviene decirlo.** Al revisarlo para la Fase 9, CI ya
+pasaba `REQUIRE_INTEGRATION: '1'` en el trabajo que ejecuta `verify`
+(`.github/workflows/ci.yml`), así que allí una omisión siempre fue un fallo. El
+agujero era **solo local**, y lo tapó la carga del `.env` en `jest.config.js`.
+**CERRADO** el 4/10/2026, por comprobación: la mitad de CI ya estaba hecha antes
+de que este elemento se escribiera.
 
 ### J-3 · El documento de DevOps contradice al código en tres puntos
 **Qué pasa.** `10-devops/environments.md` prescribe la convención
