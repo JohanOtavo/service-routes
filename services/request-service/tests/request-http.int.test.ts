@@ -20,6 +20,8 @@ const OTRO_OFERENTE = 8103;
 const AJENO = 8104;
 
 const PRESTADOR = 7101;
+/** El telefono que el oferente declara EN SU PERFIL, para que le contacten (B-1). */
+const TELEFONO_PERFIL = '3005550101';
 const OTRO_PRESTADOR = 7102;
 const SERVICIO = 6101;
 const CATEGORIA = 5101;
@@ -482,6 +484,91 @@ describe('contratacion directa y contacto (SRS RF60 a RF70, RF156)', () => {
     // El de la CONTRAPARTE, no el propio: cada parte ya conoce el suyo.
     expect(despues.body.contacto.idUsuario).toBe(OFERENTE);
     expect(despues.body.contacto.correo).toBe(`u${OFERENTE}@puntoamigo.local`);
+  });
+
+  /**
+   * B-1: el telefono sale del PERFIL DE PRESTADOR, no de la cuenta.
+   *
+   * Decidido el 3/10/2026, opcion (c) de `FASE-2-ENTREGA.md` §6.1: el perfil es
+   * donde el oferente declara un telefono *para que le contacten*. El de la
+   * cuenta se dio para administrarla, no para publicarlo a una contraparte.
+   *
+   * La prueba siembra los dos valores DISTINTOS a proposito. Si leyera el de la
+   * cuenta, `usuario_ref.telefono` es null y esto fallaria; si leyera cualquiera
+   * de los dos indistintamente, el valor exacto lo delata.
+   */
+  it('revela el telefono del perfil de prestador, no el de la cuenta', async () => {
+    if (saltar()) return;
+    const id = await crearDirecta();
+
+    await knex('usuario_ref').where({ id_usuario: OFERENTE }).update({ telefono: '3009999999' });
+    await knex('prestador_ref')
+      .where({ id_prestador: PRESTADOR })
+      .update({ telefono: TELEFONO_PERFIL });
+
+    await oferente().patch(`/api/v1/requests/${id}/status`).send({ destino: 'ACEPTADA' });
+
+    const r = await solicitante().get(`/api/v1/requests/${id}`);
+    expect(r.status).toBe(200);
+    expect(r.body.contacto.telefono).toBe(TELEFONO_PERFIL);
+    expect(r.body.contacto.telefono).not.toBe('3009999999');
+  });
+
+  /**
+   * Un perfil sin telefono no inventa uno.
+   *
+   * La columna es opcional en `pa_provider.prestador`, asi que la respuesta
+   * tiene que poder decir "no hay". Caer al telefono de la cuenta seria
+   * exactamente la opcion (a) que la decision descarto.
+   */
+  it('deja el telefono en null si el perfil de prestador no lo declara', async () => {
+    if (saltar()) return;
+    const id = await crearDirecta();
+
+    await knex('usuario_ref').where({ id_usuario: OFERENTE }).update({ telefono: '3009999999' });
+    await knex('prestador_ref').where({ id_prestador: PRESTADOR }).update({ telefono: null });
+
+    await oferente().patch(`/api/v1/requests/${id}/status`).send({ destino: 'ACEPTADA' });
+
+    const r = await solicitante().get(`/api/v1/requests/${id}`);
+    expect(r.body.contacto.telefono).toBeNull();
+  });
+
+  /**
+   * Y el oferente NO recibe el telefono del solicitante.
+   *
+   * La decision cubre el telefono del perfil de prestador, y un solicitante no
+   * tiene perfil: no hay ningun campo donde haya declarado un telefono para ser
+   * contactado. Revelarle el de su cuenta seria volver a la opcion (a).
+   */
+  it('no revela al oferente un telefono del solicitante', async () => {
+    if (saltar()) return;
+    const id = await crearDirecta();
+
+    await knex('usuario_ref').where({ id_usuario: SOLICITANTE }).update({ telefono: '3001111111' });
+
+    await oferente().patch(`/api/v1/requests/${id}/status`).send({ destino: 'ACEPTADA' });
+
+    const r = await oferente().get(`/api/v1/requests/${id}`);
+    expect(r.status).toBe(200);
+    expect(r.body.contacto.idUsuario).toBe(SOLICITANTE);
+    expect(r.body.contacto.telefono).toBeNull();
+    // El correo si: es el canal que la plataforma ya usa para avisarle.
+    expect(r.body.contacto.correo).toBe(`u${SOLICITANTE}@puntoamigo.local`);
+  });
+
+  it('un tercero sigue sin ver el telefono del perfil', async () => {
+    if (saltar()) return;
+    const id = await crearDirecta();
+
+    await knex('prestador_ref')
+      .where({ id_prestador: PRESTADOR })
+      .update({ telefono: TELEFONO_PERFIL });
+    await oferente().patch(`/api/v1/requests/${id}/status`).send({ destino: 'ACEPTADA' });
+
+    const r = await ajeno().get(`/api/v1/requests/${id}`);
+    expect(r.status).toBe(404);
+    expect(JSON.stringify(r.body)).not.toContain(TELEFONO_PERFIL);
   });
 
   it('un tercero no ve una contratacion ajena', async () => {

@@ -54,6 +54,13 @@ export class SyncReplicasUseCase {
     nombre?: string | null;
     especialidad?: string | null;
     estado: string;
+    /**
+     * Ausente y null son distintos (B-1).
+     *
+     * Ausente: el evento no habla del telefono, se conserva el replicado.
+     * Null: el oferente lo borro del perfil, hay que borrarlo aqui tambien.
+     */
+    telefono?: string | null | undefined;
   }): Promise<void> {
     const actual = await this.replicas.prestadorPorId(datos.idPrestador);
 
@@ -66,6 +73,9 @@ export class SyncReplicasUseCase {
       nombre: datos.nombre ?? actual?.nombre ?? '',
       especialidad: datos.especialidad ?? actual?.especialidad ?? null,
       estado: datos.estado,
+      // `??` no sirve: trataria el null explicito como ausencia y el borrado
+      // del telefono no se propagaria nunca.
+      telefono: datos.telefono === undefined ? (actual?.telefono ?? null) : datos.telefono,
     });
   }
 

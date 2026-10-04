@@ -63,6 +63,19 @@ export class ManageProviderProfileUseCase {
           nombre: guardado.nombre,
           especialidad: guardado.especialidad,
           estado: guardado.estado,
+          /**
+           * El telefono del perfil viaja al evento (B-1).
+           *
+           * `pa_request` lo necesita para revelarlo a la contraparte tras el
+           * acuerdo, y no tenia ninguna forma de conocerlo: su replica no lo
+           * copiaba y ningun evento lo llevaba. El detalle de contratacion
+           * mostraba el de `usuario_ref`, que nunca se rellena porque
+           * `UserRegistered` no lo transporta: el campo salia siempre null.
+           *
+           * Solo lo consume la replica de request-service. El catalogo tambien
+           * escucha este evento y NO lo guarda: su vista es publica.
+           */
+          telefono: guardado.telefono,
         },
       },
       entrada.correlationId
@@ -106,6 +119,9 @@ export class ManageProviderProfileUseCase {
           nombre: prestador.nombre,
           especialidad: prestador.especialidad,
           estado: prestador.estado,
+          // Corregir el telefono tiene que llegar a la replica: es el dato que
+          // la contraparte va a usar para llamar.
+          telefono: prestador.telefono,
         },
       },
       entrada.correlationId

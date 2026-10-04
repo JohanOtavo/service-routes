@@ -945,6 +945,15 @@ export interface PrestadorRef {
   nombre: string;
   especialidad: string | null;
   estado: string;
+  /**
+   * Telefono declarado EN EL PERFIL, no el de la cuenta (B-1).
+   *
+   * Es el que se revela a la contraparte tras el acuerdo. Nulo mientras el
+   * oferente no lo declare, y nulo tambien en las filas que se replicaron
+   * antes de que el evento lo transportara: hasta que un
+   * `ServiceProviderProfileUpdated` o una re-emision las refresque.
+   */
+  telefono: string | null;
 }
 
 /** Copia local de un servicio, alimentada por eventos de catalog-service. */

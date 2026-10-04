@@ -2,7 +2,13 @@ import knexLib from 'knex';
 import type { Express } from 'express';
 import type { Knex } from 'knex';
 import { z } from 'zod';
-import { EventName, assertProductionSafety, baseEnvSchema, loadEnv } from '@punto-amigo/shared';
+import {
+  EventName,
+  assertProductionSafety,
+  baseEnvSchema,
+  esVacio,
+  loadEnv,
+} from '@punto-amigo/shared';
 import { Broker, EventConsumer, OutboxRelay } from '@punto-amigo/messaging';
 import { OutboxEventPublisher, SystemClock, useTransaction } from '@punto-amigo/service-kit';
 import { ManageNeedsUseCase } from './application/use-cases/ManageNeeds';
@@ -262,6 +268,22 @@ async function main(): Promise<void> {
     nombre: p['nombre'] === undefined ? null : String(p['nombre']),
     especialidad: p['especialidad'] === undefined ? null : String(p['especialidad']),
     estado: String(p['estado']),
+    /**
+     * `undefined` y null NO significan lo mismo aqui (B-1).
+     *
+     * Ausente = este evento no habla del telefono —`ProviderStatusChanged` solo
+     * trae el estado— y el que ya hubiera en la replica se conserva. Null
+     * explicito = el oferente lo borro de su perfil, y entonces hay que
+     * borrarlo tambien aqui. Colapsar los dos casos haria que un cambio de
+     * estado dejara a la contraparte sin telefono, o que borrarlo del perfil no
+     * surtiera efecto.
+     */
+    telefono:
+      p['telefono'] === undefined
+        ? undefined
+        : esVacio(p['telefono'])
+          ? null
+          : String(p['telefono']),
   });
 
   for (const evento of [

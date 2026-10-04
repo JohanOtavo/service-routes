@@ -138,6 +138,20 @@ export class Prestador {
     return this.props.estado;
   }
 
+  /**
+   * El telefono declarado en el perfil (B-1).
+   *
+   * Existe para que el evento de perfil lo transporte hasta `pa_request`, que
+   * es quien lo revela a la contraparte tras el acuerdo. Esto NO relaja lo que
+   * dice `vistaPublica`: ahi sigue sin aparecer, y por el mismo motivo de
+   * siempre —que cualquiera pueda llamar a esa persona sin haber contratado
+   * nada—. Lo que cambia es que ahora hay un camino hacia la unica vista que
+   * si debe mostrarlo.
+   */
+  get telefono(): string | null {
+    return this.props.telefono;
+  }
+
   /** Validado = revisado por un administrador y en servicio (SRS RF26). */
   get estaValidado(): boolean {
     return this.props.estado === 'ACTIVE';

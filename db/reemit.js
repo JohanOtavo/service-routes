@@ -96,7 +96,7 @@ const FUENTES = {
         'prestadores -> ServiceProviderProfileCreated (prestador_ref en catalog y request)',
       async cargar(db) {
         return db('prestador')
-          .select('id_prestador', 'id_usuario', 'nombre', 'especialidad', 'estado')
+          .select('id_prestador', 'id_usuario', 'nombre', 'especialidad', 'estado', 'telefono')
           .whereNull('deleted_at')
           .orderBy('id_prestador');
       },
@@ -114,6 +114,14 @@ const FUENTES = {
             // alta. Reconstruir el estado inicial dejaria el catalogo
             // ocultando prestadores que llevan meses activos.
             estado: fila.estado,
+            /**
+             * El telefono tambien (B-1).
+             *
+             * Sin el, reconstruir `prestador_ref` dejaria a cada contratacion
+             * acordada sin el numero de su contraparte, y el sintoma seria un
+             * hueco en la pantalla en lugar de un error.
+             */
+            telefono: fila.telefono,
           },
         };
       },

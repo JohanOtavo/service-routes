@@ -250,15 +250,37 @@ export class ManageRequestsUseCase {
      * los datos personales que viajan en cada respuesta. Quien pregunta recibe
      * exactamente lo que necesita para coordinar el trabajo y nada mas.
      */
-    const idContraparte =
-      entrada.idUsuario === solicitud.idUsuario ? idUsuarioPrestador : solicitud.idUsuario;
+    const soySolicitante = entrada.idUsuario === solicitud.idUsuario;
+    const idContraparte = soySolicitante ? idUsuarioPrestador : solicitud.idUsuario;
 
     const contraparte = await this.replicas.usuarioPorId(idContraparte);
+
+    /**
+     * El telefono sale del PERFIL DE PRESTADOR, no de la cuenta (B-1).
+     *
+     * Decidido el 3/10/2026, opcion (c) de `FASE-2-ENTREGA.md` §6.1: el perfil
+     * es donde el oferente declara un telefono *para que le contacten*. El de la
+     * cuenta se dio para administrarla, y publicarlo a una contraparte seria la
+     * opcion (a), descartada.
+     *
+     * Por eso solo hay telefono en un sentido: cuando la contraparte es el
+     * prestador. Un solicitante no tiene perfil, asi que no existe ningun campo
+     * en el que haya declarado un telefono para ser contactado, y el oferente
+     * recibe su nombre y su correo pero no un numero. El cliente web ya
+     * contempla ese caso y muestra que no hay telefono registrado.
+     *
+     * `usuario_ref.telefono` deja de leerse aqui. Nunca se rellenaba
+     * —`UserRegistered` no lo transporta— asi que este campo venia null
+     * siempre, y el cliente llevaba mostrando un hueco desde la Fase 3.
+     */
+    const perfil = soySolicitante
+      ? await this.replicas.prestadorPorId(solicitud.idPrestador)
+      : null;
 
     return solicitud.toJSON(true, {
       idUsuario: idContraparte,
       nombre: contraparte?.nombre ?? null,
-      telefono: contraparte?.telefono ?? null,
+      telefono: perfil?.telefono ?? null,
       correo: contraparte?.correo ?? null,
     });
   }

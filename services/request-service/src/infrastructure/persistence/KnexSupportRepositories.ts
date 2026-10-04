@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { currentDb } from '@punto-amigo/service-kit';
+import { esVacio } from '@punto-amigo/shared';
 import type {
   AsientoHistorial,
   ICancelacionRepository,
@@ -206,10 +207,11 @@ export class KnexReplicaRepository implements IReplicaRepository {
         nombre: ref.nombre,
         especialidad: ref.especialidad,
         estado: ref.estado,
+        telefono: ref.telefono,
         synced_at: new Date(),
       })
       .onConflict('id_prestador')
-      .merge(['id_usuario', 'nombre', 'especialidad', 'estado', 'synced_at']);
+      .merge(['id_usuario', 'nombre', 'especialidad', 'estado', 'telefono', 'synced_at']);
   }
 
   async upsertServicio(ref: ServicioRef): Promise<void> {
@@ -249,6 +251,7 @@ export class KnexReplicaRepository implements IReplicaRepository {
       nombre: String(fila['nombre']),
       especialidad: fila['especialidad'] === null ? null : String(fila['especialidad']),
       estado: String(fila['estado']),
+      telefono: esVacio(fila['telefono']) ? null : String(fila['telefono']),
     };
   }
 }
