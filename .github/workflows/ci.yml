@@ -282,11 +282,28 @@ jobs:
           # como `\n`, porque es el formato que produce un fichero .env.
           openssl genrsa -out private.pem 2048
           openssl rsa -in private.pem -pubout -out public.pem
-          priv=$(awk '{printf "%s\n", $0}' private.pem)
-          pub=$(awk '{printf "%s\n", $0}' public.pem)
-          sed -i "s|^JWT_PRIVATE_KEY=.*|JWT_PRIVATE_KEY=\"$priv\"|" .env
-          sed -i "s|^JWT_PUBLIC_KEY=.*|JWT_PUBLIC_KEY=\"$pub\"|" .env
+          # `printf "%s\\n"`: con una sola barra, awk emite un salto DE VERDAD
+          # y la variable queda multilinea. Eso rompio el primer intento con
+          # `sed: unterminated s command`.
+          priv=$(awk '{printf "%s\\n", $0}' private.pem)
+          pub=$(awk '{printf "%s\\n", $0}' public.pem)
+
+          # Las claves se reemplazan quitando la linea y anadiendola al final, y
+          # no con `sed`: el valor lleva barras y comillas, y escaparlo para el
+          # lado derecho de una sustitucion es una fuente de fallos que no hace
+          # falta correr.
+          grep -v '^JWT_PRIVATE_KEY=' .env | grep -v '^JWT_PUBLIC_KEY=' > .env.tmp
+          {
+            echo "JWT_PRIVATE_KEY=\"$priv\""
+            echo "JWT_PUBLIC_KEY=\"$pub\""
+          } >> .env.tmp
+          mv .env.tmp .env
           rm -f private.pem public.pem
+
+          # Una clave vacia dejaria arrancar a auth-service y fallar al emitir
+          # el primer token, con un error que no menciona esto.
+          grep -q 'BEGIN PRIVATE KEY' .env || { echo 'La clave privada no entro en el .env'; exit 1; }
+          grep -q 'BEGIN PUBLIC KEY' .env || { echo 'La clave publica no entro en el .env'; exit 1; }
 
       - name: Construir las imagenes
         run: docker compose --profile apps build
