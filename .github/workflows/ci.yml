@@ -237,3 +237,102 @@ jobs:
       # Vitest y las dependencias. Una sola puerta, igual que en local.
       - name: verify
         run: npm run verify
+
+  e2e:
+    name: Recorrido en navegador
+    runs-on: ubuntu-latest
+    # Despues de la puerta: si el formato, los tipos o las pruebas estan rotos,
+    # construir ocho imagenes para descubrirlo es tiempo tirado.
+    needs: verify
+    # El recorrido atraviesa cinco servicios y un broker; mas de media hora
+    # significa que algo se quedo colgado.
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # La pila se levanta con docker compose y NO con los `services` del
+      # runner: los ocho servicios son contenedores construidos desde este
+      # repositorio, y `services` solo sirve para imagenes ya publicadas.
+      #
+      # `env_file: [.env]` del compose exige un .env, asi que se parte del
+      # ejemplo y se rellenan los valores que no pueden ir versionados.
+      - name: Preparar el .env de la ejecucion
+        run: |
+          cp .env.example .env
+          claves() { sed -i "s|^$1=.*|$1=$2|" .env; }
+          claves MYSQL_ROOT_PASSWORD ci-root
+          claves DB_AUTH_PASSWORD ci-auth
+          claves DB_PROVIDER_PASSWORD ci-provider
+          claves DB_CATALOG_PASSWORD ci-catalog
+          claves DB_REQUEST_PASSWORD ci-request
+          claves DB_RATING_PASSWORD ci-rating
+          claves DB_NOTIFICATION_PASSWORD ci-notification
+          claves DB_ADMIN_PASSWORD ci-admin
+          claves RABBITMQ_PASSWORD ci-rabbit
+          claves INTERNAL_SERVICE_SECRET ci-internal-secret-largo
+          claves SEED_DEV_PASSWORD ci-solo-esta-ejecucion
+
+          # Claves efimeras. El codigo espera el PEM con los saltos escapados
+          # como `\n`, porque es el formato que produce un fichero .env.
+          openssl genrsa -out private.pem 2048
+          openssl rsa -in private.pem -pubout -out public.pem
+          priv=$(awk '{printf "%s\n", $0}' private.pem)
+          pub=$(awk '{printf "%s\n", $0}' public.pem)
+          sed -i "s|^JWT_PRIVATE_KEY=.*|JWT_PRIVATE_KEY=\"$priv\"|" .env
+          sed -i "s|^JWT_PUBLIC_KEY=.*|JWT_PUBLIC_KEY=\"$pub\"|" .env
+          rm -f private.pem public.pem
+
+      - name: Construir las imagenes
+        run: docker compose --profile apps build
+
+      # La superposicion eleva los limitadores de peticiones. Son una medida de
+      # seguridad real y el recorrido los agota en segundos; el detalle esta en
+      # docker-compose.e2e.yml.
+      - name: Levantar la pila
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.e2e.yml \
+            --profile apps up -d --wait --wait-timeout 300
+
+      - name: Estado de la pila
+        run: |
+          docker compose --profile apps ps
+          curl -fsS --retry 10 --retry-delay 3 http://127.0.0.1:8080/health
+
+      # El `migrator` del compose ya aplico las migraciones; los seeds no, y sin
+      # el catalogo de roles ni las categorias el recorrido no puede empezar.
+      - name: Cargar datos iniciales
+        env:
+          MYSQL_HOST: 127.0.0.1
+          NODE_ENV: development
+        run: npm run db:seed
+
+      - name: Instalar el navegador
+        run: npx playwright install --with-deps chromium
+
+      - name: Recorrido
+        env:
+          CI: 'true'
+          MYSQL_HOST: 127.0.0.1
+        run: npm run e2e
+
+      # Los registros de los contenedores, solo si fallo: sin ellos un fallo de
+      # un servicio se lee como un fallo de la prueba.
+      - name: Registros de la pila
+        if: failure()
+        run: docker compose --profile apps logs --tail 200
+
+      - name: Artefactos de Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

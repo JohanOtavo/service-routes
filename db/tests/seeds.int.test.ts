@@ -37,6 +37,20 @@ import knexLib, { type Knex } from 'knex';
 process.env['SEED_DEV_PASSWORD'] ??= 'ContrasenaDeSemillaParaPruebas';
 process.env['NODE_ENV'] ??= 'test';
 
+/**
+ * AVISO: esta suite cambia la contrasena de las cuatro cuentas sembradas.
+ *
+ * Ejecuta el seed de VERDAD —es lo que esta probando—, y el seed refresca el
+ * hash con `SEED_DEV_PASSWORD`. Si esa variable no esta en el entorno se usa el
+ * valor por omision de arriba, asi que correr esta suite deja las cuentas con
+ * esa contrasena y no con la del `.env`.
+ *
+ * No es un defecto que haya que arreglar aqui: el seed debe poder cambiar la
+ * contrasena, y esta prueba debe ejecutar el seed real. Lo que no puede es
+ * suponerse: las E2E llaman a `asegurarContrasenaSembrada()` antes de empezar,
+ * en lugar de dar por bueno lo que dejara la suite anterior.
+ */
+
 /* eslint-disable @typescript-eslint/no-require-imports */
 const configs = require('../knexfile') as Record<string, Knex.Config>;
 const seedAuth = require('../seeds/auth/01_roles_and_users') as {

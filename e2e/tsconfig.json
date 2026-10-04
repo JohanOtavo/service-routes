@@ -21,6 +21,9 @@
     // La base los enciende para los proyectos referenciados; aqui no hay nada
     // que emitir y TypeScript rechaza un mapa de declaraciones sin declaracion.
     "declarationMap": false,
+    // `dom` porque `evaluateAll` corre en el navegador y su callback toca
+    // tipos del DOM, aunque el archivo se ejecute en Node.
+    "lib": ["ES2022", "DOM"],
     "types": ["node"],
     "module": "ESNext",
     "moduleResolution": "bundler"

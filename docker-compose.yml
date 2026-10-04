@@ -154,14 +154,6 @@ services:
       MYSQL_HOST: mysql
       REDIS_HOST: redis
       NODE_ENV: ${NODE_ENV:-development}
-      # El limite de peticiones de autenticacion, elevable desde el entorno.
-      #
-      # El valor por omision no cambia: sigue siendo el del .env. Esto existe
-      # porque las E2E recorren varios inicios de sesion y recuperaciones en
-      # pocos segundos y chocan con los 10 por minuto, y bajar la guardia en el
-      # .env dejaria el limite flojo tambien fuera de las pruebas. La suite de
-      # integracion ya hacia lo mismo pasandose un valor alto a si misma.
-      RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-10}
     # Sin `ports`: deliberado. Alcanzarlo desde el host exigiria publicarlo, y
     # entonces dejaria de ser interno.
     depends_on:
@@ -326,11 +318,6 @@ services:
       UPSTREAM_RATING_URL: http://rating-service:3005
       UPSTREAM_NOTIFICATION_URL: http://notification-service:3006
       UPSTREAM_ADMIN_URL: http://admin-reporting-service:3007
-      # El gateway tiene su PROPIO limitador de las rutas de autenticacion,
-      # aparte del de auth-service. Elevar solo el del servicio no servia de
-      # nada: el 429 lo devolvia este. Se eleva igual desde el entorno, con el
-      # mismo valor por omision.
-      RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-10}
     ports:
       - '127.0.0.1:${GATEWAY_PORT:-8080}:8080'
     depends_on:

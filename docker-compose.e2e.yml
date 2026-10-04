@@ -1,0 +1,36 @@
+# Superposicion para las pruebas de extremo a extremo (C-3).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile apps up -d
+#
+# Existe por un motivo concreto: los limitadores de peticiones. Son una medida
+# de seguridad real y el recorrido E2E los agota en segundos.
+#
+#   - `RATE_LIMIT_MAX_PER_IP=100` por minuto. Cada pantalla del cliente hace
+#     varias peticiones y el recorrido recorre muchas pantallas, asi que el 429
+#     acaba saliendo en la siguiente peticion cualquiera. Cuando salia en la de
+#     recuperacion, el mensaje hablaba de "demasiadas recuperaciones" y parecia
+#     un limite de ese endpoint; no lo era.
+#   - `RATE_LIMIT_AUTH_MAX=10` por minuto, y lo aplican DOS limitadores
+#     distintos: el del gateway y el de auth-service. Elevar solo el del
+#     servicio no sirve de nada, porque el 429 lo devuelve el de delante.
+#
+# Por que un archivo aparte y no el bloque `environment` de cada servicio: ese
+# bloque ENSOMBRECE el `env_file`, asi que meterlo ahi habria hecho que cambiar
+# el valor en el `.env` dejara de surtir efecto para todo el mundo. Aqui la
+# configuracion de prueba es explicita, se pide a mano y no toca el valor por
+# omision de nadie.
+#
+# Lo que NO se toca: `LOGIN_MAX_ATTEMPTS`. El bloqueo progresivo por intentos
+# fallidos sigue en su valor real, porque el recorrido no depende de fallar
+# inicios de sesion y relajarlo dejaria sin probar una proteccion que si importa.
+services:
+  api-gateway:
+    environment:
+      RATE_LIMIT_MAX_PER_IP: '5000'
+      RATE_LIMIT_MAX_PER_USER: '5000'
+      RATE_LIMIT_AUTH_MAX: '2000'
+
+  auth-service:
+    environment:
+      RATE_LIMIT_MAX_PER_IP: '5000'
+      RATE_LIMIT_AUTH_MAX: '2000'

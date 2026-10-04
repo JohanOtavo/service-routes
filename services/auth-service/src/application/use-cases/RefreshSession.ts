@@ -17,6 +17,20 @@ export interface RefreshOutput {
   refreshToken: string;
   accessExpiresAt: Date;
   refreshExpiresAt: Date;
+  /**
+   * El usuario, igual que lo devuelve el inicio de sesion.
+   *
+   * No lo devolvia, y eso rompia el cliente de una forma que ninguna prueba
+   * veia: en una carga en frio —una recarga, o abrir un enlace directo— el
+   * token en memoria no existe todavia, asi que la sesion se reconstruia solo
+   * con esta respuesta. Sin `usuario`, el cliente se quedaba con una sesion de
+   * roles vacios y toda pantalla con rol respondia "esta pantalla no es para su
+   * perfil".
+   *
+   * Este caso de uso YA cargaba el usuario para comprobar que la cuenta sigue
+   * activa; lo unico que faltaba era devolverlo.
+   */
+  usuario: { id: number; nombre: string; correo: string; roles: string[] };
 }
 
 /**
@@ -95,6 +109,12 @@ export class RefreshSessionUseCase {
       refreshToken: emitidos.refreshToken,
       accessExpiresAt: emitidos.accessExpiresAt,
       refreshExpiresAt: emitidos.refreshExpiresAt,
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        correo: usuario.email.value,
+        roles: usuario.roles.toArray(),
+      },
     };
   }
 }

@@ -299,6 +299,10 @@ export function createApp(deps: AppDeps): Express {
         res.json({
           accessToken: salida.accessToken,
           expiresAt: salida.accessExpiresAt.toISOString(),
+          // El usuario viaja tambien en la renovacion, igual que en el inicio
+          // de sesion: en una carga en frio es la UNICA respuesta con la que el
+          // cliente puede reconstruir la sesion, y sin esto se quedaba sin roles.
+          usuario: salida.usuario,
         });
       } catch (error) {
         // Una renovacion fallida limpia la cookie: conservarla solo produce

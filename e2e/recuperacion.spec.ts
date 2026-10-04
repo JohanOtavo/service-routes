@@ -19,7 +19,7 @@ import { spawnSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
 import {
   USUARIOS,
-  contrasenaSembrada,
+  asegurarContrasenaSembrada,
   enlaceActualONada,
   esperarEnlaceNuevo,
   rutaDelEnlace,
@@ -35,7 +35,7 @@ test.describe('recuperacion de contrasena', () => {
    * mensaje habla de un seed en lugar de decir que falta una variable.
    */
   test.beforeAll(() => {
-    contrasenaSembrada();
+    asegurarContrasenaSembrada();
   });
 
   test('pide el enlace, lo abre, cambia la contrasena y entra con la nueva', async ({ page }) => {

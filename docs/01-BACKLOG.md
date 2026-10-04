@@ -26,15 +26,15 @@ técnico: necesita una respuesta tuya.
 | Grupo | Orígenes | Elementos | Abiertos | Decisión pendiente |
 |---|---|---|---|---|
 | A. Pendientes de la Fase 1 | `FASE-1-ENTREGA.md` §6 | 3 | **0** | 0 · los 3 cerrados en Fase 5 |
-| B. Pendientes de la Fase 2 | `FASE-2-ENTREGA.md` §6 | 6 | **4** | 0 · B-2 y B-3 cerrados en Fase 5 |
-| C. Pendientes de la Fase 3 | `FASE-3-ENTREGA.md` §7 | 4 | **3** | 0 · C-2 cerrado |
+| B. Pendientes de la Fase 2 | `FASE-2-ENTREGA.md` §6 | 6 | **3** | 0 · B-1, B-2 y B-3 cerrados |
+| C. Pendientes de la Fase 3 | `FASE-3-ENTREGA.md` §7 | 4 | **0** | 0 · los 4 cerrados |
 | D. Deuda técnica registrada | `05-architecture/overview.md` §14 | 7 | **6** | 3 (AT-001, AT-003, AT-006) · AT-004 cerrado |
 | E. Preguntas abiertas | `srs-microservices.md` §11 | 12 | 12 | 5 bloqueantes |
 | F. Brechas de trazabilidad | `traceability-matrix.md` §10 | 8 | 8 | 0 |
 | G. Calidad del repositorio | medido el 3/10/2026 | 8 | **1** | 0 · G-3 decidido |
 | H. Documentación ausente | §H, abajo | 9 | 9 | 0 |
-| I. Hallazgos de la Fase 5 | §I, abajo | 4 | 4 | 0 |
-| **Total** | | **61** | **48** | **8** |
+| I. Hallazgos de las Fases 5 y 6 | §I, abajo | 6 | **5** | 0 · I-5 cerrado |
+| **Total** | | **63** | **44** | **8** |
 
 El recuento de G subió de 5 a 8 porque G-6, G-7 y G-8 se añadieron después de la
 primera versión de esta tabla y no se habían contado. Siete de los ocho están
@@ -117,7 +117,10 @@ documentadas, y una prueba que verifica que una fila aparece.
 Origen: `FASE-2-ENTREGA.md` §6. El propio documento dice que ninguno bloquea la
 Fase 3 y que conviene resolverlos. Siguen abiertos.
 
-### B-1 · El teléfono no llega al contacto posterior al acuerdo · **DECIDIDO**
+### B-1 · El teléfono no llega al contacto posterior al acuerdo — **CERRADO** el 3/10/2026
+**Cerrado con.** El teléfono sale del perfil de prestador, por el camino completo: migración, los dos eventos de perfil, consumidor, réplica, lectura y `db/reemit.js`. 5 pruebas de integración y una aserción en el E2E. Cierra también C-4. Detalle en [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) §2.
+
+Lo que decia este elemento:
 **Qué pasa.** Tras adjudicarse una solicitud, la pantalla de detalle de
 contratación no muestra el teléfono de la contraparte.
 **Decisión del 3/10/2026.** Opción **(c)**: sale del **perfil de prestador**, que es
@@ -180,7 +183,10 @@ Pagos, notificaciones por correo o push, y el cálculo de `statistics_snapshot`.
 
 Origen: `FASE-3-ENTREGA.md` §7.
 
-### C-1 · Recuperación de contraseña sin canal de entrega · **DECIDIDO**
+### C-1 · Recuperación de contraseña sin canal de entrega — **CERRADO** el 3/10/2026
+**Cerrado con.** Consumidor de correo transaccional en `notification-service` y `nodemailer@^10.0.14`. 13 pruebas unitarias y un recorrido en navegador que pide el enlace, lo abre, cambia la contraseña y entra con la nueva. Detalle en [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) §3.
+
+Lo que decia este elemento:
 **El título de este pendiente era incorrecto.** Decía «sin interfaz», y la interfaz
 ya está: las pantallas compilan y las rutas `/recuperar` y `/restablecer` están
 cableadas en `App.tsx` desde la Fase 4 (ver G-5). Lo que falta es **el canal**.
@@ -231,7 +237,10 @@ no lo usaba al rasterizar.
 inicio»: requiere instalar la PWA en un dispositivo. Queda como comprobación manual
 dentro del E2E de la Fase 6 (C-3), no como pendiente abierto.
 
-### C-3 · No hay pruebas de extremo a extremo
+### C-3 · No hay pruebas de extremo a extremo — **CERRADO** el 3/10/2026
+**Cerrado con.** 4 pruebas Playwright en `e2e/` y un job de CI propio, `Recorrido en navegador`. Cubren el recorrido crítico completo y la recuperación de contraseña, y encontraron un defecto que ninguna otra prueba veía: ver I-5. Detalle en [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) §4.
+
+Lo que decia este elemento:
 **Qué pasa.** `11-quality/testing-strategy.md` §E2E las exige para el Go/No-Go. El
 recorrido crítico —publicar necesidad, recibir propuestas, adjudicar, cancelar— solo
 está cubierto por pruebas unitarias y de integración por partes.
@@ -433,7 +442,7 @@ por servicio.
 
 ---
 
-## I. Hallazgos de la Fase 5 que no estaban registrados
+## I. Hallazgos de las Fases 5 y 6 que no estaban registrados
 
 Aparecieron al construir la re-emisión y el escritor de métricas. Ninguno estaba
 en este backlog antes del 3/10/2026.
@@ -484,6 +493,29 @@ exporta con la lista de estados válidos y un error claro. El manejador real hac
 prestador desaparece del catálogo y nadie sabe por qué.
 **Cierra cuando.** El manejador la usa, o la función se elimina.
 **Fase destino.** 6.
+
+
+### I-5 · Recargar una pantalla dejaba al usuario sin roles — **CERRADO** el 3/10/2026
+**Qué pasaba.** El cliente guarda el token solo en memoria. En una carga en frío
+—una recarga, o abrir un enlace directo— la sesión se reconstruía solo con
+`/auth/refresh`, que **no devolvía el usuario**, y el cliente lo resolvía con
+`?? { id: 0, nombre: '', roles: [] }`. Toda pantalla con rol respondía «Esta
+pantalla no es para su perfil».
+**Por qué no lo veía nadie.** Las pruebas de cliente montan los componentes con
+la sesión ya puesta; ninguna hacía una carga en frío con solo la cookie.
+**Cerrado con.** `/auth/refresh` devuelve el usuario que su caso de uso ya
+cargaba, el cliente deja de inventar una sesión vacía, y hay una prueba de
+integración de regresión. Lo encontró la primera E2E del recorrido.
+
+### I-6 · El resultado de una cancelación no se llega a ver
+**Qué pasa.** `Contratacion.tsx` monta `<Cancelar>` solo mientras el estado es
+`PENDIENTE` o `ACEPTADA`. Al cancelar, el estado pasa a `CANCELADA` y el
+formulario —con su mensaje de resultado— se desmonta antes de que nadie lo lea.
+**Por qué importa.** Ese mensaje explica si la cancelación cuenta en la tasa y
+con qué peso. Es la única vez que se le dice a la persona, y no se ve.
+**Cierra cuando.** El resultado sobrevive al cambio de estado, con una prueba
+que lo compruebe.
+**Fase destino.** 8 o antes; es trabajo de interfaz.
 
 ## Cómo se cierra un elemento de este backlog
 

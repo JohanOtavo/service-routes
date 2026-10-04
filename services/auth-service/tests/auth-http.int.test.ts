@@ -491,6 +491,44 @@ describe('endurecimiento', () => {
     expect(JSON.stringify(login.body)).not.toContain('pa_refresh');
   });
 
+  /**
+   * La renovacion devuelve el usuario, igual que el inicio de sesion.
+   *
+   * No lo hacia, y el efecto no se veia en ninguna prueba: el cliente guarda el
+   * token en memoria, asi que en una carga en frio —una recarga, o abrir un
+   * enlace directo— la sesion se reconstruye SOLO con esta respuesta. Sin
+   * `usuario` el cliente se quedaba con roles vacios e `id: 0`, y toda pantalla
+   * con rol respondia "esta pantalla no es para su perfil". Lo encontro la
+   * primera prueba E2E del recorrido critico.
+   */
+  it('la renovacion devuelve el usuario y sus roles, no solo el token', async () => {
+    if (saltarSiNoHayBase()) return;
+
+    await request(app).post('/api/v1/auth/register').send({
+      nombre: 'Persona',
+      correo: CORREO,
+      contrasena: CONTRASENA,
+      confirmacionContrasena: CONTRASENA,
+    });
+    const login = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ correo: CORREO, contrasena: CONTRASENA });
+
+    const cookie = (login.headers['set-cookie'] as unknown as string[]).find((c) =>
+      c.startsWith('pa_refresh=')
+    ) as string;
+
+    const renovado = await request(app).post('/api/v1/auth/refresh').set('cookie', cookie);
+
+    expect(renovado.status).toBe(200);
+    expect(renovado.body.usuario).toBeDefined();
+    expect(renovado.body.usuario.roles).toEqual(login.body.usuario.roles);
+    expect(renovado.body.usuario.id).toBe(login.body.usuario.id);
+    // Un id 0 o unos roles vacios es exactamente el estado que rompia el cliente.
+    expect(renovado.body.usuario.id).toBeGreaterThan(0);
+    expect(renovado.body.usuario.roles.length).toBeGreaterThan(0);
+  });
+
   it('rechaza una peticion que no venga del gateway', async () => {
     if (saltarSiNoHayBase()) return;
 

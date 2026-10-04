@@ -143,3 +143,154 @@ export function rutaDelEnlace(enlace: string): string {
   const url = new URL(enlace);
   return `${url.pathname}${url.search}`;
 }
+
+/** Contenedor de MySQL, segun `docker-compose.yml`. */
+const CONTENEDOR_MYSQL = process.env['E2E_MYSQL_CONTAINER'] ?? 'pa-mysql';
+
+/**
+ * Ejecuta SQL como root dentro del contenedor.
+ *
+ * Por `docker exec` y no con un cliente del anfitrion, igual que
+ * `db/respaldo.sh`: asi la prueba no depende de que quien la corra tenga
+ * instalado un cliente de la version correcta.
+ */
+function sql(sentencia: string): string {
+  const clave = process.env['MYSQL_ROOT_PASSWORD'];
+  if (clave === undefined || clave === '') {
+    throw new Error('Falta MYSQL_ROOT_PASSWORD. Cargue el .env antes de correr las E2E.');
+  }
+
+  const r = spawnSync(
+    'docker',
+    [
+      'exec',
+      '-e',
+      `MYSQL_PWD=${clave}`,
+      CONTENEDOR_MYSQL,
+      'mysql',
+      '-uroot',
+      '-s',
+      '-N',
+      '-e',
+      sentencia,
+    ],
+    { encoding: 'utf8' }
+  );
+
+  if (r.error !== undefined) throw new Error(`No se pudo ejecutar docker: ${r.error.message}`);
+  if (r.status !== 0) {
+    throw new Error(`SQL fallo (${String(r.status)}): ${(r.stderr ?? '').slice(0, 300)}`);
+  }
+
+  return (r.stdout ?? '').trim();
+}
+
+/** El `id_usuario` de una cuenta sembrada. */
+export function idUsuarioDe(correo: string): number {
+  const salida = sql(`SELECT id_usuario FROM pa_auth.usuario WHERE correo = '${correo}';`);
+  const id = Number(salida.split(/\s+/u)[0]);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new Error(`No existe la cuenta ${correo}. Ejecute npm run db:seed.`);
+  }
+  return id;
+}
+
+/**
+ * Deja al oferente con un perfil de prestador ACTIVO y replicado.
+ *
+ * Es la precondicion del recorrido de negocio: sin perfil no se puede enviar
+ * una propuesta, y sin la replica en `pa_request` no se puede adjudicar.
+ *
+ * Se siembra en `pa_provider` —que es el dueno del dato— y se propaga con
+ * `npm run db:reemit provider`, el comando de A-2. Conducir las pantallas de
+ * administracion para validar el perfil anadiria media prueba de un flujo que
+ * no es el que se quiere probar, y pasaria por un rol mas.
+ *
+ * Como efecto secundario, cada ejecucion comprueba que la re-emision funciona
+ * de verdad contra la pila completa.
+ */
+export function prepararPrestadorActivo(correo: string, telefonoPerfil: string): number {
+  const idUsuario = idUsuarioDe(correo);
+
+  sql(
+    `INSERT INTO pa_provider.prestador
+       (id_usuario, nombre, especialidad, telefono, estado)
+     VALUES (${idUsuario}, 'Oferente de la prueba E2E', 'Plomeria', '${telefonoPerfil}', 'ACTIVE')
+     ON DUPLICATE KEY UPDATE
+       nombre = VALUES(nombre),
+       especialidad = VALUES(especialidad),
+       telefono = VALUES(telefono),
+       estado = VALUES(estado),
+       deleted_at = NULL;`
+  );
+
+  const r = spawnSync('npm run db:reemit provider', {
+    encoding: 'utf8',
+    shell: true,
+    env: { ...process.env, NODE_ENV: 'development', MYSQL_HOST: '127.0.0.1' },
+  });
+  if (r.status !== 0) {
+    throw new Error(`db:reemit fallo: ${((r.stdout ?? '') + (r.stderr ?? '')).slice(0, 400)}`);
+  }
+
+  return idUsuario;
+}
+
+/**
+ * Espera a que la replica de `pa_request` tenga el perfil.
+ *
+ * El relevo publica cada segundo y el consumidor tarda lo que tarde el broker,
+ * asi que la fila no esta ahi en el instante en que `db:reemit` termina.
+ */
+export async function esperarPrestadorReplicado(idUsuario: number): Promise<void> {
+  const limite = Date.now() + 30_000;
+
+  while (Date.now() < limite) {
+    const n = sql(
+      `SELECT COUNT(*) FROM pa_request.prestador_ref WHERE id_usuario = ${idUsuario} AND estado = 'ACTIVE';`
+    );
+    if (Number(n) > 0) return;
+    await new Promise((listo) => setTimeout(listo, 1_000));
+  }
+
+  throw new Error(
+    `El perfil del usuario ${idUsuario} no llego a pa_request.prestador_ref en 30 s. ` +
+      'Compruebe que request-service y RabbitMQ estan levantados.'
+  );
+}
+
+/** Cierra las necesidades que dejara una ejecucion anterior de la prueba. */
+export function limpiarNecesidadesDePrueba(marca: string): void {
+  sql(
+    `UPDATE pa_request.necesidad SET estado = 'CERRADA'
+     WHERE titulo LIKE '%${marca}%' AND estado = 'ABIERTA';`
+  );
+}
+
+/**
+ * Deja las cuatro cuentas sembradas con la contrasena de `SEED_DEV_PASSWORD`.
+ *
+ * Las E2E establecen su propia precondicion en lugar de suponerla, y hay un
+ * motivo concreto: `db/tests/seeds.int.test.ts` ejecuta el seed de verdad, y si
+ * corre sin `SEED_DEV_PASSWORD` en el entorno usa su propio valor por omision.
+ * Eso reescribe la contrasena de las cuatro cuentas, asi que correr la suite de
+ * integracion antes de las E2E dejaba el recorrido sin poder iniciar sesion.
+ *
+ * El refresco idempotente de A-1 es justo la herramienta: repetir el seed no
+ * toca los identificadores y si pone la contrasena que toca.
+ */
+export function asegurarContrasenaSembrada(): void {
+  contrasenaSembrada();
+
+  const r = spawnSync('npm run db:seed', {
+    encoding: 'utf8',
+    shell: true,
+    env: { ...process.env, NODE_ENV: 'development', MYSQL_HOST: '127.0.0.1' },
+  });
+
+  if (r.status !== 0) {
+    throw new Error(
+      `No se pudo sembrar antes de las E2E: ${((r.stdout ?? '') + (r.stderr ?? '')).slice(0, 400)}`
+    );
+  }
+}

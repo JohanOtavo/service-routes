@@ -91,9 +91,9 @@ resolvieron el 3/10/2026 en [02-DECISIONES.md](02-DECISIONES.md), de modo que la
 | 3 | Cliente web PWA | React 18 + TypeScript sobre Vite, 18 pantallas, sistema de diseño propio, PWA instalable | **Completada**; 1 pendiente cerrado, 3 asignados a la Fase 6 | [FASE-3-ENTREGA.md](FASE-3-ENTREGA.md) |
 | 4 | Cierre de calidad y deuda heredada | Que `npm run verify` y CI pasen en verde, y decidir los 13 pendientes abiertos | **Completada** el 3/10/2026 | [FASE-4-PLAN.md](FASE-4-PLAN.md) · [02-DECISIONES.md](02-DECISIONES.md) |
 | 5 | Datos y operación | Semillas idempotentes, re-emisión de réplicas, escritor de métricas, restauración probada, política de datos personales | **Completada** el 3/10/2026; la política queda en borrador | [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md) |
-| 6 | Experiencia del cliente | Teléfono desde el perfil de prestador, recuperación de contraseña con correo transaccional, E2E del recorrido | **Siguiente** | §5 |
+| 6 | Experiencia del cliente | Teléfono desde el perfil de prestador, recuperación de contraseña con correo transaccional, E2E del recorrido | **Completada** el 3/10/2026 | [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) |
 | ~~7~~ | ~~Notificaciones fuera del MVP~~ | ~~Correo y push~~ | **Eliminada.** Push y correo de producto descartados; el correo transaccional pasa a la Fase 6 | [02-DECISIONES.md](02-DECISIONES.md) §2 |
-| 8 | Observabilidad y despliegue | Logging estructurado, métricas, k6, entornos dev/staging/prod, despliegue | Aprobada | §5 |
+| 8 | Observabilidad y despliegue | Logging estructurado, métricas, k6, entornos dev/staging/prod, despliegue | **Siguiente** | §5 |
 | 9 | Documentación y trazabilidad | 6 de 8 servicios sin documentar, SRS inglés obsoleto, contratos duplicados, backlog formal | Aprobada · puede ir en paralelo ya | §5 |
 | 10 | Preparación de producción | Go/No-Go, Definition of Done completo, cierre de deuda técnica AT-001..007 | Aprobada | §5 |
 
@@ -332,13 +332,14 @@ Fase 1 ──┐
         ┌─────────────────────┼─────────────────────┐
         v                     v                     v
     Fase 5               Fase 6               Fase 9
-  COMPLETADA          (experiencia)        (documentación)
-        │             <-- aqui              en paralelo
+  COMPLETADA          COMPLETADA          (documentación)
+        │                     │            en paralelo
         │                     │
         └──────────┬──────────┘
                    v
               Fase 8  ──>  Fase 10
            (operación)    (producción)
+             <-- aqui
 ```
 
 La Fase 7 ya no está en el grafo: se eliminó el 3/10/2026 y el correo transaccional,
@@ -500,6 +501,7 @@ la Fase 5.
 | [03-RUNBOOK-RESPALDOS.md](03-RUNBOOK-RESPALDOS.md) | Respaldo y restauración: el procedimiento y la primera restauración verificada (AT-004) |
 | [04-POLITICA-DATOS-PERSONALES.md](04-POLITICA-DATOS-PERSONALES.md) | Inventario de datos personales y las 6 decisiones que bloquean producción |
 | [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md) | Registro de la Fase 5 |
+| [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) | Registro de la Fase 6 |
 | [FASE-4-PLAN.md](FASE-4-PLAN.md) | La Fase 4, completada, en detalle |
 | [FASE-1-ENTREGA.md](FASE-1-ENTREGA.md) | Registro de la Fase 1 |
 | [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) | Registro de la Fase 2 |

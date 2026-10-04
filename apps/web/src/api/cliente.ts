@@ -356,11 +356,31 @@ async function renovar(): Promise<boolean> {
       const datos = esquemaSesion.parse(await respuesta.json());
       const anterior = obtenerSesion();
 
+      /**
+       * Sin usuario no hay sesion. No se inventa uno vacio.
+       *
+       * Aqui habia `?? { id: 0, nombre: '', roles: [] }`, y era el defecto que
+       * encontro la primera E2E del recorrido. En una carga en frio —recargar
+       * una pantalla, o abrir un enlace directo— no hay sesion anterior en
+       * memoria, y la renovacion no devolvia el usuario: el cliente se quedaba
+       * con roles vacios e `id: 0`. Toda pantalla con rol respondia "esta
+       * pantalla no es para su perfil", y ninguna prueba lo veia porque las de
+       * cliente montan los componentes con la sesion ya puesta.
+       *
+       * La renovacion ya devuelve el usuario. Esto es la segunda mitad del
+       * arreglo: si aun asi no llegara, se trata como una renovacion fallida en
+       * lugar de fabricar una sesion que parece valida y no lo es.
+       */
+      const usuario = datos.usuario ?? anterior?.usuario;
+      if (usuario === undefined) {
+        sesionFuera();
+        return false;
+      }
+
       guardarSesion({
         accessToken: datos.accessToken,
         expiraEn: new Date(datos.expiresAt),
-        // La renovacion no reenvia el usuario: se conserva el que ya habia.
-        usuario: datos.usuario ?? anterior?.usuario ?? { id: 0, nombre: '', roles: [] },
+        usuario,
       });
       return true;
     } catch {
