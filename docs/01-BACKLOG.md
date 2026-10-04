@@ -28,13 +28,14 @@ técnico: necesita una respuesta tuya.
 | A. Pendientes de la Fase 1 | `FASE-1-ENTREGA.md` §6 | 3 | **0** | 0 · los 3 cerrados en Fase 5 |
 | B. Pendientes de la Fase 2 | `FASE-2-ENTREGA.md` §6 | 6 | **3** | 0 · B-1, B-2 y B-3 cerrados |
 | C. Pendientes de la Fase 3 | `FASE-3-ENTREGA.md` §7 | 4 | **0** | 0 · los 4 cerrados |
-| D. Deuda técnica registrada | `05-architecture/overview.md` §14 | 7 | **6** | 3 (AT-001, AT-003, AT-006) · AT-004 cerrado |
+| D. Deuda técnica registrada | `05-architecture/overview.md` §14 | 7 | **3** | 2 (AT-001, AT-003) · AT-004, AT-005, AT-006 y AT-007 cerrados |
 | E. Preguntas abiertas | `srs-microservices.md` §11 | 12 | 12 | 5 bloqueantes |
 | F. Brechas de trazabilidad | `traceability-matrix.md` §10 | 8 | 8 | 0 |
 | G. Calidad del repositorio | medido el 3/10/2026 | 8 | **1** | 0 · G-3 decidido |
 | H. Documentación ausente | §H, abajo | 9 | 9 | 0 |
 | I. Hallazgos de las Fases 5 y 6 | §I, abajo | 6 | **5** | 0 · I-5 cerrado |
-| **Total** | | **63** | **44** | **8** |
+| J. Hallazgos de la Fase 8 | §J, abajo | 3 | **3** | 0 |
+| **Total** | | **66** | **44** | **7** |
 
 El recuento de G subió de 5 a 8 porque G-6, G-7 y G-8 se añadieron después de la
 primera versión de esta tabla y no se habían contado. Siete de los ocho están
@@ -263,9 +264,9 @@ Origen: `05-architecture/overview.md` §14. **Los siete tienen destino
 | AT-002 | Estructura REST definitiva | P1 | Las rutas de los 63 endpoints están congeladas y el SRS refleja la decisión |
 | AT-003 | Organización de los repositorios | P2 | Se decide si `friend-point-docs` y `friend-point-development` se fusionan, se separan o se quedan. **Decisión** |
 | ~~AT-004~~ | ~~Procedimiento de restauración de respaldos~~ · **CERRADO** 3/10/2026 | ~~P1 · High~~ | Cumplido: [03-RUNBOOK-RESPALDOS.md](03-RUNBOOK-RESPALDOS.md) y `db/respaldo.sh`. Los 7 esquemas restaurados y verificados, 69 tablas comparadas, `restauracion_probada_at` con valor real en las 7 filas |
-| AT-005 | Herramientas de monitoreo y logging | P2 | Todos los servicios emiten logs estructurados con `correlation_id` y hay panel de métricas |
-| AT-006 | Valores de expiración de JWT | P1 | Access, refresh y denylist tienen caducidad decidida, documentada y testeada |
-| AT-007 | Límites de escalabilidad | P2 | Hay una prueba k6 con el umbral de la estrategia: P95 < 300 ms, error < 1 % |
+| ~~AT-005~~ | ~~Herramientas de monitoreo y logging~~ · **CERRADO** 4/10/2026 | ~~P2~~ | Cumplido: una línea JSON con `correlation_id` por petición en los nueve procesos, nueve `/metrics`, y Prometheus con Grafana en el perfil `observabilidad`. Los 10 objetivos verificados en `up`. Ver [05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.md) |
+| ~~AT-006~~ | ~~Valores de expiración de JWT~~ · **CERRADO** 4/10/2026 | ~~P1~~ | Cumplido: access 15 min, refresco 7 días, recuperación 30 min de un solo uso, y la lista de denegación caduca cuando caduca el token. Tenía un literal de 900.000 ms escrito a mano en la ruta de cierre de sesión; ahora sale de `JWT_ACCESS_TTL_SECONDS` y hay prueba de regresión que falla con el valor anterior |
+| ~~AT-007~~ | ~~Límites de escalabilidad~~ · **CERRADO** 4/10/2026 | ~~P2~~ | Cumplido: `npm run carga` con el umbral declarado como `threshold`. P95 **6,98 ms** contra 300 ms y **0 %** de error sobre 5.403 comprobaciones |
 
 ~~**AT-004 es el único de severidad High del proyecto.**~~ Cerrado el 3/10/2026. Ya no bloquea la Fase 10; lo que sigue bloqueándola es la política de datos personales.
 
@@ -515,7 +516,62 @@ formulario —con su mensaje de resultado— se desmonta antes de que nadie lo l
 con qué peso. Es la única vez que se le dice a la persona, y no se ve.
 **Cierra cuando.** El resultado sobrevive al cambio de estado, con una prueba
 que lo compruebe.
-**Fase destino.** 8 o antes; es trabajo de interfaz.
+**Fase destino.** Era «8 o antes». La Fase 8 se cerró el 4/10/2026 **sin
+tocarlo**: su trabajo fue observabilidad y carga, y esto es interfaz. Pasa a la
+Fase 9, donde no desentona, en lugar de quedarse con un destino ya vencido.
+
+## J. Hallazgos de la Fase 8 que no estaban registrados
+
+Salieron al poner en verde la observabilidad y la prueba de carga. El detalle de
+los siete defectos que bloqueaban el recorrido E2E en CI está en
+[FASE-8-ENTREGA.md](FASE-8-ENTREGA.md) §3; aquí quedan solo los que siguen
+abiertos.
+
+### J-1 · Un limitador por IP detrás del gateway no limita por cliente
+**Qué pasa.** Cada uno de los siete servicios internos aplica
+`RATE_LIMIT_MAX_PER_IP`, pero **todas** sus peticiones llegan desde una sola IP,
+la del gateway. Con el valor por omisión de 100 por minuto, el techo efectivo de
+todo el sistema son 100 peticiones por minuto, con independencia de cuántos
+clientes haya.
+**Cómo se descubrió.** La prueba de carga recibía 429 desde catalog-service con
+el límite del gateway ya elevado. Ver [05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.md) §4.
+**Por qué importa.** No es solo que estorbe a la prueba: en producción, dos
+usuarios activos podrían agotar el cupo del sistema entero. Y el limitador
+interno no protege de nada que el del gateway no cubra ya, porque los servicios
+no son alcanzables desde fuera.
+**Cierra cuando.** O el limitador interno se retira, con el motivo escrito, o
+limita por la identidad que inyecta el gateway (`x-internal-user-id`) en lugar
+de por IP. Con una prueba que lo demuestre.
+**Fase destino.** 10, o antes si se despliega algo con tráfico real.
+
+### J-2 · Una prueba de integración que se omite se cuenta como aprobada
+**Qué pasa.** Las pruebas de integración se saltan solas cuando no alcanzan
+MySQL y Jest las reporta como pasadas. Antes de la Fase 8, en una máquina sin el
+`.env` exportado, eso eran 151 pruebas «en verde» sin tocar la base y una
+cobertura de 42 % contra un umbral de 67 % sin que nada fallara.
+**Qué se hizo ya.** `jest.config.js` carga el `.env` y fija `MYSQL_HOST`, así
+que en una máquina de desarrollo normal ya no se omiten. Existe además
+`REQUIRE_INTEGRATION=1`, que convierte la omisión en fallo.
+**Lo que queda.** CI no pasa `REQUIRE_INTEGRATION=1`. Mientras no lo haga, un
+cambio que rompa la conexión en CI puede volver a leerse como una ejecución
+limpia.
+**Cierra cuando.** El workflow exige `REQUIRE_INTEGRATION=1` en los trabajos que
+tienen base de datos.
+**Fase destino.** 9.
+
+### J-3 · El documento de DevOps contradice al código en tres puntos
+**Qué pasa.** `10-devops/environments.md` prescribe la convención
+`APP_[SERVICIO]_[VARIABLE]`, pone ejemplos con PostgreSQL y da por hecho un
+gestor de secretos. El código usa `JWT_PRIVATE_KEY` y compañía, MySQL 8 con
+siete esquemas, y un `.env`.
+**Por qué importa.** Quien monte un entorno con ese documento en la mano
+construirá otra cosa.
+**Cierra cuando.** Se decide cuál de los dos manda en cada punto y el otro se
+corrige. Las tres diferencias están listadas en
+[06-ENTORNOS-Y-DESPLIEGUE.md](06-ENTORNOS-Y-DESPLIEGUE.md) §2.
+**Fase destino.** 9.
+
+---
 
 ## Cómo se cierra un elemento de este backlog
 

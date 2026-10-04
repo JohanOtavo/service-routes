@@ -79,6 +79,14 @@ const env = {
   // Un umbral bajo hace la prueba del bloqueo rapida y legible.
   LOGIN_MAX_ATTEMPTS: '3',
   LOGIN_LOCKOUT_BASE_SECONDS: '60',
+  /**
+   * A proposito distinto del 900 por omision.
+   *
+   * La caducidad de la lista de denegacion debe salir de ESTE valor. Con el
+   * valor por omision, la version con los 900_000 ms escritos a mano pasaria la
+   * prueba por coincidencia y el desajuste solo aparecia al cambiar el TTL.
+   */
+  JWT_ACCESS_TTL_SECONDS: '300',
   RATE_LIMIT_AUTH_MAX: '500',
   RATE_LIMIT_MAX_PER_IP: '1000',
   RABBITMQ_HOST: process.env['RABBITMQ_HOST'] ?? '127.0.0.1',
@@ -465,6 +473,41 @@ describe('endurecimiento', () => {
       .get('/api/v1/auth/me')
       .set('Authorization', `Bearer ${token}`);
     expect(despues.status).toBe(401);
+  });
+
+  it('deniega el access token exactamente lo que el token iba a vivir', async () => {
+    if (saltarSiNoHayBase()) return;
+
+    // Arrange
+    await request(app).post('/api/v1/auth/register').send({
+      nombre: 'Usuario Integracion',
+      correo: CORREO,
+      contrasena: CONTRASENA,
+      confirmacionContrasena: CONTRASENA,
+    });
+    const login = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ correo: CORREO, contrasena: CONTRASENA });
+
+    // Act
+    const antes = Date.now();
+    await request(app)
+      .post('/api/v1/auth/logout')
+      .set('Authorization', `Bearer ${login.body.accessToken}`)
+      .expect(204);
+
+    // Assert: la fila caduca cuando caducaba el token, no 15 minutos despues.
+    //
+    // La caducidad estuvo escrita a mano como 900_000 ms en la ruta de cierre
+    // de sesion. Con `JWT_ACCESS_TTL_SECONDS` por debajo de 900 la fila
+    // sobrevivia al token sin motivo; por encima, el token cerrado volvia a
+    // servir en cuanto la fila caducaba (deuda AT-006).
+    const fila = await knex('token_denylist').orderBy('jti').first();
+    const vividoMs = new Date(fila.expira_at).getTime() - antes;
+    const esperadoMs = envSchema.parse(env).JWT_ACCESS_TTL_SECONDS * 1000;
+
+    expect(vividoMs).toBeGreaterThan(esperadoMs - 5_000);
+    expect(vividoMs).toBeLessThanOrEqual(esperadoMs + 1_000);
   });
 
   it('entrega la cookie de refresco como httpOnly y SameSite=Strict', async () => {

@@ -5,15 +5,17 @@ import { z } from 'zod';
 import type { Knex } from 'knex';
 import { AppError } from '@punto-amigo/shared';
 import {
+  accessLog,
   correlationId,
+  crearMetricas,
   errorHandler,
   idDeRuta,
   notFoundHandler,
   requireGatewayIdentity,
   requireInternalCaller,
   runInTransaction,
-  validateQuery,
   type Logger,
+  validateQuery,
 } from '@punto-amigo/service-kit';
 import { ESTADOS_NOTIFICACION, TAMANO_PAGINA_MAXIMO, type EstadoNotificacion } from '../../domain';
 import type { ManageInboxUseCase } from '../../application/use-cases/ManageInbox';
@@ -83,6 +85,18 @@ export function createApp(deps: AppDeps): Express {
 
   app.use(express.json({ limit: deps.config.bodyLimit }));
   app.use(correlationId);
+
+  /**
+   * Observabilidad (deuda AT-005).
+   *
+   * Las metricas van antes del enrutador para medir TODA peticion,
+   * incluidas las que acaban en 404 o en el limitador. El registro de
+   * acceso va detras, para que su linea lleve el identificador de
+   * correlacion que acaba de asignarse.
+   */
+  const metricas = crearMetricas('notification-service');
+  app.use(metricas.middleware);
+  app.use(accessLog(deps.logger));
   app.use(requireInternalCaller(deps.config.internalSecret));
   app.use(
     rateLimit({
@@ -101,6 +115,15 @@ export function createApp(deps: AppDeps): Express {
     (req: Request, res: Response, next: NextFunction): void => {
       fn(req, res).catch(next);
     };
+
+  /**
+   * Metricas para Prometheus (deuda AT-005).
+   *
+   * Sin secreto, igual que `/health`: este puerto no se publica, asi que la
+   * ruta solo es alcanzable desde la red interna, que es donde vive Prometheus.
+   * El gateway, que si esta publicado, sirve las suyas en otro puerto.
+   */
+  app.get('/metrics', (req: Request, res: Response) => void metricas.exponer(req, res));
 
   app.get('/health', async (_req: Request, res: Response) => {
     try {

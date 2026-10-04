@@ -2,6 +2,7 @@ import { randomUUID, timingSafeEqual } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { AppError, ErrorCode, toErrorResponse } from '@punto-amigo/shared';
 import type { ZodTypeAny } from 'zod';
+import type { Logger } from './observabilidad';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -122,13 +123,18 @@ export function idDeRuta(req: Request, nombre = 'id'): number {
  * los primeros caracteres difieren, y esa diferencia permite deducir el secreto
  * caracter a caracter.
  *
- * `/health` queda fuera: lo consulta el orquestador, que no conoce el secreto.
+ * `/health` y `/metrics` quedan fuera: los consultan el orquestador y
+ * Prometheus, que no conocen el secreto. Ninguno de los ocho servicios publica
+ * su puerto, asi que las dos rutas solo son alcanzables desde la red interna.
+ * El gateway SI esta publicado, y por eso sirve sus metricas en otro puerto que
+ * tampoco se publica, en vez de abrir esta ruta.
  */
 export function requireInternalCaller(secreto: string) {
   const esperado = Buffer.from(secreto);
+  const ABIERTAS = new Set(['/health', '/metrics']);
 
   return (req: Request, _res: Response, next: NextFunction): void => {
-    if (req.path === '/health') {
+    if (ABIERTAS.has(req.path)) {
       next();
       return;
     }
@@ -250,10 +256,6 @@ export function requireRole(...permitidos: readonly string[]) {
     }
     next();
   };
-}
-
-export interface Logger {
-  error(mensaje: string, contexto: Record<string, unknown>): void;
 }
 
 /**

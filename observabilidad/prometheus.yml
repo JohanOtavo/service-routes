@@ -1,0 +1,38 @@
+# Recoleccion de metricas de Punto Amigo (deuda AT-005).
+#
+# Los ocho servicios exponen /metrics en su propio puerto, que NO se publica:
+# solo Prometheus, que vive en la misma red de Docker, los alcanza. El gateway
+# si esta publicado, asi que sirve las suyas en un puerto aparte (9090) que
+# tampoco se publica. Por eso aqui no hace falta ningun secreto.
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    entorno: local
+
+scrape_configs:
+  # Un solo trabajo con los ocho servicios: todos exponen las mismas metricas
+  # con la misma forma, y la etiqueta `service` la pone cada proceso.
+  - job_name: punto-amigo
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - api-gateway:9090
+          - auth-service:3001
+          - provider-service:3002
+          - catalog-service:3003
+          - request-service:3004
+          - rating-service:3005
+          - notification-service:3006
+          - admin-reporting-service:3007
+
+  # El plugin rabbitmq_prometheus ya venia activado en la imagen. Da la
+  # profundidad de las colas, que es la senal que delata un consumidor parado:
+  # los servicios siguen sanos y los mensajes se acumulan.
+  - job_name: rabbitmq
+    static_configs:
+      - targets: ['rabbitmq:15692']
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']

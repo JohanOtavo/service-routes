@@ -14,15 +14,17 @@ import type { KnexSessionRepository } from '../persistence/KnexSessionRepository
 import type { JwtTokenService } from '../security/JwtTokenService';
 import { runInTransaction } from '../persistence/transaction';
 import {
+  accessLog,
   correlationId,
+  crearMetricas,
   errorHandler,
   notFoundHandler,
   requireAuth,
-  requireRole,
   requireInternalCaller,
-  validateBody,
+  requireRole,
   type Logger,
-} from './middleware';
+  validateBody,
+} from '@punto-amigo/service-kit';
 
 export interface AppDeps {
   knex: Knex;
@@ -39,6 +41,11 @@ export interface AppDeps {
     bodyLimit: string;
     isProduction: boolean;
     internalSecret: string;
+    /**
+     * Cuanto vive un access token. Es lo que dura su entrada en la lista de
+     * denegacion, ni mas ni menos: ver la ruta de cierre de sesion.
+     */
+    accessTtlSeconds: number;
     rateLimit: { windowMs: number; maxPerIp: number; authMax: number };
     refreshCookie: { name: string; secure: boolean; maxAgeMs: number };
   };
@@ -137,6 +144,18 @@ export function createApp(deps: AppDeps): Express {
   app.use(cookieParser());
   app.use(correlationId);
 
+  /**
+   * Observabilidad (deuda AT-005).
+   *
+   * Las metricas van antes del enrutador para medir TODA peticion,
+   * incluidas las que acaban en 404 o en el limitador. El registro de
+   * acceso va detras, para que su linea lleve el identificador de
+   * correlacion que acaba de asignarse.
+   */
+  const metricas = crearMetricas('auth-service');
+  app.use(metricas.middleware);
+  app.use(accessLog(deps.logger));
+
   const limiteGeneral = rateLimit({
     windowMs: deps.config.rateLimit.windowMs,
     limit: deps.config.rateLimit.maxPerIp,
@@ -162,6 +181,15 @@ export function createApp(deps: AppDeps): Express {
 
   app.use(requireInternalCaller(deps.config.internalSecret));
   app.use(limiteGeneral);
+
+  /**
+   * Metricas para Prometheus (deuda AT-005).
+   *
+   * Sin secreto, igual que `/health`: este puerto no se publica, asi que la
+   * ruta solo es alcanzable desde la red interna, que es donde vive Prometheus.
+   * El gateway, que si esta publicado, sirve las suyas en otro puerto.
+   */
+  app.get('/metrics', (req: Request, res: Response) => void metricas.exponer(req, res));
 
   app.get('/health', async (_req: Request, res: Response) => {
     try {
@@ -247,13 +275,23 @@ export function createApp(deps: AppDeps): Express {
             if (sesion !== null) await deps.sesiones.revocar(sesion.id, 'LOGOUT');
           }
 
-          // El access token en curso pasa a la lista de denegacion: sin esto
-          // seguiria sirviendo hasta expirar pese al cierre de sesion.
+          /**
+           * El access token en curso pasa a la lista de denegacion: sin esto
+           * seguiria sirviendo hasta expirar pese al cierre de sesion.
+           *
+           * La caducidad de la entrada ES la del token, tomada de
+           * `JWT_ACCESS_TTL_SECONDS` (deuda AT-006). Antes eran 900_000 ms
+           * escritos aqui a mano: con un TTL mas corto la fila sobrevivia
+           * inutilmente al token, y si alguien subia el TTL por encima de 15
+           * minutos la entrada caducaba ANTES que el token y el token cerrado
+           * volvia a servir. Un literal que tiene que coincidir con una
+           * variable de entorno acaba no coincidiendo.
+           */
           if (req.auth !== undefined) {
             await deps.sesiones.denegarAccessToken(
               req.auth.jti,
               req.auth.userId,
-              new Date(Date.now() + 900_000)
+              new Date(Date.now() + deps.config.accessTtlSeconds * 1000)
             );
           }
         });

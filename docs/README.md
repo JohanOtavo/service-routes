@@ -9,7 +9,9 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 | Saber qué fases existen y en qué estado | [00-FLUJO-DEL-PROYECTO.md](00-FLUJO-DEL-PROYECTO.md) |
 | Saber exactamente qué falta y qué hay que cumplir para cerrarlo | [01-BACKLOG.md](01-BACKLOG.md) |
 | Saber qué se decidió, y por qué | [02-DECISIONES.md](02-DECISIONES.md) |
-| Ver qué se hizo en la última fase cerrada | [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) |
+| Ver qué se hizo en la última fase cerrada | [FASE-8-ENTREGA.md](FASE-8-ENTREGA.md) |
+| Saber qué registra y qué mide el sistema, y qué carga aguanta | [05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.md) |
+| Saber qué entornos existen y qué falta para desplegar | [06-ENTORNOS-Y-DESPLIEGUE.md](06-ENTORNOS-Y-DESPLIEGUE.md) |
 | Restaurar un respaldo | [03-RUNBOOK-RESPALDOS.md](03-RUNBOOK-RESPALDOS.md) |
 | Saber qué datos personales guarda el sistema | [04-POLITICA-DATOS-PERSONALES.md](04-POLITICA-DATOS-PERSONALES.md) |
 | Ver qué se construyó en una fase concreta | su documento de entrega, abajo |
@@ -23,6 +25,8 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 | **[02-DECISIONES.md](02-DECISIONES.md)** | Las 13 decisiones de las Fases 1-3, resueltas el 3/10/2026, con su motivo y su fase destino. Incluye el hallazgo que cambió una de ellas: la recuperación de contraseña genera un token que nadie entrega |
 | **[03-RUNBOOK-RESPALDOS.md](03-RUNBOOK-RESPALDOS.md)** | El procedimiento de respaldo y restauración, la primera restauración verificada de verdad (AT-004) y los dos falsos positivos que el script tuvo al nacer |
 | **[04-POLITICA-DATOS-PERSONALES.md](04-POLITICA-DATOS-PERSONALES.md)** | Dónde vive cada dato personal, qué hace ya bien el código, y las 6 decisiones que siguen bloqueando producción |
+| **[05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.md)** | El registro con `correlation_id`, las métricas, los paneles, la prueba de carga con su resultado, y la caducidad de los cuatro tipos de token |
+| **[06-ENTORNOS-Y-DESPLIEGUE.md](06-ENTORNOS-Y-DESPLIEGUE.md)** | Qué entornos existen de verdad, los guardias de producción, las tres contradicciones con el documento de DevOps, y qué hace falta decidir |
 | **[FASE-4-PLAN.md](FASE-4-PLAN.md)** | La Fase 4, cerrada el 3/10/2026: lo que hizo falta para que `npm run verify` y CI pasasen, y las dos discrepancias de cobertura que quedaron diferidas con motivo |
 
 ### Fases entregadas
@@ -33,18 +37,24 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 | [FASE-2-ENTREGA.md](FASE-2-ENTREGA.md) | Backend seguro | Construida · 6 pendientes, asignados a las Fases 5, 6 y 9 |
 | [FASE-3-ENTREGA.md](FASE-3-ENTREGA.md) | Cliente web PWA | Construida · 1 pendiente cerrado, 3 en la Fase 6 |
 | [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md) | Datos y operación | Completada · 4 de 5 cerrados; la política de datos personales en borrador |
-| [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) | Experiencia del cliente | Completada · los 3 elementos cerrados |
+| [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) | Experiencia del cliente | Completada · los 3 elementos cerrados; el recorrido pasa en CI desde el 4/10/2026 |
+| [FASE-8-ENTREGA.md](FASE-8-ENTREGA.md) | Observabilidad y despliegue | Completada · AT-005, AT-006 y AT-007 cerrados; los entornos esperan AT-001 |
 
 ## En una línea
 
-Seis fases cerradas: base de datos, backend, cliente web, la puerta de calidad,
-los datos y la experiencia del cliente. Las semillas ya no destruyen estado, las réplicas se pueden reconstruir
-con `npm run db:reemit`, los informes de serie tienen quien los calcule, y AT-004
-—el único elemento `High` del proyecto— está cerrado con una restauración probada
-sobre los siete esquemas. El recorrido crítico ya pasa en un navegador real, en CI. **La siguiente es la
-Fase 8 —observabilidad y despliegue—**; la Fase 9, documentación, puede ir en
-paralelo. Lo que sigue bloqueando producción es la política de datos
-personales: el inventario está hecho y faltan seis decisiones.
+Siete fases cerradas: base de datos, backend, cliente web, la puerta de
+calidad, los datos, la experiencia del cliente y la observabilidad. El recorrido
+crítico pasa en un navegador real **en CI**, y llegar hasta ahí destapó siete
+defectos que solo se veían allí, entre ellos dos de producto: el broker no se
+reconectaba si fallaba su primer intento —y por eso el correo de recuperación no
+llegaba nunca— y la lista de denegación de tokens caducaba a los 900.000 ms
+escritos a mano en lugar de cuando caducaba el token. El sistema ya se puede
+observar: una línea JSON con `correlation_id` por petición, nueve `/metrics`,
+Prometheus y Grafana, y una prueba de carga que da **P95 de 6,98 ms** contra un
+umbral de 300 ms. **La siguiente es la Fase 9 —documentación y trazabilidad—**.
+Lo que sigue bloqueando producción es la política de datos personales, con seis
+decisiones pendientes, y desplegar en algún sitio necesita que elijas nube
+(AT-001).
 
 ## Una nota sobre las fechas
 

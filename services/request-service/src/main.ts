@@ -10,7 +10,12 @@ import {
   loadEnv,
 } from '@punto-amigo/shared';
 import { Broker, EventConsumer, OutboxRelay } from '@punto-amigo/messaging';
-import { OutboxEventPublisher, SystemClock, useTransaction } from '@punto-amigo/service-kit';
+import {
+  OutboxEventPublisher,
+  SystemClock,
+  crearLogger,
+  useTransaction,
+} from '@punto-amigo/service-kit';
 import { ManageNeedsUseCase } from './application/use-cases/ManageNeeds';
 import { ManageProposalsUseCase } from './application/use-cases/ManageProposals';
 import { ManageRequestsUseCase } from './application/use-cases/ManageRequests';
@@ -57,18 +62,7 @@ const envSchema = baseEnvSchema.extend({
   CONSUMER_PREFETCH: z.coerce.number().int().min(1).max(100).default(10),
 });
 
-const logger = {
-  info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.warn(
-      JSON.stringify({ level: 'info', service: 'request-service', mensaje, ...contexto })
-    );
-  },
-  error(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.error(
-      JSON.stringify({ level: 'error', service: 'request-service', mensaje, ...contexto })
-    );
-  },
-};
+const logger = crearLogger('request-service');
 
 export function buildContainer(env: z.infer<typeof envSchema>): {
   app: Express;

@@ -117,7 +117,17 @@ services:
 
   # Servicio de un solo uso: aplica las migraciones de los siete esquemas y, en
   # desarrollo, carga los seeds. Termina con codigo 0 y no queda corriendo.
+  # El migrador lleva el perfil `apps` ademas del por omision.
+  #
+  # Sin el, `docker compose --profile apps build` construia las ocho imagenes y
+  # NO esta, asi que el migrador seguia siendo la imagen de la ultima vez que
+  # alguien la construyo a mano. En una maquina donde eso fue antes de la
+  # Fase 6, levantar la pila dejaba `pa_request.prestador_ref` sin la columna
+  # `telefono`: el consumidor fallaba al replicar un prestador, el perfil no
+  # llegaba nunca, y el recorrido moria con un 409 "Necesita un perfil de
+  # prestador" que no mencionaba ninguna migracion.
   migrator:
+    profiles: ['', apps]
     build:
       context: .
       dockerfile: db/Dockerfile
@@ -331,10 +341,55 @@ services:
     # arrancar el gateway, y con el las rutas que si funcionaban.
     networks: [punto-amigo]
 
+  # Observabilidad en su propio perfil: `docker compose --profile observabilidad up -d`.
+  #
+  # Fuera del perfil `apps` a proposito. Levantar la pila para trabajar no
+  # deberia costar dos contenedores mas, y quien quiera ver los paneles los
+  # pide. Los dos puertos se atan a 127.0.0.1: un panel de metricas describe el
+  # sistema por dentro y no tiene por que escuchar en toda la red.
+  prometheus:
+    profiles: [observabilidad]
+    image: prom/prometheus:v3.1.0
+    container_name: pa-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    volumes:
+      - ./observabilidad/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - '127.0.0.1:${PROMETHEUS_PORT:-9091}:9090'
+    networks: [punto-amigo]
+
+  grafana:
+    profiles: [observabilidad]
+    image: grafana/grafana:11.5.1
+    container_name: pa-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?falta GRAFANA_PASSWORD en .env}
+      # Sin registro ni acceso anonimo: el panel dice que rutas existen, con que
+      # frecuencia se usan y cuanta memoria gasta cada proceso.
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+    volumes:
+      # El panel se versiona como archivo: editarlo en la interfaz no sobrevive
+      # a un reinicio, y eso es deliberado.
+      - ./observabilidad/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observabilidad/grafana/paneles:/etc/grafana/paneles:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - '127.0.0.1:${GRAFANA_PORT:-3000}:3000'
+    depends_on: [prometheus]
+    networks: [punto-amigo]
+
 volumes:
   mysql-data:
   redis-data:
   rabbitmq-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   punto-amigo:

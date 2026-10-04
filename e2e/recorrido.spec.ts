@@ -44,16 +44,6 @@ test.describe('recorrido critico', () => {
     // puede haber dejado otra contrasena en las cuentas sembradas.
     asegurarContrasenaSembrada();
     limpiarNecesidadesDePrueba(MARCA);
-
-    /**
-     * El oferente necesita un perfil ACTIVO y replicado antes de empezar.
-     *
-     * Se siembra en `pa_provider` y se propaga con `db:reemit` en lugar de
-     * conducir las pantallas de administracion: validar un perfil es otro
-     * recorrido, con otro rol, y meterlo aqui probaria dos cosas a la vez.
-     */
-    const idOferente = prepararPrestadorActivo(USUARIOS.oferente, TELEFONO_PERFIL);
-    await esperarPrestadorReplicado(idOferente);
   });
 
   test('publica, recibe propuesta, adjudica, ve el contacto y cancela', async ({ browser }) => {
@@ -84,6 +74,25 @@ test.describe('recorrido critico', () => {
 
       // ── 2. El oferente la encuentra y propone ────────────────────────────
       await entrar(oferente, USUARIOS.oferente);
+
+      /**
+       * El perfil de prestador se prepara AQUI, no en el `beforeAll`.
+       *
+       * Se siembra en `pa_provider` y se propaga con `db:reemit` en lugar de
+       * conducir las pantallas de administracion: validar un perfil es otro
+       * recorrido, con otro rol, y meterlo aqui probaria dos cosas a la vez.
+       *
+       * Por que despues de iniciar sesion y no antes: el perfil se ata al
+       * `id_usuario` que se lee de `pa_auth` por correo, y el seed puede volver
+       * a crear las cuentas con identificadores nuevos. Hacerlo en el
+       * `beforeAll` dejaba una ventana en la que el perfil quedaba atado a un
+       * identificador viejo mientras el token llevaba el nuevo: el perfil
+       * existia, el oferente no lo tenia, y la propuesta moria con un 409
+       * "Necesita un perfil de prestador" que no explicaba nada.
+       */
+      const idOferente = prepararPrestadorActivo(USUARIOS.oferente, TELEFONO_PERFIL);
+      await esperarPrestadorReplicado(idOferente);
+
       await oferente.goto('/necesidades');
       await expect(oferente.getByRole('heading', { name: 'Necesidades abiertas' })).toBeVisible();
 

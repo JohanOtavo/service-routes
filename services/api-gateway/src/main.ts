@@ -1,5 +1,6 @@
+import { crearLogger, type Metricas } from '@punto-amigo/service-kit';
 import Redis from 'ioredis';
-import type { Express } from 'express';
+import express, { type Express } from 'express';
 import { z } from 'zod';
 import { baseEnvSchema, loadEnv, assertProductionSafety } from '@punto-amigo/shared';
 import { createGateway } from './http/app';
@@ -9,6 +10,15 @@ import { RUTAS } from './config/routes';
 
 const envSchema = baseEnvSchema.extend({
   GATEWAY_PORT: z.coerce.number().int().min(1).max(65535).default(8080),
+  /**
+   * Puerto de las metricas, que NO se publica.
+   *
+   * Las metricas van en su propio puerto porque el 8080 si esta publicado:
+   * servirlas ahi dejaria ver el inventario de rutas, su frecuencia de uso y el
+   * estado del proceso a cualquiera. Los otros ocho servicios no necesitan esto
+   * porque ninguno publica su puerto.
+   */
+  GATEWAY_METRICS_PORT: z.coerce.number().int().min(1).max(65535).default(9090),
 
   // Solo la clave PUBLICA. El gateway verifica; no emite.
   JWT_PUBLIC_KEY: z.string().min(1),
@@ -25,16 +35,13 @@ const envSchema = baseEnvSchema.extend({
   RATE_LIMIT_AUTH_MAX: z.coerce.number().int().min(1).default(10),
 });
 
-const logger = {
-  info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.warn(JSON.stringify({ level: 'info', service: 'api-gateway', mensaje, ...contexto }));
-  },
-  error(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.error(JSON.stringify({ level: 'error', service: 'api-gateway', mensaje, ...contexto }));
-  },
-};
+const logger = crearLogger('api-gateway');
 
-export function buildGateway(env: z.infer<typeof envSchema>): { app: Express; redis: Redis } {
+export function buildGateway(env: z.infer<typeof envSchema>): {
+  app: Express;
+  redis: Redis;
+  metricas: Metricas;
+} {
   const redis = new Redis({
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,
@@ -77,7 +84,7 @@ export function buildGateway(env: z.infer<typeof envSchema>): { app: Express; re
     logger.info('servicios sin configurar; sus rutas responderan 503', { pendientes });
   }
 
-  const app = createGateway({
+  const { app, metricas } = createGateway({
     verifier,
     breaker: new CircuitBreaker(),
     logger,
@@ -97,21 +104,29 @@ export function buildGateway(env: z.infer<typeof envSchema>): { app: Express; re
     },
   });
 
-  return { app, redis };
+  return { app, redis, metricas };
 }
 
 async function main(): Promise<void> {
   const env = loadEnv(envSchema);
   assertProductionSafety(env);
 
-  const { app, redis } = buildGateway(env);
+  const { app, redis, metricas } = buildGateway(env);
 
   const servidor = app.listen(env.GATEWAY_PORT, () => {
     logger.info('api-gateway escuchando', { puerto: env.GATEWAY_PORT, entorno: env.NODE_ENV });
   });
 
+  // Servidor aparte, en un puerto que no se publica: ver GATEWAY_METRICS_PORT.
+  const metricasApp = express();
+  metricasApp.get('/metrics', (req, res) => void metricas.exponer(req, res));
+  const servidorMetricas = metricasApp.listen(env.GATEWAY_METRICS_PORT, () => {
+    logger.info('metricas del gateway escuchando', { puerto: env.GATEWAY_METRICS_PORT });
+  });
+
   const cerrar = (senal: string): void => {
     logger.info('cerrando', { senal });
+    servidorMetricas.close();
     servidor.close(() => {
       void redis.quit().then(() => process.exit(0));
     });

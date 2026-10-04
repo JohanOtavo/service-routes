@@ -14,6 +14,7 @@ import { Broker, EventConsumer, OutboxRelay } from '@punto-amigo/messaging';
 import {
   OutboxEventPublisher,
   SystemClock,
+  crearLogger,
   runInTransaction,
   useTransaction,
 } from '@punto-amigo/service-kit';
@@ -54,18 +55,7 @@ const envSchema = baseEnvSchema.extend({
   CONSUMER_PREFETCH: z.coerce.number().int().min(1).max(100).default(10),
 });
 
-const logger = {
-  info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.warn(
-      JSON.stringify({ level: 'info', service: 'rating-service', mensaje, ...contexto })
-    );
-  },
-  error(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.error(
-      JSON.stringify({ level: 'error', service: 'rating-service', mensaje, ...contexto })
-    );
-  },
-};
+const logger = crearLogger('rating-service');
 
 export function buildContainer(env: z.infer<typeof envSchema>): {
   app: Express;

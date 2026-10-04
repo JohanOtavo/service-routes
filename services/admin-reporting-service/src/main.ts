@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 import { z } from 'zod';
 import { EventName, assertProductionSafety, baseEnvSchema, loadEnv } from '@punto-amigo/shared';
 import { Broker, EventConsumer } from '@punto-amigo/messaging';
-import { SystemClock, useTransaction } from '@punto-amigo/service-kit';
+import { SystemClock, crearLogger, useTransaction } from '@punto-amigo/service-kit';
 import { QueryAuditTrailUseCase } from './application/use-cases/QueryAuditTrail';
 import { RecordAuditTrailUseCase } from './application/use-cases/RecordAuditTrail';
 import { ManageReportsUseCase } from './application/use-cases/ManageReports';
@@ -46,18 +46,7 @@ const envSchema = baseEnvSchema.extend({
   STATS_WINDOW_DAYS: z.coerce.number().int().min(1).max(90).default(2),
 });
 
-const logger = {
-  info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.warn(
-      JSON.stringify({ level: 'info', service: 'admin-reporting-service', mensaje, ...contexto })
-    );
-  },
-  error(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.error(
-      JSON.stringify({ level: 'error', service: 'admin-reporting-service', mensaje, ...contexto })
-    );
-  },
-};
+const logger = crearLogger('admin-reporting-service');
 
 export function buildContainer(env: z.infer<typeof envSchema>): {
   app: Express;

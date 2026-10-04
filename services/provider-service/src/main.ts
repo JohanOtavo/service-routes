@@ -4,7 +4,12 @@ import type { Knex } from 'knex';
 import { z } from 'zod';
 import { EventName, assertProductionSafety, baseEnvSchema, loadEnv } from '@punto-amigo/shared';
 import { Broker, EventConsumer, OutboxRelay } from '@punto-amigo/messaging';
-import { OutboxEventPublisher, SystemClock, useTransaction } from '@punto-amigo/service-kit';
+import {
+  OutboxEventPublisher,
+  SystemClock,
+  crearLogger,
+  useTransaction,
+} from '@punto-amigo/service-kit';
 import { ManageProviderProfileUseCase } from './application/use-cases/ManageProviderProfile';
 import { ReviewProviderProfileUseCase } from './application/use-cases/ReviewProviderProfile';
 import { SyncAccountStateUseCase } from './application/use-cases/SyncAccountState';
@@ -34,18 +39,7 @@ const envSchema = baseEnvSchema.extend({
   CONSUMER_PREFETCH: z.coerce.number().int().min(1).max(100).default(10),
 });
 
-const logger = {
-  info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.warn(
-      JSON.stringify({ level: 'info', service: 'provider-service', mensaje, ...contexto })
-    );
-  },
-  error(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.error(
-      JSON.stringify({ level: 'error', service: 'provider-service', mensaje, ...contexto })
-    );
-  },
-};
+const logger = crearLogger('provider-service');
 
 export function buildContainer(env: z.infer<typeof envSchema>): {
   app: Express;

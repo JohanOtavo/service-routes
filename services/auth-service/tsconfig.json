@@ -5,9 +5,14 @@
     "outDir": "dist",
     "paths": {
       "@punto-amigo/shared": ["../../packages/shared/src"],
-      "@punto-amigo/messaging": ["../../packages/messaging/src"]
+      "@punto-amigo/messaging": ["../../packages/messaging/src"],
+      "@punto-amigo/service-kit": ["../../packages/service-kit/src"]
     }
   },
   "include": ["src/**/*"],
-  "references": [{ "path": "../../packages/shared" }, { "path": "../../packages/messaging" }]
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/messaging" },
+    { "path": "../../packages/service-kit" }
+  ]
 }

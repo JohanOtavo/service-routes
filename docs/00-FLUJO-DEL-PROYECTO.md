@@ -91,10 +91,10 @@ resolvieron el 3/10/2026 en [02-DECISIONES.md](02-DECISIONES.md), de modo que la
 | 3 | Cliente web PWA | React 18 + TypeScript sobre Vite, 18 pantallas, sistema de diseño propio, PWA instalable | **Completada**; 1 pendiente cerrado, 3 asignados a la Fase 6 | [FASE-3-ENTREGA.md](FASE-3-ENTREGA.md) |
 | 4 | Cierre de calidad y deuda heredada | Que `npm run verify` y CI pasen en verde, y decidir los 13 pendientes abiertos | **Completada** el 3/10/2026 | [FASE-4-PLAN.md](FASE-4-PLAN.md) · [02-DECISIONES.md](02-DECISIONES.md) |
 | 5 | Datos y operación | Semillas idempotentes, re-emisión de réplicas, escritor de métricas, restauración probada, política de datos personales | **Completada** el 3/10/2026; la política queda en borrador | [FASE-5-ENTREGA.md](FASE-5-ENTREGA.md) |
-| 6 | Experiencia del cliente | Teléfono desde el perfil de prestador, recuperación de contraseña con correo transaccional, E2E del recorrido | **Completada** el 3/10/2026 | [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) |
+| 6 | Experiencia del cliente | Teléfono desde el perfil de prestador, recuperación de contraseña con correo transaccional, E2E del recorrido | **Completada** el 3/10/2026; el recorrido pasa en CI desde el 4/10/2026, tras siete defectos que solo se veían allí | [FASE-6-ENTREGA.md](FASE-6-ENTREGA.md) · [FASE-8-ENTREGA.md](FASE-8-ENTREGA.md) §3 |
 | ~~7~~ | ~~Notificaciones fuera del MVP~~ | ~~Correo y push~~ | **Eliminada.** Push y correo de producto descartados; el correo transaccional pasa a la Fase 6 | [02-DECISIONES.md](02-DECISIONES.md) §2 |
-| 8 | Observabilidad y despliegue | Logging estructurado, métricas, k6, entornos dev/staging/prod, despliegue | **Siguiente** | §5 |
-| 9 | Documentación y trazabilidad | 6 de 8 servicios sin documentar, SRS inglés obsoleto, contratos duplicados, backlog formal | Aprobada · puede ir en paralelo ya | §5 |
+| 8 | Observabilidad y despliegue | Logging estructurado, métricas, k6, entornos dev/staging/prod, despliegue | **Completada** el 4/10/2026 en lo que depende del código; AT-005, AT-006 y AT-007 cerrados. Los entornos esperan AT-001, que es decisión tuya | [FASE-8-ENTREGA.md](FASE-8-ENTREGA.md) · [05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.md) · [06-ENTORNOS-Y-DESPLIEGUE.md](06-ENTORNOS-Y-DESPLIEGUE.md) |
+| 9 | Documentación y trazabilidad | 6 de 8 servicios sin documentar, SRS inglés obsoleto, contratos duplicados, backlog formal | **Siguiente** | §5 |
 | 10 | Preparación de producción | Go/No-Go, Definition of Done completo, cierre de deuda técnica AT-001..007 | Aprobada | §5 |
 
 **Trabajo abierto, al 3/10/2026: los 13 pendientes de las Fases 1–3 ya tienen
@@ -275,7 +275,30 @@ Lo único que sobrevive es el **correo transaccional** para la recuperación de
 contraseña, y pasa a la Fase 6 porque C-1 no se puede cerrar sin él. Motivo completo
 en [02-DECISIONES.md](02-DECISIONES.md) §2 y §4.
 
-### Fase 8 — Observabilidad y despliegue
+### Fase 8 — Observabilidad y despliegue · completada el 4/10/2026
+
+Entregado, con su detalle en [FASE-8-ENTREGA.md](FASE-8-ENTREGA.md):
+
+- ~~**Logging y métricas** por servicio con `correlation_id`~~ (AT-005).
+  **Cerrado.** Una línea JSON por petición en los nueve procesos, nueve
+  `/metrics`, y Prometheus con Grafana en el perfil `observabilidad`. Los diez
+  objetivos verificados en `up`
+- ~~**Pruebas de carga k6**~~ (AT-007). **Cerrado.** `npm run carga`: P95 de
+  **6,98 ms** contra el umbral de 300 ms, **0 %** de error. El umbral está
+  declarado como `threshold`, así que la prueba falla sola
+- ~~**Expiración de JWT**~~ (AT-006). **Cerrado.** Access 15 min, refresco 7
+  días, enlace de recuperación 30 min de un solo uso, y la lista de denegación
+  caduca ahora cuando caduca el token, en lugar de a los 900.000 ms que había
+  escritos a mano
+- **Entornos dev / staging / producción: no entregados, y depende de ti.** Sin
+  elegir nube no hay red, ni registro de imágenes, ni gestor de secretos. Es
+  **AT-001**. Lo que sí hay es el inventario de lo que el código espera
+  encontrar, y las tres contradicciones con `10-devops/environments.md`, en
+  [06-ENTORNOS-Y-DESPLIEGUE.md](06-ENTORNOS-Y-DESPLIEGUE.md)
+- **Sin alertas, sin registros centralizados y sin trazas distribuidas.** Las
+  tres necesitan un destino y un turno de guardia: son decisiones de operación
+
+Lo que decía este apartado antes de la entrega:
 
 - **Logging y métricas** por servicio con `correlation_id` (deuda AT-005)
 - **Pruebas de carga k6** con el umbral que fija la estrategia de pruebas: P95 < 300 ms
@@ -313,7 +336,8 @@ No es trabajo nuevo: es la comprobación de que todo lo anterior está resuelto.
   puerta de `00-sdd-guide.md` §Review gates
 - Definition of Done de `00-governance/definition-of-done.md` completo. Nota: hoy
   **ninguna** de las Fases 1–3 cumple el punto de revisión por Pull Request que exige
-- Cerrar AT-001 a AT-007
+- Cerrar AT-001 a AT-007. Cerrados: AT-004 (3/10/2026), AT-005, AT-006 y AT-007
+  (4/10/2026). Quedan AT-001 y AT-003, que son decisiones tuyas, y AT-002
 - Describir la estrategia de despliegue: `10-devops/environments.md` tiene el hueco
   `[Canary / Blue-Green / Rolling]` sin decidir
 
@@ -333,13 +357,12 @@ Fase 1 ──┐
         v                     v                     v
     Fase 5               Fase 6               Fase 9
   COMPLETADA          COMPLETADA          (documentación)
-        │                     │            en paralelo
+        │                     │              <-- aqui
         │                     │
         └──────────┬──────────┘
                    v
               Fase 8  ──>  Fase 10
-           (operación)    (producción)
-             <-- aqui
+           COMPLETADA     (producción)
 ```
 
 La Fase 7 ya no está en el grafo: se eliminó el 3/10/2026 y el correo transaccional,

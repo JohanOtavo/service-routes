@@ -11,7 +11,7 @@ import {
   loadEnv,
 } from '@punto-amigo/shared';
 import { Broker, EventConsumer } from '@punto-amigo/messaging';
-import { SystemClock, useTransaction } from '@punto-amigo/service-kit';
+import { SystemClock, crearLogger, useTransaction } from '@punto-amigo/service-kit';
 import { ManageInboxUseCase } from './application/use-cases/ManageInbox';
 import { CreateFromEventUseCase } from './application/use-cases/CreateFromEvent';
 import {
@@ -86,18 +86,7 @@ const envSchema = baseEnvSchema.extend({
   WEB_PUBLIC_URL: vacioEsAusente(z.string().url().optional()),
 });
 
-const logger = {
-  info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.warn(
-      JSON.stringify({ level: 'info', service: 'notification-service', mensaje, ...contexto })
-    );
-  },
-  error(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.error(
-      JSON.stringify({ level: 'error', service: 'notification-service', mensaje, ...contexto })
-    );
-  },
-};
+const logger = crearLogger('notification-service');
 
 export function buildContainer(env: z.infer<typeof envSchema>): {
   app: Express;

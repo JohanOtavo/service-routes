@@ -353,7 +353,12 @@ jobs:
             sleep 2
           done
           echo 'Las replicas no se llenaron en 60 s'
-          docker compose --profile apps logs --tail 50 catalog-service request-service
+          # Sin esto, el fallo solo dice "0" y hay que adivinar en que eslabon
+          # se corto: el relevo que no publica, el broker que no entrega, o el
+          # consumidor que deriva a la cola de fallidos.
+          docker exec pa-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -t -e "select count(*) as pendientes, max(attempts) as intentos, max(left(ifnull(last_error, '-'), 200)) as ultimo_error from pa_catalog.outbox_event where published_at is null;"
+          docker exec pa-rabbitmq rabbitmqctl list_queues name messages_ready || true
+          docker compose --profile apps logs --tail 80 catalog-service request-service
           exit 1
 
       - name: Instalar el navegador

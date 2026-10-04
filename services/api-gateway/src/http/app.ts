@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { randomUUID } from 'node:crypto';
 import { AppError, ErrorCode, toErrorResponse } from '@punto-amigo/shared';
+import { accessLog, crearMetricas, type Metricas } from '@punto-amigo/service-kit';
 import { esPublica, resolverRuta } from '../config/routes';
 import { limpiarCabecerasDeCliente, reenviar } from '../proxy/forward';
 import type { CircuitBreaker } from '../proxy/CircuitBreaker';
@@ -31,7 +32,7 @@ export interface GatewayDeps {
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
-export function createGateway(deps: GatewayDeps): Express {
+export function createGateway(deps: GatewayDeps): { app: Express; metricas: Metricas } {
   const app = express();
 
   app.set('trust proxy', 1);
@@ -80,6 +81,24 @@ export function createGateway(deps: GatewayDeps): Express {
     res.setHeader('x-correlation-id', req.correlationId);
     next();
   });
+
+  /**
+   * Observabilidad (deuda AT-005).
+   *
+   * El gateway es el unico sitio donde se mide la latencia que de verdad ve el
+   * cliente: la de un servicio interno no incluye el salto, la verificacion del
+   * token ni el cortacircuitos. El umbral de la estrategia de pruebas
+   * —P95 < 300 ms— se comprueba contra ESTAS metricas (deuda AT-007).
+   */
+  //
+  // La etiqueta sale de la tabla de rutas, y lo que no esta en ella cae en
+  // `otra`: devolver `req.path` dejaria que cualquiera creara una serie temporal
+  // nueva por peticion, que es como se tumba a Prometheus.
+  const metricas = crearMetricas('api-gateway', (req) =>
+    req.path === '/health' ? '/health' : (resolverRuta(req.path)?.prefijo ?? 'otra')
+  );
+  app.use(metricas.middleware);
+  app.use(accessLog(deps.logger));
 
   app.use((req: Request, res: Response, next: NextFunction) => {
     const origen = req.header('origin');
@@ -242,5 +261,5 @@ export function createGateway(deps: GatewayDeps): Express {
     res.status(appError.httpStatus).json(toErrorResponse(appError, req.correlationId));
   });
 
-  return app;
+  return { app, metricas };
 }

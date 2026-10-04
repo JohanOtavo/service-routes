@@ -9,6 +9,7 @@
     "test": "jest --selectProjects unit"
   },
   "dependencies": {
+    "@punto-amigo/service-kit": "0.1.0",
     "@punto-amigo/shared": "0.1.0",
     "express": "4.22.3",
     "express-rate-limit": "7.5.0",

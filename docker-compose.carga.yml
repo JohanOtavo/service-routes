@@ -1,0 +1,59 @@
+# Superposicion para la prueba de carga (deuda AT-007).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.carga.yml --profile apps up -d
+#   npm run carga
+#
+# Los limitadores se elevan por el mismo motivo que en docker-compose.e2e.yml,
+# pero aqui el argumento es mas fuerte: la prueba mide cuanta carga aguantan los
+# servicios, y con el limitador en su valor real lo que se mide es el limitador.
+# La primera ejecucion devolvio 429 en el 99,81 % de 215.431 peticiones y un P95
+# de 7 ms, que es lo que tarda en decir "no".
+#
+# Que el limitador funciona ya lo prueban las pruebas de integracion del
+# gateway, donde es el sujeto y no un estorbo.
+#
+# El perfil de carga va en `k6/carga.js`: 30 iteraciones por segundo, tres
+# peticiones cada una, 60 segundos de meseta. Los valores de aqui dejan margen
+# de sobra sobre eso (90 peticiones/s son 5.400 por minuto).
+# Hallazgo de la primera ejecucion, que es la razon de que esten los SIETE
+# servicios y no solo el gateway: el limitador `RATE_LIMIT_MAX_PER_IP` de cada
+# servicio interno ve siempre UNA sola IP, la del gateway. Con 100 por minuto,
+# el techo efectivo de todo el sistema era de 100 peticiones por minuto, y la
+# carga devolvia 429 desde catalog-service aunque el gateway ya tuviera el
+# limite elevado. Queda anotado en el backlog como hallazgo J-1: un limitador
+# por IP detras de un proxy no limita por cliente, limita por proxy.
+services:
+  api-gateway:
+    environment:
+      RATE_LIMIT_MAX_PER_IP: '60000'
+      RATE_LIMIT_MAX_PER_USER: '60000'
+      RATE_LIMIT_AUTH_MAX: '2000'
+
+  auth-service:
+    environment:
+      RATE_LIMIT_MAX_PER_IP: '60000'
+      RATE_LIMIT_AUTH_MAX: '2000'
+
+  provider-service:
+    environment:
+      RATE_LIMIT_MAX_PER_IP: '60000'
+
+  catalog-service:
+    environment:
+      RATE_LIMIT_MAX_PER_IP: '60000'
+
+  request-service:
+    environment:
+      RATE_LIMIT_MAX_PER_IP: '60000'
+
+  rating-service:
+    environment:
+      RATE_LIMIT_MAX_PER_IP: '60000'
+
+  notification-service:
+    environment:
+      RATE_LIMIT_MAX_PER_IP: '60000'
+
+  admin-reporting-service:
+    environment:
+      RATE_LIMIT_MAX_PER_IP: '60000'

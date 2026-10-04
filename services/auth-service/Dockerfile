@@ -6,12 +6,14 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
+COPY packages/service-kit/package.json packages/service-kit/
 COPY packages/messaging/package.json packages/messaging/
 COPY services/auth-service/package.json services/auth-service/
 RUN npm ci --ignore-scripts=false
 
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
+COPY packages/service-kit packages/service-kit
 COPY packages/messaging packages/messaging
 COPY services/auth-service services/auth-service
 RUN npx tsc --build services/auth-service
@@ -23,11 +25,13 @@ ENV NODE_ENV=production
 
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
+COPY packages/service-kit/package.json packages/service-kit/
 COPY packages/messaging/package.json packages/messaging/
 COPY services/auth-service/package.json services/auth-service/
 RUN npm ci --omit=dev --ignore-scripts=false && npm cache clean --force
 
 COPY --from=build /app/packages/shared/dist packages/shared/dist
+COPY --from=build /app/packages/service-kit/dist packages/service-kit/dist
 COPY --from=build /app/packages/messaging/dist packages/messaging/dist
 COPY --from=build /app/services/auth-service/dist services/auth-service/dist
 

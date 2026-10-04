@@ -1,3 +1,4 @@
+import { crearLogger } from '@punto-amigo/service-kit';
 import knexLib from 'knex';
 import type { Express } from 'express';
 import type { Knex } from 'knex';
@@ -61,16 +62,7 @@ const envSchema = baseEnvSchema.extend({
 });
 
 /** Registro estructurado en JSON, con el identificador de correlacion (RNF77). */
-const logger = {
-  info(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.warn(JSON.stringify({ level: 'info', service: 'auth-service', mensaje, ...contexto }));
-  },
-  error(mensaje: string, contexto: Record<string, unknown> = {}): void {
-    console.error(
-      JSON.stringify({ level: 'error', service: 'auth-service', mensaje, ...contexto })
-    );
-  },
-};
+const logger = crearLogger('auth-service');
 
 export function buildContainer(env: z.infer<typeof envSchema>): { app: Express; knex: Knex } {
   const knex = knexLib({
@@ -144,6 +136,7 @@ export function buildContainer(env: z.infer<typeof envSchema>): { app: Express; 
       corsOrigin: env.CORS_ORIGIN,
       bodyLimit: env.REQUEST_BODY_LIMIT,
       isProduction: env.NODE_ENV === 'production',
+      accessTtlSeconds: env.JWT_ACCESS_TTL_SECONDS,
       internalSecret: env.INTERNAL_SERVICE_SECRET,
       rateLimit: {
         windowMs: env.RATE_LIMIT_WINDOW_MS,

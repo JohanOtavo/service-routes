@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: punto-amigo
+    type: file
+    # `foldersFromFilesStructure: false` y una sola carpeta: el panel se
+    # versiona como archivo, asi que editarlo en la interfaz de Grafana no
+    # sobrevive a un reinicio. Es deliberado: el panel es codigo.
+    options:
+      path: /etc/grafana/paneles

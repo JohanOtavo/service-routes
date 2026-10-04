@@ -100,9 +100,15 @@ function rutasDelCodigo(app: Express): string[] {
     if (capa.route === undefined) continue;
     for (const metodo of Object.keys(capa.route.methods)) {
       if (metodo === '_all') continue;
-      // `/health` lo consulta el orquestador, no un cliente del API: queda
-      // fuera del contrato publico a proposito.
-      if (capa.route.path === '/health') continue;
+      /**
+       * `/health` y `/metrics` quedan fuera del contrato a proposito.
+       *
+       * El primero lo consulta el orquestador y el segundo Prometheus; ninguno
+       * es un cliente del API, y ninguno de los dos se alcanza desde fuera de
+       * la red interna. Documentarlos en el contrato publico anunciaria dos
+       * rutas que ningun consumidor del API puede usar.
+       */
+      if (capa.route.path === '/health' || capa.route.path === '/metrics') continue;
       salida.push(`${metodo.toUpperCase()} ${capa.route.path}`);
     }
   }
