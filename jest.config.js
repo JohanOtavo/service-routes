@@ -3,6 +3,32 @@
  * unitarias corren en cada commit, las de integracion solo en CI
  * (11-quality/testing-strategy.md).
  */
+/**
+ * El `.env` del repositorio, cargado antes de los proyectos.
+ *
+ * Las pruebas de integracion se OMITEN cuando falta su contrasena de base de
+ * datos, y lo hacen contandose como aprobadas. En una maquina donde el `.env`
+ * no esta exportado, eso convierte `npm test` en una medicion falsa: 151
+ * pruebas "pasando" sin tocar la base, y la cobertura cayendo de 68 % a 42 %
+ * sin que nada falle. En CI no se noto porque el workflow pone las variables a
+ * mano.
+ *
+ * `dotenv` no sobrescribe lo que ya venga del entorno, asi que CI sigue
+ * mandando sobre su propia configuracion.
+ */
+const hostPedido = process.env['MYSQL_HOST'];
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
+
+/**
+ * El `MYSQL_HOST` del `.env` es para los contenedores, no para las pruebas.
+ *
+ * Vale `mysql`, el nombre del servicio de compose, que solo resuelve dentro de
+ * la red de Docker; las pruebas corren en el anfitrion y veian
+ * "getaddrinfo ENOTFOUND mysql". Solo se corrige cuando nadie lo pidio de forma
+ * explicita: CI manda `MYSQL_HOST=127.0.0.1` y eso se respeta tal cual.
+ */
+if (hostPedido === undefined) process.env['MYSQL_HOST'] = '127.0.0.1';
+
 const tsJest = {
   preset: 'ts-jest',
   testEnvironment: 'node',

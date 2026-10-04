@@ -97,6 +97,9 @@ function brokerFalso(): {
   const broker = {
     declararCola: async (): Promise<void> => undefined,
     canalActivo: canal,
+    // El consumidor se engancha a cada conexion para volver a suscribirse. Aqui
+    // no hay reconexiones: el enganche se guarda y nadie lo invoca.
+    onConectado: (): void => undefined,
   } as unknown as Broker;
 
   return { broker, confirmados, rechazados, entregar: (m: unknown) => entregar?.(m) };

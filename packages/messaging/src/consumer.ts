@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { ConsumeMessage } from 'amqplib';
+import type { ConfirmChannel, ConsumeMessage } from 'amqplib';
 import { eventEnvelopeSchema, type EventEnvelope } from '@punto-amigo/shared';
 import type { Broker, Logger } from './broker';
 
@@ -45,13 +45,25 @@ function esClaveDuplicada(error: unknown): boolean {
 
 export class EventConsumer {
   private readonly manejadores = new Map<string, ManejadorEvento>();
+  /** El canal en el que esta puesta la suscripcion actual, si la hay. */
+  private canalSuscrito: ConfirmChannel | null = null;
 
   constructor(
     private readonly knex: Knex,
     private readonly broker: Broker,
     private readonly config: ConsumerConfig,
     private readonly logger: Logger
-  ) {}
+  ) {
+    /**
+     * La suscripcion se rehace en cada conexion, no solo al arrancar.
+     *
+     * Se engancha en el constructor y no en `iniciar()` a proposito: cuando el
+     * broker todavia no esta arriba, `main` falla en `broker.conectar()` y no
+     * llega a llamar a `iniciar()`. Enganchandolo aqui, la suscripcion ocurre
+     * sola en cuanto hay broker, sin que nadie tenga que reintentar.
+     */
+    this.broker.onConectado(() => this.suscribir());
+  }
 
   /** Registra el manejador de un tipo de evento. */
   on(eventName: string, manejador: ManejadorEvento): this {
@@ -59,7 +71,26 @@ export class EventConsumer {
     return this;
   }
 
+  /**
+   * Pone la suscripcion en marcha.
+   *
+   * Sigue lanzando si el broker no esta disponible: quien llama en el arranque
+   * lo registra, y el enganche del constructor se encarga de que la suscripcion
+   * llegue cuando el broker vuelva.
+   */
   async iniciar(): Promise<void> {
+    await this.suscribir();
+  }
+
+  private async suscribir(): Promise<void> {
+    const canalActual = this.broker.canalActivo;
+    if (canalActual === null) throw new Error('El broker no esta disponible.');
+
+    // Ya suscrito en ESTE canal. Pasa en el arranque normal, donde el enganche
+    // corre dentro de `conectar()` y `main` llama a `iniciar()` justo despues;
+    // suscribirse dos veces en el mismo canal duplicaria cada entrega.
+    if (this.canalSuscrito === canalActual) return;
+
     await this.broker.declararCola(this.config.cola, this.config.patrones);
 
     const canal = this.broker.canalActivo;
@@ -72,6 +103,8 @@ export class EventConsumer {
     await canal.consume(this.config.cola, (mensaje) => {
       void this.procesar(mensaje);
     });
+
+    this.canalSuscrito = canal;
 
     this.logger.info('consumidor iniciado', {
       cola: this.config.cola,

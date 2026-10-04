@@ -1,4 +1,21 @@
+import * as path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import * as dotenv from 'dotenv';
+
+/**
+ * El `.env` del repositorio, cargado aqui y no en cada prueba.
+ *
+ * Las pruebas necesitan `SEED_DEV_PASSWORD` para entrar con las cuentas
+ * sembradas, y el proceso de Playwright no hereda nada que no este en el
+ * entorno del shell. En una maquina de desarrollo la variable suele estar
+ * exportada y no se nota; en CI no lo esta, y las cuatro pruebas morian con
+ * "Falta SEED_DEV_PASSWORD" despues de haber levantado los ocho contenedores.
+ *
+ * Es la misma carga que hace `db/knexfile.js`: un solo sitio por proceso, y
+ * `dotenv` no sobrescribe lo que ya venga del entorno, asi que el job de CI
+ * puede seguir imponiendo sus propios valores.
+ */
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 /**
  * Pruebas de extremo a extremo (C-3).
