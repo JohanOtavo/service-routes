@@ -95,7 +95,7 @@ resolvieron el 3/10/2026 en [02-DECISIONES.md](02-DECISIONES.md), de modo que la
 | ~~7~~ | ~~Notificaciones fuera del MVP~~ | ~~Correo y push~~ | **Eliminada.** Push y correo de producto descartados; el correo transaccional pasa a la Fase 6 | [02-DECISIONES.md](02-DECISIONES.md) §2 |
 | 8 | Observabilidad y despliegue | Logging estructurado, métricas, k6, entornos dev/staging/prod, despliegue | **Completada** el 4/10/2026 en lo que depende del código; AT-005, AT-006 y AT-007 cerrados. Los entornos esperan AT-001, que es decisión tuya | [FASE-8-ENTREGA.md](FASE-8-ENTREGA.md) · [05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.md) · [06-ENTORNOS-Y-DESPLIEGUE.md](06-ENTORNOS-Y-DESPLIEGUE.md) |
 | 9 | Documentación y trazabilidad | 6 de 8 servicios sin documentar, SRS inglés obsoleto, contratos duplicados, backlog formal | **Completada** el 4/10/2026 en lo que depende de este repositorio; 4 pendientes viven en el repositorio congelado y esperan AT-003 | [FASE-9-ENTREGA.md](FASE-9-ENTREGA.md) · [10-TRAZABILIDAD.md](10-TRAZABILIDAD.md) · [servicios/](servicios/README.md) |
-| 10 | Preparación de producción | Go/No-Go, Definition of Done completo, cierre de deuda técnica AT-001..007 | **Siguiente** | §5 |
+| 10 | Preparación de producción | Go/No-Go, Definition of Done completo, cierre de deuda técnica AT-001..007 | **Expediente entregado** el 4/10/2026, con veredicto **NO-GO**: lo que bloquea son tres decisiones tuyas, ninguna de código | [11-GO-NO-GO.md](11-GO-NO-GO.md) |
 
 **Trabajo abierto, al 3/10/2026: los 13 pendientes de las Fases 1–3 ya tienen
 decisión registrada** —1 cerrado, 9 asignados a fase, 3 duplicados— **y quedan 7
@@ -349,9 +349,25 @@ Lo que decía este apartado antes de la entrega:
   prescribe `technical-backlog.md`, `dependencies.md` y `open-questions.md`. **Ninguno
   de los tres existe.** Los 13 pendientes viven hoy dentro de los documentos de entrega.
 
-### Fase 10 — Preparación de producción
+### Fase 10 — Preparación de producción · expediente entregado el 4/10/2026
 
-No es trabajo nuevo: es la comprobación de que todo lo anterior está resuelto.
+No es trabajo nuevo: es la comprobación de que todo lo anterior está resuelto. El
+expediente está en [11-GO-NO-GO.md](11-GO-NO-GO.md), con el *Definition of Done*
+bloque por bloque y su evidencia.
+
+**Veredicto: NO-GO**, y no por el software. Bloquean tres cosas, y las tres son
+decisiones:
+
+1. **La política de datos personales**, seis decisiones. El SRS la declara
+   bloqueante, y el propio DoD dice que una excepción no puede usarse para
+   ignorar un criterio crítico de seguridad
+2. **La nube (AT-001)**, y con ella la estrategia de despliegue y la retención
+   de respaldos
+3. **La revisión por Pull Request**: criterio obligatorio del DoD que **ninguna
+   de las nueve fases cumple**. Se arregla abriendo el PR de `develop` a `main`
+   y que alguien lo revise; el trabajo ya está hecho
+
+Lo que sigue por debajo:
 
 - Go/No-Go con Tech Lead y Product Owner, exigiendo DoD, DoR y los RNF, según la
   puerta de `00-sdd-guide.md` §Review gates

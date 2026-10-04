@@ -13,6 +13,7 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 | Entender un servicio concreto: qué hace, qué guarda, qué eventos mueve | [servicios/](servicios/README.md) |
 | Seguir un dato de un servicio a otro, o averiguar por qué no llegó | [07-GRAFO-DE-EVENTOS.md](07-GRAFO-DE-EVENTOS.md) |
 | Saber qué requisito del SRS toca qué código | [10-TRAZABILIDAD.md](10-TRAZABILIDAD.md) |
+| Saber si el sistema puede salir a producción, y qué falta | [11-GO-NO-GO.md](11-GO-NO-GO.md) |
 | Saber qué registra y qué mide el sistema, y qué carga aguanta | [05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.md) |
 | Saber qué entornos existen y qué falta para desplegar | [06-ENTORNOS-Y-DESPLIEGUE.md](06-ENTORNOS-Y-DESPLIEGUE.md) |
 | Restaurar un respaldo | [03-RUNBOOK-RESPALDOS.md](03-RUNBOOK-RESPALDOS.md) |
@@ -34,6 +35,7 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 | **[08-BACKLOG-TECNICO.md](08-BACKLOG-TECNICO.md)** | La deuda técnica con el formato que pide la gobernanza: impacto si no se resuelve, esfuerzo y prioridad. Con lo ya cerrado, para no repetir el trabajo |
 | **[09-PREGUNTAS-ABIERTAS.md](09-PREGUNTAS-ABIERTAS.md)** | Las 12 preguntas del SRS §11. Siete llevaban meses contestadas por el código sin que nadie cerrara el registro; cinco siguen abiertas |
 | **[10-TRAZABILIDAD.md](10-TRAZABILIDAD.md)** | Qué requisito toca qué archivo, y cuál tiene una prueba que lo nombre. Generada desde el código, no a mano |
+| **[11-GO-NO-GO.md](11-GO-NO-GO.md)** | El expediente de la puerta de producción: el *Definition of Done* bloque por bloque con su evidencia, las tres cosas que bloquean —ninguna es código— y las cuatro que harían falta para decir «sí» |
 | **[servicios/](servicios/README.md)** | Un documento por servicio: responsabilidad, API, modelo de datos, eventos, decisiones y runbook. Los nueve procesos, con los dos avisos sobre la documentación que ya existía |
 | **[FASE-4-PLAN.md](FASE-4-PLAN.md)** | La Fase 4, cerrada el 3/10/2026: lo que hizo falta para que `npm run verify` y CI pasasen, y las dos discrepancias de cobertura que quedaron diferidas con motivo |
 
@@ -51,21 +53,17 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 
 ## En una línea
 
-Ocho fases cerradas: base de datos, backend, cliente web, la puerta de calidad,
-los datos, la experiencia del cliente, la observabilidad y la documentación. El
-recorrido crítico pasa en un navegador real **en CI**. El sistema se puede
-observar —una línea JSON con `correlation_id` por petición, nueve `/metrics`,
-Prometheus y Grafana, y una carga medida con **P95 de 6,98 ms** contra un umbral
-de 300 ms— y ahora también se puede leer: los nueve procesos documentados, los 29
-eventos con quién los escucha, y **164 de 282 requisitos** trazados hasta el
-archivo que los implementa. Escribirlo destapó lo que no estaba anotado: seis
-eventos que nadie consume, semillas que no llenan las réplicas, y siete
-preguntas «abiertas» que el código llevaba meses contestando. **La siguiente es
-la Fase 10 —preparación de producción—**, que no es trabajo nuevo sino
-comprobar lo anterior. Lo que sigue bloqueando producción es la política de
-datos personales, con seis decisiones pendientes; desplegar necesita que elijas
-nube (AT-001), y cuatro pendientes de documentación esperan que decidas la
-organización de los repositorios (AT-003).
+Las nueve fases de construcción están cerradas y la décima —la puerta de
+producción— tiene su expediente escrito, con veredicto **NO-GO**. El sistema
+funciona y se puede demostrar: el recorrido crítico pasa en un navegador real
+**en CI**, 368 pruebas de Jest y 129 de Vitest en verde, P95 de **6,98 ms**
+contra un umbral de 300 ms, una restauración de respaldo probada sobre los siete
+esquemas, nueve `/metrics` con sus paneles, y 164 de 282 requisitos trazados
+hasta el archivo que los implementa. Lo que bloquea producción no es código:
+**la política de datos personales** (seis decisiones), **la elección de nube**
+(AT-001) y **la revisión por Pull Request**, que el *Definition of Done* exige y
+que ninguna fase ha cumplido. El detalle, bloque por bloque y con su evidencia,
+está en [11-GO-NO-GO.md](11-GO-NO-GO.md).
 
 ## Una nota sobre las fechas
 
