@@ -128,8 +128,27 @@ function mensaje(eventId: string, eventName: string, payload: Record<string, unk
   };
 }
 
-/** Espera a que el consumidor termine: `consume` no devuelve una promesa. */
-const reposar = (): Promise<void> => new Promise((r) => setTimeout(r, 150));
+/**
+ * Espera a que algo ocurra, no a que pasen 150 ms.
+ *
+ * `consume` no devuelve una promesa: el consumidor procesa el mensaje por su
+ * cuenta y hay que esperar a que acabe. La primera version de este archivo
+ * esperaba un plazo fijo de 150 ms, y eso basta en una maquina de desarrollo y
+ * no en un runner de CI cargado: la asercion corria antes de que la transaccion
+ * terminara y la prueba fallaba con "Expected length: 1, Received length: 0".
+ * Un plazo fijo no es una espera, es una apuesta.
+ *
+ * Si la condicion no se cumple, se agota el tiempo y se devuelve: las
+ * aserciones de la prueba dicen entonces que falto, que es mas informativo que
+ * el mensaje de este ayudante.
+ */
+async function esperarA(condicion: () => boolean, limiteMs = 5_000): Promise<void> {
+  const limite = Date.now() + limiteMs;
+  while (Date.now() < limite) {
+    if (condicion()) return;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+}
 
 describe('idempotencia del consumidor de eventos', () => {
   it('la PRIMERA entrega ejecuta el manejador', async () => {
@@ -150,7 +169,7 @@ describe('idempotencia del consumidor de eventos', () => {
 
     await consumidor.iniciar();
     entregar(mensaje('aaaaaaaa-1111-4111-8111-111111111111', 'Prueba', { marca: 'primera' }));
-    await reposar();
+    await esperarA(() => confirmados.length === 1);
 
     // Esto es lo que fallaba: el manejador no se ejecutaba NUNCA, y aun asi el
     // mensaje se confirmaba y la marca quedaba escrita.
@@ -183,9 +202,9 @@ describe('idempotencia del consumidor de eventos', () => {
     const id = 'bbbbbbbb-2222-4222-8222-222222222222';
 
     entregar(mensaje(id, 'Prueba', { marca: 'uno' }));
-    await reposar();
+    await esperarA(() => confirmados.length === 1);
     entregar(mensaje(id, 'Prueba', { marca: 'dos' }));
-    await reposar();
+    await esperarA(() => confirmados.length === 2);
 
     expect(aplicados).toEqual(['aplicado']);
     // Las dos se confirman: la repetida no es un error, es el broker haciendo
@@ -216,7 +235,7 @@ describe('idempotencia del consumidor de eventos', () => {
     await consumidor.iniciar();
     const id = 'cccccccc-3333-4333-8333-333333333333';
     entregar(mensaje(id, 'Prueba', {}));
-    await reposar();
+    await esperarA(() => rechazados.length === 1);
 
     expect(rechazados).toHaveLength(1);
     const marca = await knex('processed_event')
