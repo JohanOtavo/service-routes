@@ -9,6 +9,14 @@
 # Para reejecutarlo:  docker compose down -v && docker compose up -d
 #
 # SRS: RNF28 (credenciales propias por servicio, restringidas a su esquema).
+#
+# El bit de ejecucion de este archivo NO es decorativo. El entrypoint de MySQL
+# ejecuta los .sh de initdb.d como proceso aparte solo si son ejecutables; si no
+# lo son, los hace `source` en su propio shell, y entonces el `set -euo pipefail`
+# de abajo se queda pegado al entrypoint, que muere en su linea 342 con
+# "MYSQL_ONETIME_PASSWORD: unbound variable" y reinicia el contenedor en bucle.
+# En Docker Desktop el bind mount regala el bit y nunca se nota; en CI, donde el
+# modo sale de git, se nota a la primera. Si tocas este archivo, conserva el 0755.
 
 set -euo pipefail
 
