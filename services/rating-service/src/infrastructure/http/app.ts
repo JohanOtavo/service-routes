@@ -6,6 +6,7 @@ import type { Knex } from 'knex';
 import { AppError } from '@punto-amigo/shared';
 import {
   accessLog,
+  claveDeLimite,
   correlationId,
   crearMetricas,
   errorHandler,
@@ -122,6 +123,9 @@ export function createApp(deps: AppDeps): Express {
     rateLimit({
       windowMs: deps.config.rateLimit.windowMs,
       limit: deps.config.rateLimit.maxPerIp,
+      // Por identidad, no por IP: a este lado todas las peticiones vienen del
+      // gateway y un limite por IP seria un techo para todo el sistema (J-1).
+      keyGenerator: claveDeLimite,
       standardHeaders: 'draft-7',
       legacyHeaders: false,
       handler: (_req, _res, next) => next(AppError.rateLimited()),

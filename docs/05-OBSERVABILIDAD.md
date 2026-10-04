@@ -146,9 +146,12 @@ que el número:
    proxy.** Con el límite del gateway ya elevado, la carga seguía recibiendo 429
    desde catalog-service: cada servicio interno aplica `RATE_LIMIT_MAX_PER_IP` y
    **ve siempre una sola IP**, la del gateway. Con 100 por minuto, el techo
-   efectivo de todo el sistema eran 100 peticiones por minuto. Queda anotado
-   como hallazgo **J-1** en [01-BACKLOG.md](01-BACKLOG.md); la superposición de
-   carga los eleva en los siete servicios para poder medir.
+   efectivo de todo el sistema eran 100 peticiones por minuto. **Corregido el
+   4/10/2026** (J-1): el limitador interno usa ahora la identidad que inyecta el
+   gateway, y solo cae a la IP en las rutas públicas, donde no hay identidad y
+   el limitador del gateway ya controla cliente a cliente. La superposición de
+   carga sigue elevándolos porque la prueba mide sobre todo rutas públicas, que
+   por definición comparten contador a este lado.
 
 El paso de escritura se queda fuera a propósito: publicar necesidades en bucle
 llena la base y deja el entorno distinto al que empezó. Medir la latencia de

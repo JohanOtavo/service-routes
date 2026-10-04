@@ -15,6 +15,7 @@ import type { JwtTokenService } from '../security/JwtTokenService';
 import { runInTransaction } from '../persistence/transaction';
 import {
   accessLog,
+  claveDeLimite,
   correlationId,
   crearMetricas,
   errorHandler,
@@ -159,6 +160,9 @@ export function createApp(deps: AppDeps): Express {
   const limiteGeneral = rateLimit({
     windowMs: deps.config.rateLimit.windowMs,
     limit: deps.config.rateLimit.maxPerIp,
+    // Por identidad, no por IP: a este lado todas las peticiones vienen del
+    // gateway y un limite por IP seria un techo para todo el sistema (J-1).
+    keyGenerator: claveDeLimite,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     handler: (_req, _res, next) => next(AppError.rateLimited()),
@@ -174,6 +178,7 @@ export function createApp(deps: AppDeps): Express {
   const limiteAuth = rateLimit({
     windowMs: deps.config.rateLimit.windowMs,
     limit: deps.config.rateLimit.authMax,
+    keyGenerator: claveDeLimite,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     handler: (_req, _res, next) => next(AppError.rateLimited()),

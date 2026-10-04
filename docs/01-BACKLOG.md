@@ -545,10 +545,13 @@ el límite del gateway ya elevado. Ver [05-OBSERVABILIDAD.md](05-OBSERVABILIDAD.
 usuarios activos podrían agotar el cupo del sistema entero. Y el limitador
 interno no protege de nada que el del gateway no cubra ya, porque los servicios
 no son alcanzables desde fuera.
-**Cierra cuando.** O el limitador interno se retira, con el motivo escrito, o
-limita por la identidad que inyecta el gateway (`x-internal-user-id`) en lugar
-de por IP. Con una prueba que lo demuestre.
-**Fase destino.** 10, o antes si se despliega algo con tráfico real.
+**CERRADO** el 4/10/2026. El limitador de los siete servicios internos usa
+ahora `claveDeLimite`, que toma la identidad que inyecta el gateway y solo cae a
+la IP cuando no hay ninguna —rutas públicas, que es el caso que el limitador por
+IP del gateway ya controla cliente a cliente antes de llegar aquí—.
+**Verificado contra la pila**, con el límite en su valor real de 100 por minuto:
+el usuario 34 agotó su cupo en la petición 101 y recibió 429, mientras el
+usuario 35 seguía recibiendo 200. Antes los dos compartían contador.
 
 ### J-2 · Una prueba de integración que se omite se cuenta como aprobada
 **Qué pasa.** Las pruebas de integración se saltan solas cuando no alcanzan

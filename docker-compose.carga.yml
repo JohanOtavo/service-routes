@@ -16,12 +16,15 @@
 # peticiones cada una, 60 segundos de meseta. Los valores de aqui dejan margen
 # de sobra sobre eso (90 peticiones/s son 5.400 por minuto).
 # Hallazgo de la primera ejecucion, que es la razon de que esten los SIETE
-# servicios y no solo el gateway: el limitador `RATE_LIMIT_MAX_PER_IP` de cada
-# servicio interno ve siempre UNA sola IP, la del gateway. Con 100 por minuto,
-# el techo efectivo de todo el sistema era de 100 peticiones por minuto, y la
-# carga devolvia 429 desde catalog-service aunque el gateway ya tuviera el
-# limite elevado. Queda anotado en el backlog como hallazgo J-1: un limitador
-# por IP detras de un proxy no limita por cliente, limita por proxy.
+# servicios y no solo el gateway: el limitador de cada servicio interno veia
+# siempre UNA sola IP, la del gateway. Con 100 por minuto, el techo efectivo de
+# todo el sistema era de 100 peticiones por minuto, y la carga devolvia 429
+# desde catalog-service aunque el gateway ya tuviera el limite elevado.
+#
+# Corregido (J-1): ahora la clave es la identidad que inyecta el gateway. Estos
+# valores siguen haciendo falta porque la prueba mide sobre todo rutas PUBLICAS
+# —categorias y servicios—, que no traen identidad y por eso comparten contador
+# a este lado; a quien limita cliente a cliente en ese caso es el gateway.
 services:
   api-gateway:
     environment:

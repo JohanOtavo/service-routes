@@ -156,6 +156,32 @@ export function requireInternalCaller(secreto: string) {
 }
 
 /**
+ * Clave del limitador de peticiones dentro de la red: la identidad, no la IP.
+ *
+ * Los ocho servicios de dentro reciben TODAS sus peticiones desde una sola
+ * direccion, la del gateway. Un limitador por IP ahi no limita por cliente,
+ * limita por proxy: con el valor por omision de 100 por minuto, el techo
+ * efectivo de todo el sistema eran 100 peticiones por minuto, y dos usuarios
+ * activos podian agotar el cupo de todos los demas. Se descubrio midiendo:
+ * la prueba de carga recibia 429 desde catalog-service con el limite del
+ * gateway ya elevado (hallazgo J-1).
+ *
+ * Se usa la identidad que inyecta el gateway, que es la unica forma de
+ * distinguir clientes a este lado. Cuando no hay identidad —una ruta publica—
+ * se cae a la IP, que aqui es la del gateway: eso deja un cupo compartido para
+ * el trafico anonimo, y es justo el caso que el limitador por IP del gateway
+ * ya controla cliente a cliente, antes de llegar aqui.
+ *
+ * El prefijo evita que un identificador de usuario y una direccion puedan
+ * colisionar en la misma clave.
+ */
+export function claveDeLimite(req: Request): string {
+  const bruto = req.header(CABECERA_USUARIO);
+  if (bruto !== undefined && /^[1-9][0-9]{0,18}$/u.test(bruto)) return `u:${bruto}`;
+  return `ip:${req.ip ?? 'desconocida'}`;
+}
+
+/**
  * Identidad que el gateway inyecta tras verificar el token.
  *
  * Los nombres coinciden con `CABECERAS_INTERNAS` del gateway. No se importan de
