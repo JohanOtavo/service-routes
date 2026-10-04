@@ -28,7 +28,6 @@ COPY services/api-gateway/package.json services/api-gateway/
 RUN npm ci --omit=dev --ignore-scripts=false && npm cache clean --force
 
 COPY --from=build /app/packages/shared/dist packages/shared/dist
-COPY --from=build /app/packages/messaging/dist packages/messaging/dist
 COPY --from=build /app/services/api-gateway/dist services/api-gateway/dist
 
 # Sin privilegios de root: la imagen de node ya trae el usuario `node`.

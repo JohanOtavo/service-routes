@@ -1,0 +1,53 @@
+# Qué NO entra en el contexto de construcción.
+#
+# No existía, y eso tenía dos consecuencias. La visible: el `dist/` de la
+# maquina de quien construye se colaba en el contexto, asi que un Dockerfile que
+# copia un `dist` que su propia compilacion NO genera funcionaba en local y
+# fallaba en un clon limpio. Es como se descubrio que `api-gateway` copiaba
+# `packages/messaging/dist` sin usar ese paquete para nada.
+#
+# La que importa mas: el `.env` con las credenciales reales se enviaba al
+# contexto de las ocho imagenes. No acababa en ninguna capa porque ningun
+# Dockerfile lo copia, pero viajaba al demonio de Docker en cada construccion, y
+# un `COPY . .` futuro lo habria metido en la imagen sin que nadie lo notara.
+
+# Entorno y secretos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.keys/
+
+# Dependencias: cada imagen hace su propio `npm ci`
+node_modules/
+**/node_modules/
+
+# Compilacion: la hace la etapa `build` de cada Dockerfile
+**/dist/
+# `**/` no es opcional: un patron como `*.tsbuildinfo` solo encaja en la RAIZ
+# del contexto, asi que `packages/shared/tsconfig.tsbuildinfo` seguia entrando.
+# Con el `dist` ya excluido, ese buildinfo rancio le decia a `tsc --build` que el
+# paquete estaba al dia y la compilacion fallaba con TS6305: "Output file
+# dist/index.d.ts has not been built from source file src/index.ts".
+*.tsbuildinfo
+**/*.tsbuildinfo
+.vite/
+
+# Historial y herramientas
+.git/
+.github/
+.claude/
+
+# Pruebas y artefactos
+coverage/
+test-results/
+playwright-report/
+blob-report/
+e2e/
+dumps/
+
+# Documentacion
+docs/
+*.md
+!README.md
