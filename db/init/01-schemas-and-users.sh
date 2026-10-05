@@ -118,6 +118,39 @@ done
 
 mysql "${CONEXION[@]}" -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "FLUSH PRIVILEGES;"
 
+# --------------------------------------------------------------------------------------
+# Excepcion documentada: admin-reporting-service lee cinco tablas de otros esquemas.
+#
+# RF108 prohibia que este servicio consultara otra base de datos. ADR-005 relaja esa
+# regla para el calculo de estadisticas, porque las metricas que pide el SRS viven en
+# request, catalog y rating, y ningun servicio publica eventos con ese contenido.
+#
+# El privilegio se concede a NIVEL DE TABLA, no de esquema, por dos razones:
+#
+#   1. `SCHEMA_PRIVILEGES` solo registra privilegios de nivel esquema. Concederlos a
+#      nivel de tabla deja la verificacion de aislamiento de abajo exactamente igual de
+#      estricta: un GRANT accidental sobre `pa_request.*` -que es el error grave- sigue
+#      haciendo fallar el arranque.
+#   2. La excepcion queda acotada a cinco tablas y no a tres esquemas. Si manana hace
+#      falta una sexta tabla, hay que editar esta lista y el ADR, no abrir un esquema.
+#
+# Solo SELECT. Ni escritura, ni GRANT OPTION, ni privilegios globales.
+REPORTING_READS=(
+  "pa_request.necesidad"
+  "pa_request.propuesta"
+  "pa_catalog.prestador_ref"
+  "pa_catalog.servicio"
+  "pa_rating.calificacion"
+)
+
+echo "[init] concediendo lectura de reportes a pa_admin_svc (ADR-005)"
+for tabla in "${REPORTING_READS[@]}"; do
+  mysql "${CONEXION[@]}" -uroot -p"${MYSQL_ROOT_PASSWORD}" <<SQL
+GRANT SELECT ON \`${tabla%%.*}\`.\`${tabla##*.}\` TO '${DB_ADMIN_USER:-pa_admin_svc}'@'%';
+SQL
+  echo "[init]   SELECT ${tabla}"
+done
+
 # Comprobacion: ningun usuario de servicio debe tener privilegios fuera de su
 # esquema. Si el bucle anterior se equivocara, esto lo detecta ahora y no en
 # produccion.
@@ -142,4 +175,41 @@ for entry in "${SERVICES[@]}"; do
   fi
 done
 
-echo "[init] listo: 7 esquemas, 7 usuarios, aislamiento verificado"
+# La excepcion de ADR-005 es a nivel de TABLA, y TABLE_PRIVILEGES es distinta de
+# SCHEMA_PRIVILEGES: el bucle de arriba no la ve. Sin esta comprobacion la excepcion
+# seria invisible para el gate, y un gate que no ve una excepcion deja de ser un gate.
+#
+# Se exige que los privilegios de tabla cruzados sean EXACTAMENTE la lista aprobada.
+# Cualquier tabla de mas, cualquier privilegio distinto de SELECT, o cualquier tabla
+# de la lista que sobre, hace fallar el arranque.
+echo "[init] verificando excepcion de lectura de ADR-005"
+
+# GROUP_CONCAT ordena por TABLE_SCHEMA, TABLE_NAME; la lista esperada se ordena con
+# `sort` para que las dos cadenas coincidan sin depender del shell.
+esperado=$(printf '%s\n' "${REPORTING_READS[@]}" | sort -u | tr '\n' ',' | sed 's/,$//')
+
+no_select=$(mysql "${CONEXION[@]}" -uroot -p"${MYSQL_ROOT_PASSWORD}" -N -B -e \
+  "SELECT COUNT(*) FROM information_schema.TABLE_PRIVILEGES
+   WHERE GRANTEE = \"'${DB_ADMIN_USER:-pa_admin_svc}'@'%'\"
+     AND TABLE_SCHEMA <> 'pa_admin'
+     AND PRIVILEGE_TYPE <> 'SELECT';")
+
+concedidas=$(mysql "${CONEXION[@]}" -uroot -p"${MYSQL_ROOT_PASSWORD}" -N -B -e \
+  "SELECT GROUP_CONCAT(CONCAT(TABLE_SCHEMA, '.', TABLE_NAME) ORDER BY TABLE_SCHEMA, TABLE_NAME)
+   FROM information_schema.TABLE_PRIVILEGES
+   WHERE GRANTEE = \"'${DB_ADMIN_USER:-pa_admin_svc}'@'%'\"
+     AND TABLE_SCHEMA <> 'pa_admin';")
+
+if [ "$no_select" != "0" ]; then
+  echo "[init] ERROR: pa_admin_svc tiene ${no_select} privilegio(s) de tabla Cruzados que no son SELECT" >&2
+  exit 1
+fi
+
+if [ "$concedidas" != "$esperado" ]; then
+  echo "[init] ERROR: los privilegios cruzados de pa_admin_svc no son los de ADR-005" >&2
+  echo "[init]   esperado: ${esperado}" >&2
+  echo "[init]   real:     ${concedidas}" >&2
+  exit 1
+fi
+
+echo "[init] listo: 7 esquemas, 7 usuarios, aislamiento verificado, excepcion ADR-005 verificada"

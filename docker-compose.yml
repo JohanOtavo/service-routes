@@ -1,11 +1,11 @@
 # Punto Amigo — entorno local completo.
 #
-# Estado: Fase 1 (base de datos). Levanta la infraestructura y aplica las
-# migraciones de los 7 esquemas. Los 8 servicios de aplicacion y el cliente web
-# se incorporan en las Fases 2 y 3, bajo el perfil "apps".
+# Levanta la infraestructura (MySQL, Redis, RabbitMQ), aplica las migraciones de
+# los 7 esquemas, carga los seeds y, bajo el perfil "apps", los 8 servicios de
+# aplicacion. El cliente web (apps/web) no corre aqui: es un proceso de Node.
 #
 #   docker compose up -d          → infraestructura + migraciones + seeds
-#   docker compose --profile apps up -d   → lo anterior + servicios (Fase 2)
+#   docker compose --profile apps up -d   → lo anterior + servicios y gateway
 
 name: punto-amigo
 

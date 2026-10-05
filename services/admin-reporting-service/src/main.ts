@@ -8,18 +8,25 @@ import { SystemClock, useTransaction } from '@punto-amigo/service-kit';
 import { QueryAuditTrailUseCase } from './application/use-cases/QueryAuditTrail';
 import { RecordAuditTrailUseCase } from './application/use-cases/RecordAuditTrail';
 import { ManageReportsUseCase } from './application/use-cases/ManageReports';
+import { CalculateStatistics } from './application/use-cases/CalculateStatistics';
 import { KnexAuditRepository } from './infrastructure/persistence/KnexAdminRepositories';
 import {
   KnexBackupRepository,
+  KnexEstadisticasSnapshotRepository,
   KnexParameterRepository,
   KnexStatisticsRepository,
 } from './infrastructure/persistence/KnexSupportRepositories';
+import { KnexEstadisticasCalculadora } from './infrastructure/persistence/KnexEstadisticasCalculadora';
+import { EstadisticasScheduler } from './infrastructure/scheduling/EstadisticasScheduler';
 import { createApp } from './infrastructure/http/app';
 
 const envSchema = baseEnvSchema.extend({
   ADMIN_PORT: z.coerce.number().int().min(1).max(65535).default(3007),
   DB_ADMIN_USER: z.string().min(1),
   DB_ADMIN_PASSWORD: z.string().min(1),
+
+  /** Cada cuanto se recalculan las estadisticas (A-3, RF113). */
+  STATISTICS_INTERVAL_MS: z.coerce.number().int().min(60_000).default(3_600_000),
 
   RABBITMQ_HOST: z.string().min(1),
   RABBITMQ_PORT: z.coerce.number().int().min(1).max(65535).default(5672),
@@ -47,6 +54,7 @@ export function buildContainer(env: z.infer<typeof envSchema>): {
   app: Express;
   knex: Knex;
   registrar: RecordAuditTrailUseCase;
+  estadisticas: EstadisticasScheduler;
 } {
   const knex = knexLib({
     client: 'mysql2',
@@ -84,14 +92,26 @@ export function buildContainer(env: z.infer<typeof envSchema>): {
     },
   });
 
-  return { app, knex, registrar };
+  // El calculo de estadisticas es la parte de este servicio que lee datos ajenos
+  // (ADR-005). Se cablea aqui, no en el arranque, para que los tests puedan montar
+  // el contenedor y exercise el HTTP sin disparar un calculo que nobody pidio.
+  const planificador = new EstadisticasScheduler(
+    new CalculateStatistics(
+      new KnexEstadisticasCalculadora(knex),
+      new KnexEstadisticasSnapshotRepository(knex)
+    ),
+    logger,
+    { intervaloMs: env.STATISTICS_INTERVAL_MS }
+  );
+
+  return { app, knex, registrar, estadisticas: planificador };
 }
 
 async function main(): Promise<void> {
   const env = loadEnv(envSchema);
   assertProductionSafety(env);
 
-  const { app, knex, registrar } = buildContainer(env);
+  const { app, knex, registrar, estadisticas } = buildContainer(env);
 
   const broker = new Broker(
     {
@@ -151,8 +171,15 @@ async function main(): Promise<void> {
     });
   });
 
+  // El planificador se arranca despues de escuchar: el servicio ya acepta
+  // peticiones de auditoria aunque el primer calculo falle, y el fallo del calculo
+  // queda registrado en la bitacora en vez de impedir que el modulo de
+  // informacion salga.
+  await estadisticas.iniciar();
+
   const cerrar = (senal: string): void => {
     logger.info('cerrando', { senal });
+    estadisticas.detener();
     servidor.close(() => {
       void broker
         .cerrar()

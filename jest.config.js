@@ -34,12 +34,24 @@ module.exports = {
     {
       ...tsJest,
       displayName: 'integration',
+      /**
+       * Carga `.env` sin pisar lo que ya venga definido, traduce los nombres de
+       * servicio de Compose a loopback y exige que las pruebas arranquen de
+       * verdad. Sin esto, una suite que no encuentra la base hace `return`
+       * temprano y Jest la cuenta como aprobada: el gate puede quedar verde sin
+       * que se haya ejecutado una sola prueba. Ver el archivo para el detalle.
+       */
+      globalSetup: '<rootDir>/jest.global-setup.js',
       // Tambien los paquetes compartidos: el consumidor de eventos solo se
       // puede probar de verdad contra MySQL, porque su defecto mas grave estuvo
       // en lo que el motor devuelve al insertar.
+      // Y `db/`: los seeds se ejecutan contra el motor porque su garantia es
+      // sobre lo que este NO hace -no borrar, no reasignar identificadores-, y
+      // un doble en memoria no probaria ninguna de las dos cosas.
       testMatch: [
         '<rootDir>/services/*/tests/**/*.int.test.ts',
         '<rootDir>/packages/*/tests/**/*.int.test.ts',
+        '<rootDir>/db/tests/**/*.int.test.ts',
       ],
     },
   ],

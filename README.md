@@ -21,9 +21,15 @@ gobernanza viven en [`friend-point-docs`](../friend-point-docs).
 
 ## Estado
 
-**Fase 1 — base de datos.** Los siete esquemas, sus migraciones versionadas y los
-seeds de desarrollo están construidos. Los servicios de aplicación (Fase 2) y el
-cliente web (Fase 3) todavía no.
+**Fases 1, 2 y 3 construidas.** Los siete esquemas con sus migraciones versionadas
+y seeds, los ocho microservicios detrás del gateway, y el cliente web PWA. La
+puerta de calidad del repositorio (`npm run verify`) pasa en local y en CI.
+
+El estado medido de cada puerta, y los 48 elementos de trabajo que quedan
+abiertos, están en [`docs/00-FLUJO-DEL-PROYECTO.md`](docs/00-FLUJO-DEL-PROYECTO.md)
+§1 y [`docs/01-BACKLOG.md`](docs/01-BACKLOG.md). Quién publica cada evento y quién
+lo consume está en [`docs/02-GRAFO-DE-EVENTOS.md`](docs/02-GRAFO-DE-EVENTOS.md).
+Este README describe cómo se arranca el proyecto, no en qué punto está.
 
 ---
 
@@ -39,11 +45,32 @@ docker compose up -d
 Eso levanta MySQL, Redis y RabbitMQ, crea los siete esquemas con un usuario de
 privilegio mínimo cada uno, aplica las migraciones y carga los seeds.
 
+> **Si acabas de tocar `db/migrations` o `db/seeds`, usa `docker compose up -d --build`.**
+> El servicio `migrator` usa una imagen con etiqueta fija
+> (`punto-amigo/migrator:local`), y Compose no la reconstruye si ya existe: sin
+> `--build` seguiría ejecutando el código anterior y los cambios parecerían no
+> tener efecto. Es la razón por la que `db/` se copia dentro de la imagen en vez
+> de montarse como volumen.
+
 Para comprobar que terminó bien:
 
 ```bash
 docker compose logs migrator
 ```
+
+### Los seeds se pueden repetir
+
+`docker compose up -d` carga los seeds en cada arranque, así que
+`npm run db:seed` es idempotente: no borra nada, busca por clave natural (el
+correo del usuario, el nombre del rol, el de la categoría) e inserta o actualiza.
+Los identificadores se conservan, de modo que las claves foráneas de los demás
+esquemas siguen apuntando a alguien que existe.
+
+Antes sí borraban sus tablas antes de insertar, así que `usuario.id_usuario`
+cambiaba en cada ejecución y las tablas `*_ref` de los demás esquemas —
+que **no** tienen clave foránea contra `pa_auth.usuario` porque viven en otro
+esquema— quedaban apuntando a filas fantasma sin un solo error. Lo comprueba
+`db/tests/seeds-idempotency.int.test.ts` contra MySQL real.
 
 ### Usuarios de prueba
 
@@ -105,12 +132,13 @@ levantar la base de datos.
 bash db/verify-invariants.sh
 ```
 
-21 pruebas negativas contra la base real. Cada una **intenta violar** un
-invariante del modelo y pasa solo si MySQL la rechaza: dos propuestas
-adjudicadas sobre la misma necesidad, una contratación por adjudicación que nace
-pendiente, un `UPDATE` sobre la auditoría, una puntuación fuera de rango, o un
-servicio leyendo el esquema de otro. Un invariante que solo está en la
-documentación no cuenta como implementado.
+31 pruebas de invariantes contra la base real: 25 **intento violar** un invariante
+del modelo y 6 comprueban que una escritura legítima sigue pasando. Cada prueba
+negativa pasa solo si MySQL **rechaza** la escritura: dos propuestas adjudicadas
+sobre la misma necesidad, una contratación por adjudicación que nace pendiente, un
+`UPDATE` sobre la auditoría, una puntuación fuera de rango, o un servicio leyendo
+el esquema de otro. Un invariante que solo está en la documentación no cuenta como
+implementado.
 
 ### Si una migración falla a medias
 
@@ -143,6 +171,18 @@ npm run lint
 npm run typecheck
 npm test
 npm run audit
+```
+
+`npm test` corre las 368 pruebas, y 133 de ellas son de integración: necesitan el
+MySQL, el Redis y el RabbitMQ del compose levantados. `jest.global-setup.js` carga
+`.env`, traduce los hosts de Compose a `127.0.0.1` y **exige que la integración
+se ejecute de verdad**: si la base no responde, las pruebas fallan en lugar de
+quedarse en un "omitido" que Jest cuenta como aprobado. Para correrlas sin
+infraestructura, y aceptando que no prueban nada:
+
+```bash
+SKIP_INTEGRATION=1 npm test          # bash
+$env:SKIP_INTEGRATION='1'; npm test  # PowerShell
 ```
 
 ---

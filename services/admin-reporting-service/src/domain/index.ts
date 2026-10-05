@@ -11,10 +11,11 @@ import { AppError } from '@punto-amigo/shared';
  * registro que solo se anade, un diccionario de parametros y tres formas de
  * agregar. Partirlo en siete archivos anadiria navegacion sin anadir claridad.
  *
- * Este servicio NO consulta la base de datos de ningun otro (RF108). Lo que no
- * llegue por un evento y no este en una tabla de `pa_admin` sencillamente no se
- * puede informar: inventarlo o cruzar esquemas romperia la propiedad de datos
- * que sostiene el resto de la arquitectura.
+ * Este servicio consulta la base de datos de ningun otro (RF108), con una sola y
+ * documentada excepcion: ADR-005 le concede lectura de SELECT, a nivel de tabla, de
+ * cinco tablas de `pa_request`, `pa_catalog` y `pa_rating` para calcular las
+ * estadisticas. La lista de tablas esta cerrada en el ADR y en el script de
+ * aprovisionamiento, que verifica al arrancar que no existe ninguna mas.
  */
 
 /**
@@ -501,6 +502,60 @@ export interface IStatisticsRepository {
   ): Promise<Pagina<PuntoSerie>>;
   /** Metricas disponibles: sin esto el administrador tendria que adivinarlas. */
   metricas(): Promise<readonly string[]>;
+}
+
+/**
+ * Una metrica del catalogo, con su formula escrita.
+ *
+ * La formula va en el dominio y no en la consulta SQL a proposito: es lo que
+ * permite responder "como se calcula esto" sin abrir el infraestructura, y es lo
+ * que traveling se documenta para el administrador. Una metrica sin
+ * formula declarada no entra en el catalogo.
+ */
+export interface DefinicionMetrica {
+  /** Identificador almacenado en `statistics_snapshot.metrica` (varchar 60). */
+  nombre: string;
+  descripcion: string;
+  /** Formula legible, expuesta al administrador en la API de metricas. */
+  formula: string;
+  /**
+   * `diaria` cuenta hechos ocurridos ese dia, asi que admite historico.
+   * `instantanea` es el estado del mundo en la fecha del calculo: se puede
+   * repetir hoy y dara otro valor, y no tiene sentido promediarse.
+   */
+  granularidad: 'diaria' | 'instantanea';
+  /** Eje de desglose, o null si la metrica solo admite un total. */
+  dimension: string | null;
+  /** Tablas ajenas a `pa_admin` que esta metrica necesita leer (ADR-005). */
+  requiere: readonly string[];
+}
+
+/** Un valor calculado, listo para guardarse en la instantanea diaria. */
+export interface PuntoCalculado {
+  metrica: string;
+  /** `TOTAL` es el agregado; cualquier otro valor es un corte por dimension. */
+  dimension: string;
+  valor: number;
+}
+
+/**
+ * Lee los datos de origen y produce los puntos de las metricas pedidas.
+ *
+ * Vive como puerto y no como caso de uso porque el calculo es SQL: interesan los
+ * tests de integracion contra el dato real, no una suite de unitarios sobre una
+ * formula que en realidad no se ejecuta aqui.
+ */
+export interface IEstadisticasCalculadora {
+  calcular(nombre: string, fecha: string): Promise<readonly PuntoCalculado[]>;
+}
+
+/**
+ * Guarda los puntos de una fecha. Debe ser idempotente: el calculo corre cada
+ * vez que el proceso arranca y luego en cada tick, y las dos vueltas tienen que
+ * dejar el mismo estado, no duplicar filas.
+ */
+export interface IEstadisticasSnapshotRepository {
+  guardar(fecha: string, puntos: readonly PuntoCalculado[], calculadoAt: Date): Promise<number>;
 }
 
 export interface IBackupRepository {

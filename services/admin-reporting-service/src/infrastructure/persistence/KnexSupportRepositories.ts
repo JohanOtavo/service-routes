@@ -3,10 +3,12 @@ import { currentDb } from '@punto-amigo/service-kit';
 import type {
   EstadoRespaldo,
   IBackupRepository,
+  IEstadisticasSnapshotRepository,
   IParameterRepository,
   IStatisticsRepository,
   Pagina,
   ParametroSistema,
+  PuntoCalculado,
   PuntoSerie,
   TipoParametro,
 } from '../../domain';
@@ -141,6 +143,57 @@ export class KnexStatisticsRepository implements IStatisticsRepository {
       .orderBy('metrica', 'asc')) as unknown as { metrica: string }[];
 
     return filas.map((f) => String(f.metrica));
+  }
+}
+
+/**
+ * Lado que faltaba de `statistics_snapshot`: el que escribe (A-3, RF113).
+ *
+ * SRS: RF113. Ver `CalculateStatistics` para el catalogo y `ADR-005` para el acceso
+ * de lectura a los datos de origen.
+ *
+ * El guardado es un upsert sobre el indice unico `uq_snapshot_point`. La idempotencia
+ * no es una cortesia: el calculo corre al arrancar y luego en cada tick, asi que la
+ * misma fecha se calcula muchas veces al dia. Con un `insert` a secas, esas vueltas
+ * dejarian filas repetidas que el grafico leeria como si fueran dias distintos, y el
+ * total de la tabla creceria sin que nadie publicase nada.
+ *
+ * Lo que se actualiza en la segunda vuelta es `valor` y `calculado_at`, no el resto: la
+ * fila representa un hecho medido, no una opinion del proceso que la midio.
+ */
+export class KnexEstadisticasSnapshotRepository implements IEstadisticasSnapshotRepository {
+  constructor(private readonly knex: Knex) {}
+
+  private get db(): Knex | Knex.Transaction {
+    return currentDb(this.knex);
+  }
+
+  async guardar(
+    fecha: string,
+    puntos: readonly PuntoCalculado[],
+    calculadoAt: Date
+  ): Promise<number> {
+    if (puntos.length === 0) {
+      return 0;
+    }
+
+    // `merge()` sin lista de columnas actualiza todos los campos insertados: que es
+    // exactamente lo que se quiere, porque la segunda vuelta del calculo es la
+    // version buena de la misma fecha.
+    await this.db('statistics_snapshot')
+      .insert(
+        puntos.map((p) => ({
+          fecha,
+          metrica: p.metrica,
+          dimension: p.dimension,
+          valor: p.valor,
+          calculado_at: calculadoAt,
+        }))
+      )
+      .onConflict(['fecha', 'metrica', 'dimension'])
+      .merge();
+
+    return puntos.length;
   }
 }
 

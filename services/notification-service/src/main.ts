@@ -131,7 +131,7 @@ async function main(): Promise<void> {
     datos: Parameters<typeof desdeEvento.crear>[0]
   ): Promise<boolean> => useTransaction(trx, () => desdeEvento.crear(datos));
 
-  // â”€â”€â”€ Identidad â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Identidad ──────────────────────────────────────────────────────────
 
   consumidor.on(EventName.UserRegistered, async (sobre, trx) => {
     const p = sobre.payload;
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
     );
   });
 
-  // â”€â”€â”€ Perfil de prestador â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Perfil de prestador ────────────────────────────────────────────────
 
   consumidor.on(EventName.ServiceProviderProfileValidated, async (sobre, trx) => {
     const p = sobre.payload;
@@ -215,7 +215,7 @@ async function main(): Promise<void> {
     });
   });
 
-  // â”€â”€â”€ Demanda y contratacion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Demanda y contratacion ─────────────────────────────────────────────
 
   consumidor.on(EventName.ProposalSubmitted, async (sobre, trx) => {
     const p = sobre.payload;
@@ -327,7 +327,7 @@ async function main(): Promise<void> {
     });
   });
 
-  // â”€â”€â”€ Reputacion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Reputacion ─────────────────────────────────────────────────────────
 
   /**
    * Solo cuando la calificacion YA es publica.

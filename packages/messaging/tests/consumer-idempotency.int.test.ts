@@ -125,8 +125,25 @@ function mensaje(eventId: string, eventName: string, payload: Record<string, unk
   };
 }
 
-/** Espera a que el consumidor termine: `consume` no devuelve una promesa. */
-const reposar = (): Promise<void> => new Promise((r) => setTimeout(r, 150));
+/**
+ * Espera a que el consumidor termine: `consume` no devuelve una promesa.
+ *
+ * No basta con dormir un tiempo fijo. `consume` entrega el mensaje en un
+ * callback y el manejador escribe en MySQL, asi que cuanto tarda depende de
+ * cuantos conectores haya encima. Con las diecisiete suites corriendo a la vez,
+ * 150 ms se quedaban cortos y esta prueba fallaba de forma intermitente sin que
+ * hubiera nada que corregir en el consumidor. Preguntar cada cuanto hasta que la
+ * condicion se cumple hace que dependa del trabajo hecho y no del reloj, y el
+ * techo sigue existiendo: si nunca llega, la prueba falla con un mensaje util en
+ * lugar de colarse.
+ */
+const esperarA = async (condicion: () => boolean, techoMs = 5000): Promise<void> => {
+  const limite = Date.now() + techoMs;
+  while (!condicion()) {
+    if (Date.now() > limite) return;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+};
 
 describe('idempotencia del consumidor de eventos', () => {
   it('la PRIMERA entrega ejecuta el manejador', async () => {
@@ -147,7 +164,7 @@ describe('idempotencia del consumidor de eventos', () => {
 
     await consumidor.iniciar();
     entregar(mensaje('aaaaaaaa-1111-4111-8111-111111111111', 'Prueba', { marca: 'primera' }));
-    await reposar();
+    await esperarA(() => confirmados.length === 1);
 
     // Esto es lo que fallaba: el manejador no se ejecutaba NUNCA, y aun asi el
     // mensaje se confirmaba y la marca quedaba escrita.
@@ -180,9 +197,9 @@ describe('idempotencia del consumidor de eventos', () => {
     const id = 'bbbbbbbb-2222-4222-8222-222222222222';
 
     entregar(mensaje(id, 'Prueba', { marca: 'uno' }));
-    await reposar();
+    await esperarA(() => confirmados.length === 1);
     entregar(mensaje(id, 'Prueba', { marca: 'dos' }));
-    await reposar();
+    await esperarA(() => confirmados.length === 2);
 
     expect(aplicados).toEqual(['aplicado']);
     // Las dos se confirman: la repetida no es un error, es el broker haciendo
@@ -213,7 +230,7 @@ describe('idempotencia del consumidor de eventos', () => {
     await consumidor.iniciar();
     const id = 'cccccccc-3333-4333-8333-333333333333';
     entregar(mensaje(id, 'Prueba', {}));
-    await reposar();
+    await esperarA(() => rechazados.length === 1);
 
     expect(rechazados).toHaveLength(1);
     const marca = await knex('processed_event')

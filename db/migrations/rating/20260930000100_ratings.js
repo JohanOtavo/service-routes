@@ -16,14 +16,14 @@ const {
   checkIn,
   createOutbox,
   createProcessedEvents,
-  createUsuarioRef,
 } = require('../../helpers');
 
 const DIRECCIONES = ['SOLICITANTE_A_OFERENTE', 'OFERENTE_A_SOLICITANTE'];
 const FACETAS = ['COMO_OFERENTE', 'COMO_SOLICITANTE'];
 
 exports.up = async function up(knex) {
-  await createUsuarioRef(knex);
+  // `usuario_ref` se creo aqui y se retiro en 20261004000100: nunca tuvo
+  // escritor ni dependientes. Ver esa migracion y A-5 del backlog.
 
   /** Replica minima de la solicitud: solo lo necesario para validar y mostrar. */
   await knex.schema.createTable('solicitud_ref', (table) => {
@@ -140,5 +140,8 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('reputacion');
   await knex.schema.dropTableIfExists('calificacion');
   await knex.schema.dropTableIfExists('solicitud_ref');
+  // Se mantiene el drop aunque `up` ya no cree la tabla: es lo que hace que un
+  // rollback completo termine en el mismo estado de antes, sin dejar una tabla
+  // suelta por el camino. Es un `if exists`, asi que no falla si no esta.
   await knex.schema.dropTableIfExists('usuario_ref');
 };

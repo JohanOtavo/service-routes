@@ -12,13 +12,13 @@ const {
   checkIn,
   createOutbox,
   createProcessedEvents,
-  createUsuarioRef,
 } = require('../../helpers');
 
 const ESTADOS_PERFIL = ['PENDING_VALIDATION', 'ACTIVE', 'SUSPENDED', 'INACTIVE'];
 
 exports.up = async function up(knex) {
-  await createUsuarioRef(knex);
+  // `usuario_ref` se creo aqui y se retiro en 20261004000100: nunca tuvo
+  // escritor ni dependientes. Ver esa migracion y A-5 del backlog.
 
   await knex.schema.createTable('prestador', (table) => {
     primaryId(table, 'id_prestador');
@@ -82,5 +82,8 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('outbox_event');
   await knex.schema.dropTableIfExists('provider_validation_log');
   await knex.schema.dropTableIfExists('prestador');
+  // Se mantiene el drop aunque `up` ya no cree la tabla: es lo que hace que un
+  // rollback completo termine en el mismo estado de antes, sin dejar una tabla
+  // suelta por el camino. Es un `if exists`, asi que no falla si no esta.
   await knex.schema.dropTableIfExists('usuario_ref');
 };
