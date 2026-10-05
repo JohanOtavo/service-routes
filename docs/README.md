@@ -8,6 +8,7 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 |---|---|
 | Saber qué fases existen y en qué estado | [00-FLUJO-DEL-PROYECTO.md](00-FLUJO-DEL-PROYECTO.md) |
 | Saber exactamente qué falta y qué hay que cumplir para cerrarlo | [01-BACKLOG.md](01-BACKLOG.md) |
+| Saber qué evento publica quién y quién lo consume | [02-GRAFO-DE-EVENTOS.md](02-GRAFO-DE-EVENTOS.md) |
 | Ver qué se está haciendo ahora | [FASE-4-PLAN.md](FASE-4-PLAN.md) |
 | Ver qué se construyó en una fase concreta | su documento de entrega, abajo |
 
@@ -16,7 +17,8 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 | Documento | Qué contiene |
 |---|---|
 | **[00-FLUJO-DEL-PROYECTO.md](00-FLUJO-DEL-PROYECTO.md)** | El plan maestro. Estado real de las puertas de calidad medido el 2/10/2026, mapa de las 10 fases, dependencias entre ellas, criterios de «fase terminada», deuda técnica y decisiones pendientes |
-| **[01-BACKLOG.md](01-BACKLOG.md)** | Los 54 elementos de trabajo abierto, agrupados por origen, cada uno con su criterio de cierre y la fase que lo recoge. 10 necesitan una decisión tuya |
+| **[01-BACKLOG.md](01-BACKLOG.md)** | Los 48 elementos de trabajo abierto, agrupados por origen, cada uno con su criterio de cierre y la fase que lo recoge. 10 necesitan una decisión tuya |
+| **[02-GRAFO-DE-EVENTOS.md](02-GRAFO-DE-EVENTOS.md)** | Quién publica cada uno de los 31 eventos, a qué cola llega, quién lo atiende y cuáles se descartan en silencio. La fuente de verdad es el código, no las intenciones |
 | **[FASE-4-PLAN.md](FASE-4-PLAN.md)** | La fase en curso: qué hay que hacer para que `npm run verify` pase, qué queda fuera de alcance, su lista de salida y sus riesgos |
 
 ### Fases entregadas
@@ -29,10 +31,10 @@ Registro de las fases del proyecto y estado de lo que queda por hacer.
 
 ## En una línea
 
-Tres fases construidas —base de datos, backend y cliente web—, 54 elementos de
-trabajo abierto, y ninguna de las tres con la puerta de calidad del repositorio en
-verde. Lo que se está haciendo ahora es cerrar esa puerta; lo que viene después está
-propuesto en el plan maestro y necesita aprobación.
+Tres fases construidas —base de datos, backend y cliente web— y la puerta de
+calidad del repositorio en verde: `npm run verify` pasa con formato, lint, tipos,
+368 pruebas y auditoría de dependencias. Quedan 48 elementos de trabajo abiertos,
+10 de ellos pendientes de una decisión tuya.
 
 ## Una nota sobre las fechas
 

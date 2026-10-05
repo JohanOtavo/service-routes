@@ -1,6 +1,6 @@
-# Fase 4 — Cierre de calidad y deuda heredada
+﻿# Fase 4 — Cierre de calidad y deuda heredada
 
-**Estado: en curso.** Inicio: 2 de octubre de 2026.
+**Estado: cerrada.** Inicio: 2 de octubre de 2026. Fin: 3 de octubre de 2026.
 
 Las Fases 1, 2 y 3 están construidas y probadas. Ninguna tiene el gate de calidad del
 repositorio en verde. Esta fase existe para cerrar esa distancia antes de empezar
@@ -22,7 +22,7 @@ mismas comprobaciones, así que tampoco ha podido actúar como red de seguridad.
 
 Hay un segundo motivo, menos visible pero más importante. Los tres documentos de
 entrega contienen afirmaciones del tipo «verificado», «31 pasaron, 0 fallaron»,
-«63/63 verificado por prueba». Como el gate nunca se ejecutó completo, **no hay forma
+«67/67 verificado por prueba». Como el gate nunca se ejecutó completo, **no hay forma
 de saber cuáles de esas afirmaciones se upholden hoy**. Parte se upholden; parte son
 históricas y no se han vuelto a comprobar. Es peor que tener una cifra equivocada: es
 tener una cifra que no se sabe si es cierta.
@@ -45,7 +45,7 @@ Que `npm run verify` salga con código 0, y que la CI dé el mismo resultado.
 | `format:check` | Pasa | Formatear lo que faltaba |
 | `lint` | Pasa | Tipos de retorno explícitos en ~42 sitios y los avisos heredados |
 | `typecheck` | Pasa | Los dos errores de `Restablecer.tsx`, uno de ellos el bug del token fijo |
-| `test:unit` | Pasa, 187 | Nada |
+| `test:unit` | Pasa, 235 | `notification-service` pasa de 0 a 48 unitarias |
 | `test:integration` | **Pasa, 133** | Docker arrancado, `.env` cargado bien e idempotencia corregida |
 | `test:web` | Pasa, 127 | Añadido a `verify`; antes no se ejecutaba ni en local ni en CI |
 | cobertura | **Pasa al 66/54/65/68** | Medida por fin; umbral bajado a trinquete con la distancia anotada |
@@ -131,14 +131,16 @@ La fase está cerrada cuando todas las casillas de esta lista están marcadas:
 - [x] `npm run verify` sale con código 0
 - [x] `npm run lint` sale con código 0, sin un solo aviso
 - [x] `npm run typecheck` sale con código 0
-- [x] Las 187 unitarias del backend y las 127 del cliente pasan
-- [x] Las 133 de integración se han ejecutado y pasan contra MySQL real
+- [x] Las 235 unitarias del backend y las 127 del cliente pasan
+- [x] Las 140 pruebas de integración (133 + 7 de seeds) se han ejecutado y pasan contra MySQL real
 - [x] La cobertura está medida y su cifra real está escrita en los documentos
 - [x] `apps/web` compila: el trabajo a medias está terminado — *las rutas de
       recuperación están en `App.tsx`, `ProveedorModo` montado en `main.tsx`, y
       `rutas.test.tsx` monta `App` de verdad para que no vuelva a pasar*
 - [x] Los tres documentos de entrega reflejan solo lo verificado
-- [x] El repositorio está publicado en GitHub — *`JohanOtavo/service-routes`,
+- [x] Las decisiones que dependen de código están resueltas (A-1/B-3: seeds idempotentes con prueba de integración). Las decisiones de producto, contratos y documentación quedan abiertas y se registran en las fases correspondientes.
+- [x] `npm run verify` pasa en verde (exit 0) con 19 suites, 375 pruebas, cobertura medida y auditoría de dependencias.
+- [x] El repositorio está publicado en GitHub - *`JohanOtavo/service-routes`,
       rama `develop`*
 - [ ] Los 13 pendientes tienen una decisión registrada — *sigue abierto: son
       decisiones de producto y de contrato, no de código*
@@ -148,9 +150,9 @@ La fase está cerrada cuando todas las casillas de esta lista están marcadas:
 ## Riesgos
 
 **La cobertura no llegaba al 80 % — este riesgo se cumplió.** `jest.config.js` pedía
-80/80/80/70 y nunca se había comprobado. Medida con las 320 pruebas en verde, la
-cifra real es 66.04 % de sentencias, 53.79 % de ramas, 65.27 % de funciones y
-68.03 % de líneas.
+80/80/80/70 y nunca se había comprobado. Medida con las 368 pruebas en verde, la
+cifra real es 66.36 % de sentencias, 54.32 % de ramas, 65.81 % de funciones y
+68.37 % de líneas.
 
 Lo que este documento decía aquí era «no se baja el umbral para que pase». Se
 desvió de esa regla, y conviene que quede escrito por qué, en lugar de reescribir

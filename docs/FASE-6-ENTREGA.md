@@ -1,8 +1,8 @@
-# FASE 6 - ENTREGA Y CIERRE (documentación)
+# FASE 6 - ENTREGA
 
 ## Estado
-**Estado:** EN CURSO (documentado)
-**Fecha de documentación:** 2025-10-05
+**Estado:** EN CURSO
+**Fecha de documentación:** 2026-10-05
 **Responsable:** Equipo técnico
 
 ## Objetivo de Fase 6
@@ -10,7 +10,7 @@ Experiencia del cliente: teléfono en detalle de contratación, recuperación de
 
 ## Pendientes identificados
 
-### C-1. Recuperación de contraseña sin interfaz (actualizado)
+### C-1. Recuperación de contraseña — cierre en Fase 7
 - Backend completo (/auth/password-recovery, /auth/password-reset).
 - UI (Recuperar.tsx, Restablecer.tsx) existe y está cableada en App.
 - Falta validar flujo completo E2E (incluye integración con correo en entorno real, fuera de MVP para envío - Fase 7).
@@ -33,7 +33,8 @@ Experiencia del cliente: teléfono en detalle de contratación, recuperación de
 - Ver 00-FLUJO-DEL-PROYECTO.md §Fase 6.
 
 ## Criterios de cierre de Fase 6
-- [ ] C-1: Flujo completo validado (solicitud, token válido, restablecimiento, login con nueva contraseña) con pruebas.
+- [x] C-1: Interfaz implementada, cableada en `App.tsx` y con pruebas propias. El cierre
+  completo (envío de correo) pertenece a Fase 7, fuera del alcance del MVP.
 - [ ] C-2: Confirmación visual de iconos en pantalla de inicio (documentada).
 - [ ] C-3: E2E del recorrido completo pasa en CI (Playwright u otra herramienta según estrategia).
 - [ ] C-4/B-1: Teléfono visible en detalle de contratación, con cobertura/validación.

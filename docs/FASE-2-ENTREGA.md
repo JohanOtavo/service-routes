@@ -1,18 +1,24 @@
 # Fase 2 — Backend seguro. Entrega
 
-Estado: **construida, con la puerta de calidad del repositorio pendiente de cerrar**.
-Ocho microservicios detrás del gateway, 63 endpoints documentados, 187 pruebas
-unitarias y 131 de integración contra MySQL real. `npm audit` sin vulnerabilidades
+Estado: **construida y verificada por CI**.
+Ocho microservicios detrás del gateway, 67 endpoints documentados, 235 pruebas
+unitarias y 133 de integración contra MySQL real. `npm audit` sin vulnerabilidades
 altas ni críticas.
 
-> **Qué significa «construida» y qué significa «verificada».** Las 187 unitarias se
-> reejecutaron el 2/10/2026: 9 suites, 187 pruebas, 0 fallos. Las 131 de integración
-> **no** se han vuelto a ejecutar: requieren MySQL 8 vía Docker, y Docker Desktop
-> estaba detenido ese día. Son el registro de lo que pasó en su momento, no una
-> comprobación reproducible hoy.
+> **Qué significa "construida" y qué significa "verificada".** Las 235 unitarias
+> reejecutaron el 2/10/2026 y el 3/10/2026: 10 suites, 235 pruebas, 0 fallos. Las 133
+> de integración se ejecutaron por primera vez contra MySQL real el 3/10/2026 —
+> hasta entonces no se habían podido comprobar, porque requerían Docker — y
+> pasaron en tres ejecuciones seguidas, que es lo que confirmó que la suite es
+> idempotente. Ambas cifras son reproducibles hoy; la puerta entera corre en CI
+> desde el run `37146895812`.
 >
-> No hay ningún servicio corriendo en este momento. El resto del estado medido de las
-> puertas de calidad está en [00-FLUJO-DEL-PROYECTO.md](00-FLUJO-DEL-PROYECTO.md) §1,
+> **Corrección 3/10/2026.** Este documento decía 63 endpoints y 131 integraciones.
+> Los 63 eran correctos en el momento de la entrega; desde entonces se añadieron
+> cuatro rutas y la suite de integración creció en dos casos. Las cifras de abajo
+> se han puesto a hoy.
+>
+> Estado de las puertas en [00-FLUJO-DEL-PROYECTO.md](00-FLUJO-DEL-PROYECTO.md) §1,
 > y la deuda heredada de esta fase en [01-BACKLOG.md](01-BACKLOG.md) grupo B.
 
 ---
@@ -23,16 +29,21 @@ altas ni críticas.
 |---|---|---|---|---|
 | `api-gateway` | 8080 | — | — | Única entrada pública. Verifica el token, inyecta identidad, cortocircuito por servicio |
 | `auth-service` | 3001 | `pa_auth` | 12 | Identidad, sesiones, roles, administración de cuentas |
-| `provider-service` | 3002 | `pa_provider` | 10 | Perfiles de prestador y su validación administrativa |
+| `provider-service` | 3002 | `pa_provider` | 11 | Perfiles de prestador y su validación administrativa |
 | `catalog-service` | 3003 | `pa_catalog` | 9 | Servicios publicados, categorías y búsqueda pública |
-| `request-service` | 3004 | `pa_request` | 16 | **El núcleo**: necesidades, propuestas, contrataciones y cancelación |
+| `request-service` | 3004 | `pa_request` | 18 | **El núcleo**: necesidades, propuestas, contrataciones y cancelación |
 | `rating-service` | 3005 | `pa_rating` | 5 | Calificaciones bidireccionales, reputación por faceta, tasa de cancelación |
 | `notification-service` | 3006 | `pa_notification` | 4 | Avisos dentro de la plataforma |
-| `admin-reporting-service` | 3007 | `pa_admin` | 7 | Auditoría, parámetros del sistema, informes |
+| `admin-reporting-service` | 3007 | `pa_admin` | 8 | Auditoría, parámetros del sistema, informes |
 
-63 endpoints, todos documentados en `contracts/openapi/` y **verificados**: una
+67 endpoints, todos documentados en `contracts/openapi/` y **verificados**: una
 prueba lee el router de Express de cada servicio y exige que coincida con su
 contrato en los dos sentidos.
+
+Las cuatro rutas que se añadieron después de la entrega original, y que este
+documento no recogía, son `GET /providers/{id}/full`,
+`GET /requests/cancellation-reasons`, `POST /requests/{id}/cancel` y
+`PUT /admin/parameters`. Los contratos sí las tenían; solo faltaban en esta tabla.
 
 ### Los dos flujos del negocio
 
@@ -77,18 +88,18 @@ reputación y la visibilidad.
 
 ## 2. Trazabilidad con el SRS
 
-Columna «Verificado por»: **int.** = prueba de integración contra MySQL real, registrada
-en la entrega y **no reejecutada desde entonces**; **unit.** = prueba unitaria,
-reejecutada el 2/10/2026 y en verde. Ninguna de estas cifras proviene de
-`npm run verify`, que nunca se ha ejecutado completo.
+Columna «Verificado por»: **int.** = prueba de integración contra MySQL real,
+reejecutada el 3/10/2026 y en verde; **unit.** = prueba unitaria, reejecutada el
+3/10/2026 y en verde. Las dos columnas salen de las suites que `npm run verify`
+ejecuta hoy.
 
 | Requisitos | Dónde | Verificado por |
 |---|---|---|
 | RF01–RF21 Identidad, sesión, recuperación | `auth-service` | 15 int. + 16 unit. |
-| RF22–RF32 Perfil de prestador y validación | `provider-service` | 20 int. + 14 unit. |
-| RF40–RF53 Catálogo, categorías, búsqueda | `catalog-service` | 17 int. + 12 unit. |
+| RF22–RF32 Perfil de prestador y validación | `provider-service` | 20 int. + 16 unit. |
+| RF40–RF53 Catálogo, categorías, búsqueda | `catalog-service` | 17 int. + 13 unit. |
 | RF60–RF70 Contratación directa | `request-service` | 30 int. |
-| RF78–RF85 Calificaciones | `rating-service` | 17 int. + 55 unit. |
+| RF78–RF85 Calificaciones | `rating-service` | 17 int. + 53 unit. |
 | RF90–RF95 Notificaciones | `notification-service` | 12 int. |
 | RF96–RF100 Administración de cuentas | `auth-service` | int. |
 | RF101–RF115 Auditoría, parámetros, informes | `admin-reporting-service` | 17 int. + 16 unit. |
@@ -99,8 +110,14 @@ reejecutada el 2/10/2026 y en verde. Ninguna de estas cifras proviene de
 | RF192 Visibilidad de la tasa | `rating-service` | int. |
 | RNF23–RNF26 RBAC, CORS, cabeceras | todos | int. negativas |
 | RNF37/RNF46 Outbox y consistencia | `packages/messaging` | 3 int. |
-| RNF78 Correlación | `service-kit` | — |
+| RNF78 Correlación | `service-kit` | 8 unit. |
 | RNF84 Contacto solo tras acuerdo | `request-service` | int. |
+
+Los conteos de esta tabla se comprobaron contra los archivos de prueba el
+3/10/2026. Las filas de `auth-service` suman 16 unitarias y las de
+`packages/messaging` otras 8: ninguna de las dos estaba atribuida antes, y las
+unitarias de `notification-service` son **cero** — es el único servicio sin
+`.unit.test.ts`, y su cobertura depende de las 12 de integración.
 
 ### Requisitos de seguridad del brief
 
@@ -116,7 +133,7 @@ reejecutada el 2/10/2026 y en verde. Ninguna de estas cifras proviene de
 | Secretos en entorno, `.env.example` | hecho |
 | Logs de auditoría sin contraseñas ni datos personales | hecho, con depurador probado |
 | Errores centralizados, sin stack traces en producción | hecho |
-| OpenAPI de todos los endpoints | 63/63, **verificado por prueba** |
+| OpenAPI de todos los endpoints | 67/67, **verificado por prueba** |
 | Pruebas negativas de seguridad | sin token, rol incorrecto, IDOR, inyección, fuerza bruta |
 | `npm audit` sin altas ni críticas | limpio (quedan 2 bajas en eslint) |
 
@@ -145,12 +162,33 @@ Unitarias, sin necesidad de base de datos:
 cd ../friend-point-development && npx jest --selectProjects unit
 ```
 
-De integración, contra el MySQL real del compose. `REQUIRE_INTEGRATION=1` hace
-que un fallo de configuración se propague en vez de disfrazarse de "omitido":
+De integración, contra el MySQL real del compose:
 
 ```bash
-cd ../friend-point-development && set -a && . ./.env && set +a && MYSQL_HOST=127.0.0.1 RABBITMQ_HOST=127.0.0.1 REDIS_HOST=127.0.0.1 REQUIRE_INTEGRATION=1 npx jest --selectProjects integration
+cd ../friend-point-development && npx jest --selectProjects integration
 ```
+
+Ese comando se basta solo y funciona igual en Windows, macOS y Linux. Desde el
+2/10/2026, `jest.global-setup.js` carga `.env` sin pisar las variables que ya
+vengan definidas, traduce los nombres de servicio de Compose (`mysql`, `redis`,
+`rabbitmq`) a `127.0.0.1` porque solo resuelven dentro de la red de Compose, y
+exige que las pruebas arranquen de verdad.
+
+**Por qué ese último punto importa.** Cuando la base no está disponible, las ocho
+suites hacen `if (saltar()) return;` y Jest cuenta esa prueba como **aprobada**.
+Ciento treinta y tres pruebas pueden no haber ejecutado nada y el gate quedar en
+verde: era lo que pasaba antes del 2/10/2026, y por eso la puerta no era una
+prueba sino una casualidad. Ahora el salto es un fallo ruidoso, y la única forma de
+aceptarlo es pedirlo:
+
+```bash
+# Sin Docker, aceptando que las 133 pruebas no se ejecuten:
+cd ../friend-point-development && SKIP_INTEGRATION=1 npx jest --selectProjects integration
+```
+
+En PowerShell el prefijo se escribe `$env:SKIP_INTEGRATION='1';` y en cmd.exe
+`set SKIP_INTEGRATION=1 &&`. El `.github/workflows/ci.yml` ya fijaba
+`REQUIRE_INTEGRATION: '1'`, así que CI nunca estuvo expuesto a este hueco.
 
 Auditoría de dependencias:
 
@@ -285,5 +323,6 @@ de `statistics_snapshot` (el servicio las lee; nadie las escribe todavía).
 
 ## 7. Lo que sigue
 
-**Fase 3 — Frontend.** React PWA, sistema de diseño que propongo y apruebas, y
-3D selectivo donde aporte realismo. Queda a la espera de tu confirmación.
+**Fase 3 — Cliente web.** React 18 + TypeScript sobre Vite, sistema de diseño y
+3D selectivo donde aporte realismo. **Entregada** — ver
+[FASE-3-ENTREGA.md](FASE-3-ENTREGA.md).

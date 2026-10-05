@@ -77,6 +77,30 @@ Después de conceder, el script **verifica** contra `information_schema` que
 ningún usuario tenga privilegios fuera de su esquema. Si los tiene, el arranque
 falla.
 
+#### La única excepción: `admin-reporting-service` lee cinco tablas
+
+`admin-reporting-service` calcula las estadísticas y para hacerlo necesita leer
+`pa_request.necesidad`, `pa_request.propuesta`, `pa_catalog.prestador_ref`,
+`pa_catalog.servicio` y `pa_rating.calificacion`. El SRS lo tenía prohibido (RF108) y
+`docs/adr/ADR-005-estadisticas-lectura-cruzada.md` lo relaja para este caso.
+
+Dos detalles de la implementación que conviene no pasar por alto:
+
+- El privilegio es **a nivel de tabla**, nunca de esquema. `SCHEMA_PRIVILEGES` solo
+  registra los privilegios de nivel esquema, así que la comprobación de aislamiento de
+  arriba sigue siendo exactamente igual de estricta para el error que de verdad
+  importa: un `GRANT` accidental sobre `pa_request.*` completo.
+- Aun así, la verificación **se extiende**: comprueba que los privilegios de tabla
+  cruzados de `pa_admin_svc` sean exactamente los cinco del ADR y solo `SELECT`. Una
+  sexta tabla, o un `UPDATE` sobre una aprobada, hacen fallar el arranque. Sin esa
+  extensión la excepción sería invisible para el gate, y un gate que no ve una
+  excepción deja de ser un gate.
+
+| Usuario | Privilegios fuera de su esquema |
+|---|---|
+| `pa_admin_svc` | `SELECT` sobre 5 tablas de `pa_request`, `pa_catalog` y `pa_rating` (ADR-005) |
+| los otros seis | ninguno |
+
 ### 2.2 Las réplicas son copias, no una segunda fuente de verdad
 
 Las tablas `*_ref` (`usuario_ref`, `prestador_ref`, `servicio_ref`,

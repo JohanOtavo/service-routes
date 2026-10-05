@@ -2,7 +2,7 @@
 
 ## Estado de cierre
 **Estado:** CERRADA (técnicamente)
-**Fecha de cierre:** 2025-10-05
+**Fecha de cierre:** 2026-10-05
 **Responsable:** Equipo técnico
 
 ## Alcance completado

@@ -1,19 +1,24 @@
 # Fase 3 — Cliente web PWA. Entrega
 
-Estado: **construida, con la puerta de calidad del repositorio pendiente de cerrar**.
-React 18 + TypeScript sobre Vite, 16 pantallas, sistema de diseño propio, PWA
-instalable y dos escenas 3D selectivas. 21 pruebas del cliente, más las 187
+Estado: **construida y verificada por CI**.
+React 18 + TypeScript sobre Vite, 18 pantallas, sistema de diseño propio, PWA
+instalable y dos escenas 3D selectivas. 127 pruebas del cliente, más las 235
 unitarias del backend. `npm audit` sin vulnerabilidades altas ni críticas.
 
-> **Estado verificado el 3/10/2026.** Esta entrega tal como se describe pasó sus 21
-> pruebas del cliente. Después se añadieron recuperación de contraseña y modo
-> oscuro, y el repositorio estuvo roto: `typecheck` fallaba con dos errores en
-> `Restablecer.tsx` (uno de ellos el bug de fondo: el token de restablecimiento
-> estaba escrito a mano, así que la página no podía restablecer ninguna contraseña
-> real) y `lint` con 55 problemas.
+> **Alcance de este documento.** Describe la entrega tal como se hizo: 16 pantallas
+> y 21 pruebas del cliente. Lo que vino después —recuperación de contraseña, modo
+> oscuro, iconos del PWA— está en §7, y su recuento actual es 18 pantallas y 127
+> pruebas.
 >
-> **Hoy ambas puertas pasan** y el cliente tiene 124 pruebas en verde. Queda
-> pendiente solo confirmar el cableado de las rutas nuevas en `App.tsx` (G-5).
+> **Estado verificado el 3/10/2026.** Esta entrega pasó sus 21 pruebas del cliente.
+> Después se añadieron recuperación de contraseña y modo oscuro, y el repositorio
+> estuvo roto: `typecheck` fallaba con dos errores en `Restablecer.tsx` (uno de
+> ellos el bug de fondo: el token de restablecimiento estaba escrito a mano, así que
+> la página no podía restablecer ninguna contraseña real) y `lint` con 55
+> problemas.
+>
+> **Hoy ambas puertas pasan, las rutas están cableadas y el cliente tiene 127
+> pruebas en verde** (8 archivos). La puerta entera corre en CI.
 >
 > Estado de las puertas en [00-FLUJO-DEL-PROYECTO.md](00-FLUJO-DEL-PROYECTO.md) §1.
 > Deuda heredada en [01-BACKLOG.md](01-BACKLOG.md) grupos C y G-5.
@@ -26,11 +31,11 @@ unitarias del backend. `npm audit` sin vulnerabilidades altas ni críticas.
 apps/web/src/
   api/          cliente HTTP, sesión en memoria, esquemas Zod, hooks de datos
   autenticacion/ contexto de sesión y ruta protegida
-  ui/           sistema de diseño: 10 componentes y su hoja de estilo
+  ui/           sistema de diseño: sus componentes y su hoja de estilo
   estilos/      tokens y base
-  paginas/      16 pantallas
+  paginas/      18 pantallas (16 en la entrega; 2 añadidas después)
   escenas/      las dos escenas 3D, en carga diferida
-  pruebas/      21 pruebas
+  pruebas/      127 pruebas en 8 archivos (21 en la entrega)
 ```
 
 | Pantalla | Quién entra | Qué resuelve |
@@ -48,6 +53,18 @@ apps/web/src/
 | Avisos | con sesión | Bandeja |
 | Mi cuenta | con sesión | Roles y reputación por faceta |
 | Administración | administrador | Revisión, actividad, parámetros, bitácora |
+
+Las dos que se añadieron después de esta entrega, y que no están en la tabla
+porque no formaban parte de ella:
+
+| Pantalla | Quién entra | Qué resuelve |
+|---|---|---|
+| Recuperar contraseña | cualquiera | Pedir el enlace de restablecimiento |
+| Restablecer contraseña | cualquiera con el token | Fijar la contraseña nueva |
+
+Ninguna de las dos aparece en la tabla de arriba porque la tabla describe lo que
+se entregó en su momento. Ambas están cableadas en `App.tsx` como rutas públicas y
+tienen pruebas propias.
 
 ---
 
@@ -214,14 +231,20 @@ sigue esperando (ver `FASE-2-ENTREGA.md`, 6.1). Mi recomendación sigue siendo
 que salga del perfil de prestador: es el dato que el oferente declaró *para que
 lo contacten*.
 
-**No hay recuperación de contraseña en la interfaz.** El backend la tiene
-completa (`/auth/password-recovery` y `/auth/password-reset`); falta la pantalla.
+**No hay recuperación de contraseña en la interfaz.** — **Resuelto el 2/10/2026.**
+`Recuperar.tsx` y `Restablecer.tsx` existen, están cableadas en `App.tsx` y tienen
+pruebas propias (14 y 15 casos). El enlace «Olvide mi contraseña» de `Entrar.tsx`
+ya no lleva a un 404. Falta el envío del correo, que es la Fase 7.
 
-**Faltan los iconos del PWA.** `icono-192.png`, `icono-512.png` e `icono.svg` no
-existen todavía, así que la aplicación se instala sin icono propio.
+**Faltan los iconos del PWA.** — **Resuelto el 2/10/2026.** `icono-192.png`,
+`icono-512.png`, `icono-maskable-512.png` e `icono.svg` existen y están declarados
+en `manifest.webmanifest`, enlazado desde `index.html` con su `apple-touch-icon`.
+Falta la confirmación visual en pantalla de inicio, que no se ha hecho.
 
-**Pruebas de extremo a extremo.** Las 21 del cliente cubren sesión, componentes y
-ruta protegida. Un recorrido completo con navegador —publicar, proponer,
-adjudicar, cancelar— daría más confianza que cualquiera de ellas por separado.
+**Pruebas de extremo a extremo.** Las del cliente cubren sesión, componentes, ruta
+protegida, modo, recuperación y restablecimiento. Un recorrido completo con
+navegador —publicar, proponer, adjudicar, cancelar— daría más confianza que
+cualquiera de ellas por separado, y `11-quality/testing-strategy.md` las exige
+para el Go/No-Go.
 
 **Los seis pendientes de la Fase 2 siguen abiertos**, ninguno bloquea esto.
