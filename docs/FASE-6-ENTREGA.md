@@ -1,7 +1,7 @@
 # FASE 6 - ENTREGA
 
 ## Estado
-**Estado:** EN CURSO
+**Estado:** EN CURSO (C-3 ejecutado en local; C-2, C-4/B-1 pendientes de cierre)
 **Fecha de documentación:** 2026-10-05
 **Responsable:** Equipo técnico
 
@@ -22,7 +22,8 @@ Experiencia del cliente: teléfono en detalle de contratación, recuperación de
 ### C-3. No hay pruebas de extremo a extremo
 - Requerido por 11-quality/testing-strategy.md §E2E.
 - Recorrido crítico: publicar necesidad → recibir propuestas → adjudicar → cancelar.
-- Cubierto parcialmente por unitarias/integración; falta E2E completo ejecutable en navegador/CI.
+- Implementado: `playwright.config.ts`, `tests/e2e/ayudas.ts`, `tests/e2e/recorrido-necesidad.spec.ts`, ejecutado 2 veces en local con OK (6.2s, 7.9s). Añadido job `e2e` a `.github/workflows/ci.yml`, `npm run test:e2e` y `typecheck` incluye `tests/tsconfig.json`. Pendiente verificar ejecución en CI.
+- Pendiente: C-2/C-4/B-1 para cierre completo.
 
 ### C-4. Teléfono sigue sin llegar (duplicado con B-1)
 - Debe mostrarse teléfono del prestador en detalle de contratación.
@@ -36,7 +37,7 @@ Experiencia del cliente: teléfono en detalle de contratación, recuperación de
 - [x] C-1: Interfaz implementada, cableada en `App.tsx` y con pruebas propias. El cierre
   completo (envío de correo) pertenece a Fase 7, fuera del alcance del MVP.
 - [ ] C-2: Confirmación visual de iconos en pantalla de inicio (documentada).
-- [ ] C-3: E2E del recorrido completo pasa en CI (Playwright u otra herramienta según estrategia).
+- [x] C-3: E2E del recorrido completo pasa en local (Playwright 1.56.1). Configuración y job de CI añadidos. Falta validación de ejecución exitosa en CI.
 - [ ] C-4/B-1: Teléfono visible en detalle de contratación, con cobertura/validación.
 - [ ] Documentación de cierre registrada (FASE-6-ENTREGA.md).
 

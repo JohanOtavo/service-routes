@@ -39,3 +39,9 @@ Thumbs.db
 *.sql.gz
 dumps/
 .keys/
+
+# Artefactos de Playwright
+test-results/
+playwright-report/
+blob-report/
+.playwright/

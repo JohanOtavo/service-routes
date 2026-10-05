@@ -237,3 +237,82 @@ jobs:
       # Vitest y las dependencias. Una sola puerta, igual que en local.
       - name: verify
         run: npm run verify
+
+  # El recorrido critico en un navegador de verdad.
+  #
+  # Vive en un job aparte y no dentro de `verify` por una razon concreta: esta
+  # prueba necesita la aplicacion en pie -los ocho servicios, el gateway y el
+  # cliente web-, y `verify` es una puerta que debe seguir siendo ejecutable sin
+  # Docker. Mezclarlas haria que un fallo de arranque de un contenedor se
+  # reportara como un fallo de codigo, que es justo la confusion que mas cuesta
+  # tiempo.
+  #
+  # Levanta el stack con `docker compose --profile apps` y no pieza a pieza: los
+  # servicios dependen del migrador, que a su vez espera a MySQL, y montarlos a
+  # mano en un runner es la forma segura de provocar una carrera.
+  e2e:
+    name: Recorrido critico en navegador
+    runs-on: ubuntu-latest
+    env:
+      # `test` es lo que hace que el migrator cargue ademas los seeds, y el E2E
+      # necesita las cuentas sembradas. El CLI de la base de datos solo permite
+      # seeds en `development` o `test`.
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # `docker compose` lee `.env`, y en un runner no existe. Se copia el
+      # ejemplo tal cual: las contrasenas de los siete esquemas tienen que
+      # coincidir entre el script de arranque de MySQL y los servicios, y ambos
+      # leen este mismo fichero, asi que dejarlo como esta ya las deja
+      # coherentes. Solo se sustituyen las claves JWT, que el ejemplo deja como
+      # marcador de posicion, y la contrasena de las cuentas sembradas.
+      - name: Preparar el .env de la ejecucion
+        run: |
+          cp .env.example .env
+          openssl genrsa -out "$RUNNER_TEMP/private.pem" 2048
+          openssl rsa -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
+          PRIVADO=$(sed ':a;N;$!ba;s/\n/\\n/g' "$RUNNER_TEMP/private.pem")
+          PUBLICO=$(sed ':a;N;$!ba;s/\n/\\n/g' "$RUNNER_TEMP/public.pem")
+          {
+            echo 'SEED_DEV_PASSWORD=ci-solo-esta-ejecucion'
+            echo "JWT_PRIVATE_KEY=$PRIVADO"
+            echo "JWT_PUBLIC_KEY=$PUBLICO"
+          } >> .env
+
+      - name: Levantar la aplicacion
+        run: docker compose --profile apps up -d
+
+      # Ningun servicio de aplicacion declara healthcheck, solo MySQL, Redis y
+      # RabbitMQ, asi que `up -d --wait` solo esperaria a la infraestructura y
+      # no al gateway. Se sondea el gateway, que es la unica puerta que importa:
+      # cuando responde, la cadena de arranque ya esta montada.
+      - name: Esperar al gateway
+        run: |
+          for intento in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1; then
+              echo "gateway listo"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::el gateway no respondio tras 3 minutos"
+          docker compose --profile apps logs --tail 100
+          exit 1
+
+      - name: Instalar el navegador
+        run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: informe-e2e
+          path: playwright-report/
+          retention-days: 7

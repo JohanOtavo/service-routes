@@ -1,0 +1,33 @@
+{
+  "//": [
+    "Las pruebas de extremo a extremo se comprueban aparte, como apps/web.",
+    "El tsconfig raiz es una solucion de referencias de proyectos compuestos y no",
+    "admite un proyecto mas sin `composite: true`, que obligaria a emitir ficheros",
+    "que aqui no existen. Playwright ejecuta su propio compilador (esbuild), pero",
+    "eso no comprueba tipos: una prueba con un selector mal escrito pasaria el",
+    "formato, el lint y la ejecucion, y solo fallaria al ejecutarse en CI.",
+    "`test:e2e:typecheck` en el script typecheck es lo que lo evita."
+  ],
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["e2e", "../playwright.config.ts"]
+}

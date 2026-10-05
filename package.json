@@ -17,11 +17,13 @@
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
-    "typecheck": "tsc --build --verbose && tsc -p apps/web",
+    "typecheck": "tsc --build --verbose && tsc -p apps/web && tsc -p tests",
     "test": "jest --coverage",
     "test:unit": "jest --selectProjects unit",
     "test:integration": "jest --selectProjects integration",
     "test:web": "npm run test --workspace apps/web",
+    "test:e2e": "playwright test",
+    "test:e2e:instalar": "playwright install chromium",
     "db:migrate": "node db/cli.js migrate",
     "db:rollback": "node db/cli.js rollback",
     "db:seed": "node db/cli.js seed",
@@ -30,6 +32,7 @@
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run test:web && npm run audit"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/jest": "^30.0.0",
     "@types/node": "20.17.9",
     "@typescript-eslint/eslint-plugin": "^8.71.0",
